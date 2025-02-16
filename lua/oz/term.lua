@@ -2,6 +2,7 @@ local M = {}
 local util = require("oz.util")
 
 local cachedCmd = nil
+local start_workingdir = nil
 
 local term_buf = nil
 local term_win = nil
@@ -11,11 +12,11 @@ function M.run_in_term(cmd, dir)
 		term_buf = vim.api.nvim_create_buf(false, true) -- Create a new buffer
 		vim.api.nvim_set_current_buf(term_buf) -- Set it as current buffer
 		if dir then
-			print(dir)
 			vim.cmd("lcd " .. dir .. " | terminal")
 		elseif cmd:match("@") then
 			cmd = cmd:gsub("@", "")
-			vim.cmd("lcd " .. util.GetProjectRoot() or vim.fn.getcwd() .. " | terminal")
+            local wd = util.GetProjectRoot() or vim.fn.getcwd()
+			vim.cmd("lcd " .. wd .. " | terminal")
 		else
 			vim.cmd("terminal")
 		end
@@ -81,21 +82,27 @@ function M.Term()
 			vim.opt_local.wrap = false
 			vim.opt_local.winfixheight = true
 
+            start_workingdir = vim.fn.getcwd()
+
 			-- mappings
 			vim.keymap.set("n", "q", "i<C-d>", { desc = "close oz_term", buffer = event.buf, silent = true })
 			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "<C-q>", function()
-				vim.cmd([[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|stacktrace)"')]])
-				vim.cmd.wincmd("p")
-				vim.cmd("cfirst")
-				print("All errors added to quickfix")
+				vim.cmd(
+					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|issue|stacktrace)"')]]
+				)
+				if #vim.fn.getqflist() ~= 0 then
+					vim.cmd.wincmd("p")
+					vim.cmd("cfirst")
+                else
+                    print("No errors")
+				end
 			end)
 
-			vim.keymap.set("n", "go", function()
+			vim.keymap.set("n", "<cr>", function()
 				local cfile = vim.fn.expand("<cfile>")
-				local cwd = vim.fn.getcwd()
-				local full_path = vim.fn.resolve(cwd .. "/" .. cfile)
+				local full_path = vim.fn.resolve(start_workingdir .. "/" .. cfile)
 
 				if vim.fn.filereadable(full_path) == 1 then
 					vim.schedule(function()
