@@ -7,7 +7,7 @@ local term_buf = nil
 local term_win = nil
 function M.run_in_term(cmd, dir)
 	if term_buf == nil or not vim.api.nvim_buf_is_valid(term_buf) then
-		vim.cmd("split | resize 10") -- Open a vertical split
+		vim.cmd("split") -- Open a vertical split
 		term_buf = vim.api.nvim_create_buf(false, true) -- Create a new buffer
 		vim.api.nvim_set_current_buf(term_buf) -- Set it as current buffer
 		if dir then
@@ -75,27 +75,40 @@ function M.Term()
 	vim.api.nvim_create_autocmd("FileType", {
 		pattern = { "oz_term" },
 		callback = function(event)
+			-- options
+			vim.cmd([[resize 10]])
 			vim.cmd("setlocal listchars= nonumber norelativenumber")
 			vim.opt_local.wrap = false
+			vim.opt_local.winfixheight = true
+
+			-- mappings
 			vim.keymap.set("n", "q", "i<C-d>", { desc = "close oz_term", buffer = event.buf, silent = true })
 			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun", buffer = event.buf, silent = true })
 
-            vim.keymap.set("n", "cc", "iclear\n<C-\\><C-n>",  { desc = "clear", buffer = event.buf, silent = true, noremap = true })
-            vim.keymap.set("t", "<C-S-\\>", "clear\n",  { desc = "clear", buffer = event.buf, silent = true, noremap = true })
+			vim.keymap.set("n", "<C-q>", function()
+				vim.cmd(
+					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|stacktrace)"') | copen]]
+				)
+			end)
+			vim.keymap.set("n", "gq", function()
+				vim.cmd(
+					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|stacktrace)"') | wincmd p | cfirst]]
+				)
+			end)
 
-			vim.keymap.set("n", "<cr>", function()
+			vim.keymap.set("n", "go", function()
 				local cfile = vim.fn.expand("<cfile>")
 				local cwd = vim.fn.getcwd()
 				local full_path = vim.fn.resolve(cwd .. "/" .. cfile)
 
 				if vim.fn.filereadable(full_path) == 1 then
 					vim.schedule(function()
-						vim.cmd.wincmd("w")
+						vim.cmd.wincmd("p")
 						vim.cmd("e " .. full_path)
 					end)
 				elseif vim.fn.isdirectory(full_path) == 1 then
 					vim.schedule(function()
-						vim.cmd.wincmd("w")
+						vim.cmd.wincmd("p")
 						vim.cmd("e " .. full_path .. "/")
 					end)
 				else
