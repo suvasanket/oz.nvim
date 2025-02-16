@@ -15,7 +15,7 @@ function M.run_in_term(cmd, dir)
 			vim.cmd("lcd " .. dir .. " | terminal")
 		elseif cmd:match("@") then
 			cmd = cmd:gsub("@", "")
-			vim.cmd("lcd " .. util.GetProjectRoot() .. " | terminal")
+			vim.cmd("lcd " .. util.GetProjectRoot() or vim.fn.getcwd() .. " | terminal")
 		else
 			vim.cmd("terminal")
 		end
@@ -86,14 +86,10 @@ function M.Term()
 			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "<C-q>", function()
-				vim.cmd(
-					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|stacktrace)"') | copen]]
-				)
-			end)
-			vim.keymap.set("n", "gq", function()
-				vim.cmd(
-					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|stacktrace)"') | wincmd p | cfirst]]
-				)
+				vim.cmd([[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|stacktrace)"')]])
+				vim.cmd.wincmd("p")
+				vim.cmd("cfirst")
+				print("All errors added to quickfix")
 			end)
 
 			vim.keymap.set("n", "go", function()

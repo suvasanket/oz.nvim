@@ -26,13 +26,18 @@ end
 -- run command for both Compile-Term
 function M.cmd_func(type)
 	local current_file = vim.fn.expand("%")
-	local fullfilepath = vim.fn.expand("%:p")
 	local ft = vim.bo.filetype
 	local shebang = d.detect_shebang()
+    local project_path = util.GetProjectRoot() -- may return nil
 	-- p: 1
 	if not shebang then
-		-- p: 2 -> 3
-		local cmd = p.getpersistCMD(fullfilepath) or p.getftCMD(current_file, ft)
+		-- p: 2 , 3
+        local cmd
+        if project_path then
+            cmd = p.getpersistCMD(project_path, ft) or p.getftCMD(current_file, ft)
+        else
+            cmd = p.getftCMD(current_file, ft)
+        end
 		if not cmd then
 			-- p: 4
 			cmd = d.predict_compiler(current_file, ft)
@@ -43,8 +48,8 @@ function M.cmd_func(type)
             -- modify for set
 			input = input:gsub('"', '\\"')
 
-			if cmd ~= input then
-				p.setpersistCMD(fullfilepath, input)
+			if cmd ~= input and project_path then
+				p.setpersistCMD(project_path, ft, input)
 			end
 			if input:find(current_file) then
 				p.setftCMD(current_file, ft, input)

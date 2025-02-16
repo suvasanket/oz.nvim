@@ -14,9 +14,9 @@ local function gen_setcmd(key, value, json_path)
     ]]
 	return data_writecmd
 		:gsub("{data_dir}", data_dir .. "/oz")
-		:gsub("{json_path}", json_path)
 		:gsub("{key}", key)
 		:gsub("{value}", value)
+		:gsub("{json_path}", json_path)
 end
 
 -- generate the command to set data to json file
@@ -28,15 +28,21 @@ local function gen_getcmd(key, json_path)
 end
 
 -- set file cmd
-function M.setpersistCMD(path, cmd)
-	util.ShellCmd(gen_setcmd(path, cmd, data_json), nil, function()
+function M.setpersistCMD(project_path, ft, cmd)
+	local key = [[{project_path}${ft}]]
+	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+
+	util.ShellCmd(gen_setcmd(key, cmd, data_json), nil, function()
 		util.Notify("error occured saving command", "error", "Error")
 	end)
 end
 
 -- get file cmd
-function M.getpersistCMD(path)
-	local out = util.ShellOutput(gen_getcmd(path:gsub("/", "\\/"), data_json))
+function M.getpersistCMD(project_path, ft)
+    local key = [[{project_path}${ft}]]
+    key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+
+	local out = util.ShellOutput(gen_getcmd(key:gsub("/", "\\/"), data_json))
 	if out and out ~= "null" then
 		return out
 	else
@@ -78,38 +84,38 @@ end
 
 -- set Term! cmd
 function M.setTermBcmd(current_file, cmd)
-    util.ShellCmd({ "sh", "-c", gen_setcmd(current_file, cmd, termbang_json) }, nil, function()
-        util.Notify("error occured saving Term! command", "error", "Error")
-    end)
+	util.ShellCmd({ "sh", "-c", gen_setcmd(current_file, cmd, termbang_json) }, nil, function()
+		util.Notify("error occured saving Term! command", "error", "Error")
+	end)
 end
 
 -- get Term! cmd
 function M.getTermBcmd(current_file)
-    local output = util.ShellOutput(gen_getcmd(current_file, termbang_json))
+	local output = util.ShellOutput(gen_getcmd(current_file, termbang_json))
 
-    if output and output ~= "null" then
-        return output
-    else
-        return nil
-    end
+	if output and output ~= "null" then
+		return output
+	else
+		return nil
+	end
 end
 
 -- set oil cmd
 function M.setoilcmd(cwd, cmd)
-    util.ShellCmd({ "sh", "-c", gen_setcmd(cwd, cmd, oil_json) }, nil, function()
-        util.Notify("error occured saving oil command", "error", "Error")
-    end)
+	util.ShellCmd({ "sh", "-c", gen_setcmd(cwd, cmd, oil_json) }, nil, function()
+		util.Notify("error occured saving oil command", "error", "Error")
+	end)
 end
 
 -- get oil cmd
 function M.getoilcmd(cwd)
-    local output = util.ShellOutput(gen_getcmd(cwd:gsub("/", "\\/"), oil_json))
+	local output = util.ShellOutput(gen_getcmd(cwd:gsub("/", "\\/"), oil_json))
 
-    if output and output ~= "null" then
-        return output
-    else
-        return nil
-    end
+	if output and output ~= "null" then
+		return output
+	else
+		return nil
+	end
 end
 
 return M

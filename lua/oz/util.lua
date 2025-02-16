@@ -5,11 +5,11 @@ function M.GetProjectRoot()
 	local firstworkspace = workspace[1]
 	if firstworkspace then
 		if firstworkspace == vim.fn.expand("~"):gsub("/$", "") then
-			return vim.fn.getcwd()
+            return nil
 		end
 		return firstworkspace
 	end
-	return vim.fs.root(0, ".git") or vim.fn.getcwd()
+	return vim.fs.root(0, ".git") or nil
 end
 
 function M.ShellCmd(cmd, on_success, on_error)
@@ -32,8 +32,8 @@ end
 
 function M.ShellOutput(cmd)
 	local obj = vim.system({ "sh", "-c", cmd }, { text = true }):wait()
-    local sout = obj.stdout:gsub("^%s+", ""):gsub("%s+$", "")
-    return sout
+	local sout = obj.stdout:gsub("^%s+", ""):gsub("%s+$", "")
+	return sout
 end
 
 function M.UserInput(msg, def)
@@ -57,9 +57,9 @@ function M.Notify(content, level, title)
 	if not title then
 		title = "Info"
 	end
-    if level == "error" then
-        level = vim.log.levels.ERROR
-    end
+	if level == "error" then
+		level = vim.log.levels.ERROR
+	end
 	vim.notify(content, level, { title = title })
 end
 
