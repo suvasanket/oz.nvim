@@ -93,7 +93,7 @@ function M.Term()
 		callback = function(event)
 			-- options
 			vim.cmd([[resize 10]])
-			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight]])
+			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight nomodifiable]])
 
 			-- mappings
 			vim.keymap.set("n", "q", function()
@@ -111,7 +111,7 @@ function M.Term()
 				else
 					print("Nothing to add")
 				end
-			end)
+            end, { desc = "open file", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "<cr>", function()
 				local cfile = vim.fn.expand("<cfile>")
