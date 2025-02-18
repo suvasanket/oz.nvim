@@ -1,15 +1,21 @@
 local M = {}
 
-function M.GetProjectRoot()
-	local workspace = vim.lsp.buf.list_workspace_folders()
-	local firstworkspace = workspace[1]
-	if firstworkspace then
-		if firstworkspace == vim.fn.expand("~"):gsub("/$", "") then
-            return nil
-		end
-		return firstworkspace
+function M.GetProjectRoot(markers, path_or_bufnr)
+	if markers then
+		return vim.fs.root(path_or_bufnr or 0, markers) or nil
 	end
-	return vim.fs.root(0, ".git") or nil
+
+	local patterns = { ".git", "Makefile", "package.json", "Cargo.toml", "go.mod", "pom.xml", "build.gradle" }
+	local root_fpattern = vim.fs.root(path_or_bufnr or 0, patterns)
+	local workspace = vim.lsp.buf.list_workspace_folders()
+
+	if root_fpattern then
+		return root_fpattern
+	elseif workspace then
+		return workspace[#workspace]
+	else
+		return nil
+	end
 end
 
 function M.ShellCmd(cmd, on_success, on_error)
@@ -43,22 +49,14 @@ function M.UserInput(msg, def)
 	end
 end
 
-function M.TableContainsValue(tab, val)
-	for index, value in ipairs(tab) do
-		if value == val then
-			return true
-		end
-	end
-
-	return false
-end
-
 function M.Notify(content, level, title)
 	if not title then
 		title = "Info"
 	end
 	if level == "error" then
 		level = vim.log.levels.ERROR
+	elseif level == "warn" then
+		level = vim.log.levels.WARN
 	end
 	vim.notify(content, level, { title = title })
 end
