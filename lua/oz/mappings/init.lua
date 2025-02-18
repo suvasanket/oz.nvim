@@ -28,16 +28,16 @@ function M.cmd_func(type)
 	local current_file = vim.fn.expand("%")
 	local ft = vim.bo.filetype
 	local shebang = d.detect_shebang()
-    local project_path = util.GetProjectRoot() -- may return nil
+	local project_path = util.GetProjectRoot() -- may return nil
 	-- p: 1
 	if not shebang then
 		-- p: 2 , 3
-        local cmd
-        if project_path then
-            cmd = p.getpersistCMD(project_path, ft) or p.getftCMD(current_file, ft)
-        else
-            cmd = p.getftCMD(current_file, ft)
-        end
+		local cmd
+		if project_path then
+			cmd = p.getpersistCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
+		else
+			cmd = p.getftCMD(current_file, ft)
+		end
 		if not cmd then
 			-- p: 4
 			cmd = d.predict_compiler(current_file, ft)
@@ -45,14 +45,18 @@ function M.cmd_func(type)
 		local input = util.UserInput(":" .. type .. " ", cmd)
 		if input then
 			vim.cmd(type .. " " .. input)
-            -- modify for set
+			-- modify for set
 			input = input:gsub('"', '\\"')
 
 			if cmd ~= input and project_path then
-				p.setpersistCMD(project_path, ft, input)
+				p.setpersistCMD(project_path, current_file, ft, input)
 			end
 			if input:find(current_file) then
-				p.setftCMD(current_file, ft, input)
+				if project_path then
+					p.setpersistCMD(project_path, current_file, ft, input)
+				else
+					p.setftCMD(current_file, ft, input)
+				end
 			end
 		end
 	else

@@ -28,9 +28,12 @@ local function gen_getcmd(key, json_path)
 end
 
 -- set file cmd
-function M.setpersistCMD(project_path, ft, cmd)
+function M.setpersistCMD(project_path, file, ft, cmd)
 	local key = [[{project_path}${ft}]]
 	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+    if cmd:find(file) then
+        cmd = cmd:gsub(file, "{filename}")
+    end
 
 	util.ShellCmd(gen_setcmd(key, cmd, data_json), nil, function()
 		util.Notify("error occured saving command", "error", "Error")
@@ -38,12 +41,15 @@ function M.setpersistCMD(project_path, ft, cmd)
 end
 
 -- get file cmd
-function M.getpersistCMD(project_path, ft)
+function M.getpersistCMD(project_path, file, ft)
     local key = [[{project_path}${ft}]]
     key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
 
 	local out = util.ShellOutput(gen_getcmd(key:gsub("/", "\\/"), data_json))
 	if out and out ~= "null" then
+        if out:find("{filename}") then
+            out = out:gsub("{filename}", file)
+        end
 		return out
 	else
 		return nil
