@@ -86,6 +86,9 @@ function M.rerunner_init(key)
 		if TerminalCommandType then
 			vim.cmd([[w]])
 			vim.cmd(TerminalCommandType)
+			if TerminalCommandType == "Term" then
+				vim.cmd.wincmd([[p]])
+			end
 		end
 	end)
 end
