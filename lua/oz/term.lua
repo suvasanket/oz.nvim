@@ -2,7 +2,6 @@ local M = {}
 local util = require("oz.util")
 
 local cachedCmd = nil
-local start_workingdir = nil
 
 local term_buf = nil
 local term_win = nil
@@ -15,7 +14,7 @@ function M.run_in_term(cmd, dir)
 			vim.cmd("lcd " .. dir .. " | terminal")
 		elseif cmd:match("@") then
 			cmd = cmd:gsub("@", "")
-            local wd = util.GetProjectRoot() or vim.fn.getcwd()
+			local wd = util.GetProjectRoot() or vim.fn.getcwd()
 			vim.cmd("lcd " .. wd .. " | terminal")
 		else
 			vim.cmd("terminal")
@@ -37,12 +36,25 @@ function M.run_in_term(cmd, dir)
 		vim.api.nvim_set_current_win(term_win)
 	end
 
-	vim.api.nvim_chan_send(vim.b.terminal_job_id, "clear\n" .. cmd .. "\n")
+	vim.api.nvim_chan_send(vim.b.terminal_job_id, cmd .. "\n")
+end
+
+function M.close_term()
+	local job_id = vim.b[term_buf].terminal_job_id
+	if job_id then
+		vim.fn.jobstop(job_id)
+	end
+	if vim.api.nvim_win_is_valid(term_win) then
+		vim.api.nvim_win_close(term_win, true)
+	end
+	if vim.api.nvim_buf_is_valid(term_buf) then
+		vim.api.nvim_buf_delete(term_buf, { force = true })
+	end
 end
 
 function M.Term()
 	vim.api.nvim_create_user_command("Term", function(args)
-		local function run_cached_or_new_term(cmd)
+		local function run_extern(cmd)
 			if cmd then
 				local inside_tmux = os.getenv("TMUX") ~= nil
 				if inside_tmux then
@@ -57,9 +69,9 @@ function M.Term()
 		if args.bang then
 			if args.args and #args.args > 0 then
 				cachedCmd = args.args
-				run_cached_or_new_term(cachedCmd)
+				run_extern(cachedCmd)
 			else
-				run_cached_or_new_term(cachedCmd)
+				run_extern(cachedCmd)
 			end
 		else
 			if args.args and #args.args >= 2 then
@@ -67,6 +79,9 @@ function M.Term()
 			end
 			if cachedCmd then
 				vim.notify("Executing '" .. cachedCmd .. "' ..")
+				if term_buf and term_win then
+					M.close_term()
+				end
 				M.run_in_term(cachedCmd)
 			end
 		end
@@ -78,14 +93,12 @@ function M.Term()
 		callback = function(event)
 			-- options
 			vim.cmd([[resize 10]])
-			vim.cmd("setlocal listchars= nonumber norelativenumber")
-			vim.opt_local.wrap = false
-			vim.opt_local.winfixheight = true
-
-            start_workingdir = vim.fn.getcwd()
+			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight]])
 
 			-- mappings
-			vim.keymap.set("n", "q", "i<C-d>", { desc = "close oz_term", buffer = event.buf, silent = true })
+			vim.keymap.set("n", "q", function()
+				M.close_term()
+			end, { desc = "close oz_term", buffer = event.buf, silent = true })
 			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "<C-q>", function()
@@ -95,14 +108,14 @@ function M.Term()
 				if #vim.fn.getqflist() ~= 0 then
 					vim.cmd.wincmd("p")
 					vim.cmd("cfirst")
-                else
-                    print("No errors")
+				else
+					print("Nothing to add")
 				end
 			end)
 
 			vim.keymap.set("n", "<cr>", function()
 				local cfile = vim.fn.expand("<cfile>")
-				local full_path = vim.fn.resolve(start_workingdir .. "/" .. cfile)
+				local full_path = vim.fn.fnamemodify(cfile, ":p")
 
 				if vim.fn.filereadable(full_path) == 1 then
 					vim.schedule(function()
