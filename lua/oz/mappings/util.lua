@@ -1,4 +1,6 @@
 local M = {}
+local util = require("oz.util")
+local p = require("oz.persistcmd")
 
 function M.detect_compiler(ft)
 	-- Try common suffix variations dynamically
@@ -12,10 +14,10 @@ function M.detect_compiler(ft)
 	-- Check if there's a compiler script in runtimepath
 	local runtime_compiler = vim.fn.globpath(vim.o.runtimepath, "compiler/" .. ft .. ".vim")
 	if runtime_compiler ~= "" then
-		return ft -- Assume filetype name matches compiler name
+		return ft
 	end
 
-	return nil -- No suitable compiler found
+	return nil
 end
 
 -- detect any shebang in the file
@@ -62,6 +64,47 @@ function M.predict_compiler(current_file, ft)
 	else
 		return makeprg
 	end
+end
+
+-- run command for both Compile-Term
+function M.cmd_func(type)
+    local current_file = vim.fn.expand("%")
+    local ft = vim.bo.filetype
+    local shebang = M.detect_shebang()
+    local project_path = util.GetProjectRoot() -- may return nil
+    -- p: 1
+    if not shebang then
+        -- p: 2 , 3
+        local cmd
+        if project_path then
+            cmd = p.getpersistCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
+        else
+            cmd = p.getftCMD(current_file, ft)
+        end
+        if not cmd then
+            -- p: 4
+            cmd = M.predict_compiler(current_file, ft)
+        end
+        local input = util.UserInput(":" .. type .. " ", cmd)
+        if input then
+            vim.cmd(type .. " " .. input)
+            -- modify for set
+            input = input:gsub('"', '\\"')
+
+            if cmd ~= input and project_path then
+                p.setpersistCMD(project_path, current_file, ft, input)
+            end
+            if input:find(current_file) then
+                if project_path then
+                    p.setpersistCMD(project_path, current_file, ft, input)
+                else
+                    p.setftCMD(current_file, ft, input)
+                end
+            end
+        end
+    else
+        vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)
+    end
 end
 
 return M

@@ -1,5 +1,5 @@
 local M = {}
-local k = require("oz.mappings")
+local k = require("oz.mappings.util")
 local t = require("oz.term")
 
 function M.compile_init()

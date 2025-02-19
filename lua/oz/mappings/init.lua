@@ -1,95 +1,66 @@
 local M = {}
 local util = require("oz.util")
 local p = require("oz.persistcmd")
-local d = require("oz.mappings.comp_detect")
+local u = require("oz.mappings.util")
 
-TerminalCommandType = nil
+M.RunnerCommandType = nil
 
 -- TermBang mapping
+function M.Termbang()
+    local current_file = vim.fn.expand("%")
+    local cmd = p.getTermBcmd(current_file) or ""
+
+    local input = util.UserInput(":Term! ", cmd)
+    if input then
+        vim.cmd("Term! " .. input)
+
+        if cmd ~= input then
+            p.setTermBcmd(current_file, input)
+        end
+        M.RunnerCommandType = "Term!"
+    end
+end
 function M.termbangkey_init(key)
 	vim.keymap.set("n", key, function()
-		local current_file = vim.fn.expand("%")
-		local cmd = p.getTermBcmd(current_file) or ""
-
-		local input = util.UserInput(":Term! ", cmd)
-		if input then
-			vim.cmd("Term! " .. input)
-
-			if cmd ~= input then
-				p.setTermBcmd(current_file, input)
-			end
-			TerminalCommandType = "Term!"
-		end
+        M.Termbang()
 	end, { desc = "oz Term!", silent = false })
 end
 
--- run command for both Compile-Term
-function M.cmd_func(type)
-	local current_file = vim.fn.expand("%")
-	local ft = vim.bo.filetype
-	local shebang = d.detect_shebang()
-	local project_path = util.GetProjectRoot() -- may return nil
-	-- p: 1
-	if not shebang then
-		-- p: 2 , 3
-		local cmd
-		if project_path then
-			cmd = p.getpersistCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
-		else
-			cmd = p.getftCMD(current_file, ft)
-		end
-		if not cmd then
-			-- p: 4
-			cmd = d.predict_compiler(current_file, ft)
-		end
-		local input = util.UserInput(":" .. type .. " ", cmd)
-		if input then
-			vim.cmd(type .. " " .. input)
-			-- modify for set
-			input = input:gsub('"', '\\"')
-
-			if cmd ~= input and project_path then
-				p.setpersistCMD(project_path, current_file, ft, input)
-			end
-			if input:find(current_file) then
-				if project_path then
-					p.setpersistCMD(project_path, current_file, ft, input)
-				else
-					p.setftCMD(current_file, ft, input)
-				end
-			end
-		end
-	else
-		vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)
-	end
-end
-
 -- Term mapping
+function M.Term()
+    u.cmd_func("Term")
+    M.RunnerCommandType = "Term"
+end
 function M.termkey_init(key)
 	vim.keymap.set("n", key, function()
-		M.cmd_func("Term")
-		TerminalCommandType = "Term"
+        M.Term()
 	end, { desc = "oz term", silent = false })
 end
 
 -- Compile mapping
+function M.Compile_mode()
+    u.cmd_func("Compile")
+    M.RunnerCommandType = "Recompile"
+end
 function M.compilekey_init(key)
 	vim.keymap.set("n", key, function()
-		M.cmd_func("Compile")
-		TerminalCommandType = "Recompile"
+        M.Compile_mode()
 	end, { desc = "Compile with oz", silent = false })
 end
 
 -- Rerunner
+function M.Rerun()
+    if M.RunnerCommandType then
+        vim.cmd([[w]])
+        vim.cmd(M.RunnerCommandType)
+        if M.RunnerCommandType == "Term" then
+            vim.cmd.wincmd([[p]])
+        end
+    end
+end
 function M.rerunner_init(key)
 	vim.keymap.set("n", key, function()
-		if TerminalCommandType then
-			vim.cmd([[w]])
-			vim.cmd(TerminalCommandType)
-			if TerminalCommandType == "Term" then
-				vim.cmd.wincmd([[p]])
-			end
-		end
+        M.Rerun()
 	end)
 end
 
