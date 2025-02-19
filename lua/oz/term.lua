@@ -95,13 +95,13 @@ function M.Term()
 			-- options
 			vim.cmd([[resize 10]])
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight nomodifiable]])
-            cwd = vim.fn.getcwd()
+			cwd = vim.fn.getcwd()
 
 			-- mappings
 			vim.keymap.set("n", "q", function()
 				M.close_term()
 			end, { desc = "close oz_term", buffer = event.buf, silent = true })
-			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun", buffer = event.buf, silent = true })
+			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun previous cmd", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "<C-q>", function()
 				vim.cmd(
@@ -113,7 +113,7 @@ function M.Term()
 				else
 					print("Nothing to add")
 				end
-            end, { desc = "open file", buffer = event.buf, silent = true })
+			end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "<cr>", function()
 				local cfile = vim.fn.expand("<cfile>")
@@ -121,18 +121,22 @@ function M.Term()
 
 				if vim.fn.filereadable(full_path) == 1 then
 					vim.schedule(function()
-						vim.cmd.wincmd("p")
+						vim.cmd.wincmd("k")
 						vim.cmd("e " .. full_path)
 					end)
 				elseif vim.fn.isdirectory(full_path) == 1 then
 					vim.schedule(function()
-						vim.cmd.wincmd("p")
+						vim.cmd.wincmd("k")
 						vim.cmd("e " .. full_path .. "/")
 					end)
 				else
 					util.Notify("out of scope", "warn", "oz_term")
 				end
-			end, { desc = "open file", buffer = event.buf, silent = true })
+			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
+
+			vim.keymap.set("n", "g?", function()
+				util.Show_buf_keymaps()
+			end, { desc = "show keymaps", noremap = true, silent = true, buffer = event.buf })
 		end,
 	})
 end
