@@ -2,6 +2,7 @@ local M = {}
 local util = require("oz.util")
 
 local cachedCmd = nil
+local cwd = nil
 
 local term_buf = nil
 local term_win = nil
@@ -94,6 +95,7 @@ function M.Term()
 			-- options
 			vim.cmd([[resize 10]])
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight nomodifiable]])
+            cwd = vim.fn.getcwd()
 
 			-- mappings
 			vim.keymap.set("n", "q", function()
@@ -115,7 +117,7 @@ function M.Term()
 
 			vim.keymap.set("n", "<cr>", function()
 				local cfile = vim.fn.expand("<cfile>")
-				local full_path = vim.fn.fnamemodify(cfile, ":p")
+				local full_path = vim.fn.resolve(cwd .. "/" .. cfile)
 
 				if vim.fn.filereadable(full_path) == 1 then
 					vim.schedule(function()
