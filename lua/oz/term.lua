@@ -135,7 +135,9 @@ function M.Term()
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 
 			vim.keymap.set("n", "g?", function()
-				util.Show_buf_keymaps()
+				util.Show_buf_keymaps({
+					subtext = { "(*): have limited usablity" },
+				})
 			end, { desc = "show keymaps", noremap = true, silent = true, buffer = event.buf })
 		end,
 	})

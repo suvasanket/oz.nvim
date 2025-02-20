@@ -21,14 +21,19 @@ function M.setup(opts)
 	opts = opts or {}
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
 
-	-- Initialize the plugin
+	-- Initialize :Term
 	term.Term()
+
+	-- Initialize mappings
 	M.mappings_init()
+
+	-- Initialize compile-mode integration
 	if M.config.compile then
 		local c = require("oz.integration.compile")
 		c.compile_init()
 	end
 
+	-- Initialize oil integration
 	if M.config.oil then
 		local o = require("oz.integration.oil")
 		if M.config.mappings.Term then
