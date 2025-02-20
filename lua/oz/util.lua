@@ -19,10 +19,17 @@ function M.GetProjectRoot(markers, path_or_bufnr)
 end
 
 function M.Map(mode, lhs, rhs, opts)
-    if not lhs then
-        return
-    end
-    return vim.keymap.set(mode, lhs, rhs, opts)
+	if not lhs then
+		return
+	end
+	return vim.keymap.set(mode, lhs, rhs, opts)
+end
+
+function M.echoprint(str, hl)
+	if not hl then
+		hl = "MoreMsg"
+	end
+	vim.api.nvim_echo({ { str, hl } }, true, {})
 end
 
 function M.ShellCmd(cmd, on_success, on_error)

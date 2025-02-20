@@ -4,7 +4,7 @@ local util = require("oz.util")
 local p = require("oz.persistcmd")
 local oil = require("oil")
 
-local function get_cur_entry_fullpath(cfile)
+local function get_cur_entry(cfile)
 	if cfile then
 		return vim.fn.expand("<cfile>")
 	end
@@ -15,9 +15,10 @@ local function get_cur_entry_fullpath(cfile)
 		return cwd .. pattern
 	end
 end
-local function split_at_dollar(input, middle)
-	input = input:gsub("%s+%$", "$")
-	local pos = input:find("%$")
+local function split_input(input, middle, splitter)
+	local escaped_delimiter = splitter:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%1")
+	local pos = input:find(escaped_delimiter)
+
 	if pos then
 		local pre_dollar = input:sub(1, pos - 1)
 		local post_dollar = input:sub(pos + 1)
@@ -61,11 +62,24 @@ function M.oil_init(a)
 			util.Map("n", a.keys.cur_entry_cmd, function()
 				local oil_cwd = oil.get_current_dir()
 				local input = util.UserInput("Command:")
-				if input then
-					local cmd = split_at_dollar(input, get_cur_entry_fullpath())
-					term.run_in_term(cmd, oil_cwd)
+				if input and input ~= "" then
+					local cmd = a.cur_entry_fullpath and split_input(input, get_cur_entry(), a.cur_entry_delimeter_char)
+						or split_input(input, get_cur_entry(true), a.cur_entry_delimeter_char)
+
+					if a.cur_entry_async then
+						util.ShellCmd(cmd, function()
+							util.echoprint("Oz(oil): cmd executed successfully!", "MoreMsg")
+							vim.defer_fn(function()
+								require("oil.actions").refresh.callback()
+							end, 700)
+						end, function()
+							util.echoprint("Oz(oil): stderr on executaion!", "ErrorMsg")
+						end)
+					else
+						term.run_in_term(cmd, oil_cwd)
+					end
 				end
-			end)
+			end, { buffer = event.buf, silent = true, desc = "execute cmd on current cursor entry" })
 
 			-- show keymaps
 			util.Map("n", a.keys.show_keybinds, function()

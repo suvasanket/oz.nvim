@@ -10,9 +10,11 @@ local defaults = {
 		TermBang = "<leader>at",
 		Compile = "<leader>ac",
 		Rerun = "<leader>aa",
+	},
 
-		-- oz-term buffer specific binds
-		oz_term = {
+    -- all oz_term options
+	oz_term = {
+		mappings = {
 			open_entry = "<cr>",
 			add_to_quickfix = "<C-q>",
 			open_in_compile_mode = "t",
@@ -20,21 +22,28 @@ local defaults = {
 			quit = "q",
 			show_keybinds = "g?",
 		},
-		-- compile-mode buffer specific binds
-		compile_mode = {
+	},
+
+	-- compile-mode integration
+	compile_mode = {
+		mappings = {
 			open_in_oz_term = "t",
 			show_keybinds = "g?",
 		},
-		-- oil buffer specific binds
-		oil = {
+	},
+
+	-- oil integration
+	oil = {
+		CurEntryAsync = true, -- false: run in oz_term instead of running async in background
+		CurEntryFullpath = true, -- false: only file or dir name will be used
+		CurEntryDelimiter_Char = "$", -- this char will be used to define the pre and post of the entry
+		mappings = {
 			Term = "<leader>av",
 			Compile = "<leader>ac",
-            cur_entry_cmd = "<C-g>",
+			cur_entry_cmd = "<C-g>",
 			show_keybinds = "g?", -- override existing g?
 		},
 	},
-	compile = true,
-	oil = true,
 }
 
 -- Setup function
@@ -44,7 +53,7 @@ function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
 
 	-- Initialize :Term
-	term.Term({ keys = M.config.mappings.oz_term })
+	term.Term({ keys = M.config.oz_term.mappings })
 
 	-- Initialize mappings
 	M.mappings_init()
@@ -52,13 +61,18 @@ function M.setup(opts)
 	-- Initialize compile-mode integration
 	if M.config.compile then
 		local c = require("oz.integration.compile")
-		c.compile_init({ keys = M.config.mappings.compile_mode })
+		c.compile_init({ keys = M.config.compile_mode.mappings })
 	end
 
 	-- Initialize oil integration
 	if M.config.oil then
 		local o = require("oz.integration.oil")
-		o.oil_init({ keys = M.config.mappings.oil })
+		o.oil_init({
+			cur_entry_async = M.config.oil.CurEntryAsync,
+			cur_entry_fullpath = M.config.oil.CurEntryFullpath,
+			cur_entry_delimeter_char = M.config.oil.CurEntryDelimiter_Char,
+			keys = M.config.oil.mappings,
+		})
 	end
 end
 

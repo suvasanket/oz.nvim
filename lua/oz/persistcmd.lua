@@ -31,7 +31,7 @@ end
 -- remove oz_temp.json if error
 local function remove_tempjson()
 	util.ShellCmd('[ -f "oz_temp.json" ] && rm oz_temp.json', function()
-		print("oz(error): temp files removed")
+        util.Notify("Error: temp files removed", "error", "Oz")
 	end, nil)
 end
 
