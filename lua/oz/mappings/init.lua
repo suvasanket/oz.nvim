@@ -21,7 +21,7 @@ function M.Termbang()
     end
 end
 function M.termbangkey_init(key)
-	vim.keymap.set("n", key, function()
+	util.Map("n", key, function()
         M.Termbang()
 	end, { desc = "oz Term!", silent = false })
 end
@@ -32,7 +32,7 @@ function M.Term()
     M.RunnerCommandType = "Term"
 end
 function M.termkey_init(key)
-	vim.keymap.set("n", key, function()
+	util.Map("n", key, function()
         M.Term()
 	end, { desc = "oz term", silent = false })
 end
@@ -43,7 +43,7 @@ function M.Compile_mode()
     M.RunnerCommandType = "Recompile"
 end
 function M.compilekey_init(key)
-	vim.keymap.set("n", key, function()
+	util.Map("n", key, function()
         M.Compile_mode()
 	end, { desc = "Compile with oz", silent = false })
 end
@@ -59,7 +59,7 @@ function M.Rerun()
     end
 end
 function M.rerunner_init(key)
-	vim.keymap.set("n", key, function()
+	util.Map("n", key, function()
         M.Rerun()
 	end)
 end

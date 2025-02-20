@@ -10,6 +10,28 @@ local defaults = {
 		TermBang = "<leader>at",
 		Compile = "<leader>ac",
 		Rerun = "<leader>aa",
+
+		-- oz-term buffer specific binds
+		oz_term = {
+			open_entry = "<cr>",
+			add_to_quickfix = "<C-q>",
+			open_in_compile_mode = "t",
+			rerun = "r",
+			quit = "q",
+			show_keybinds = "g?",
+		},
+		-- compile-mode buffer specific binds
+		compile_mode = {
+			open_in_oz_term = "t",
+			show_keybinds = "g?",
+		},
+		-- oil buffer specific binds
+		oil = {
+			Term = "<leader>av",
+			Compile = "<leader>ac",
+            cur_entry_cmd = "<C-g>",
+			show_keybinds = "g?", -- override existing g?
+		},
 	},
 	compile = true,
 	oil = true,
@@ -22,7 +44,7 @@ function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
 
 	-- Initialize :Term
-	term.Term()
+	term.Term({ keys = M.config.mappings.oz_term })
 
 	-- Initialize mappings
 	M.mappings_init()
@@ -30,18 +52,13 @@ function M.setup(opts)
 	-- Initialize compile-mode integration
 	if M.config.compile then
 		local c = require("oz.integration.compile")
-		c.compile_init()
+		c.compile_init({ keys = M.config.mappings.compile_mode })
 	end
 
 	-- Initialize oil integration
 	if M.config.oil then
 		local o = require("oz.integration.oil")
-		if M.config.mappings.Term then
-			o.oil_init(M.config.mappings.Term)
-		end
-		if M.config.mappings.Compile then
-			o.oil_init(nil, M.config.mappings.Compile)
-		end
+		o.oil_init({ keys = M.config.mappings.oil })
 	end
 end
 

@@ -18,6 +18,13 @@ function M.GetProjectRoot(markers, path_or_bufnr)
 	end
 end
 
+function M.Map(mode, lhs, rhs, opts)
+    if not lhs then
+        return
+    end
+    return vim.keymap.set(mode, lhs, rhs, opts)
+end
+
 function M.ShellCmd(cmd, on_success, on_error)
 	vim.fn.jobstart(cmd, {
 		stdout_buffered = true,

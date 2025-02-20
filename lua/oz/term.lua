@@ -53,7 +53,7 @@ function M.close_term()
 	end
 end
 
-function M.Term()
+function M.Term(a)
 	vim.api.nvim_create_user_command("Term", function(args)
 		local function run_extern(cmd)
 			if cmd then
@@ -98,12 +98,13 @@ function M.Term()
 			cwd = vim.fn.getcwd()
 
 			-- mappings
-			vim.keymap.set("n", "q", function()
+			util.Map("n", a.keys.quit, function()
 				M.close_term()
 			end, { desc = "close oz_term", buffer = event.buf, silent = true })
-			vim.keymap.set("n", "r", ":Term<cr>", { desc = "rerun previous cmd", buffer = event.buf, silent = true })
 
-			vim.keymap.set("n", "<C-q>", function()
+			util.Map("n", a.keys.rerun, ":Term<cr>", { desc = "rerun previous cmd", buffer = event.buf, silent = true })
+
+            util.Map("n", a.keys.add_to_quickfix, function()
 				vim.cmd(
 					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|issue|stacktrace)"')]]
 				)
@@ -115,7 +116,7 @@ function M.Term()
 				end
 			end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = event.buf, silent = true })
 
-			vim.keymap.set("n", "<cr>", function()
+			util.Map("n", a.keys.open_entry, function()
 				local cfile = vim.fn.expand("<cfile>")
 				local full_path = vim.fn.resolve(cwd .. "/" .. cfile)
 
@@ -134,7 +135,7 @@ function M.Term()
 				end
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 
-			vim.keymap.set("n", "g?", function()
+            util.Map("n", a.keys.show_keybinds, function()
 				util.Show_buf_keymaps({
 					subtext = { "(*): have limited usablity" },
 				})
