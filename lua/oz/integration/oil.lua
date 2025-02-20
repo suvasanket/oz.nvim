@@ -4,16 +4,18 @@ local util = require("oz.util")
 local p = require("oz.persistcmd")
 local oil = require("oil")
 
-local function get_cur_entry(cfile)
-	if cfile then
-		return vim.fn.expand("<cfile>")
+local function get_cur_entry(short)
+	local cursor_entry = oil.get_cursor_entry()
+
+	local entry = cursor_entry.parsed_name or cursor_entry.name
+	if short then
+		return entry
 	end
 	local cwd = oil.get_current_dir()
-	local line = vim.fn.getline(".")
-	local pattern = line:match("[%S]+%s+[%S]+%s+(.*)")
-	if cwd and pattern then
-		return cwd .. pattern
+	if cursor_entry.type == "directory" then
+		return cwd .. entry .. "/"
 	end
+	return cwd .. entry
 end
 local function split_input(input, middle, splitter)
 	local escaped_delimiter = splitter:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%1")
