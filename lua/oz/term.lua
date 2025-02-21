@@ -2,12 +2,16 @@ local M = {}
 local util = require("oz.util")
 local mapping_util = require("oz.mappings.util")
 
-local cachedCmd = nil
-local cwd = nil
+M.cached_cmd = nil
 
 local term_buf = nil
 local term_win = nil
 function M.run_in_term(cmd, dir)
+	if not cmd then
+		return
+	else
+		M.cached_cmd = cmd
+	end
 	if term_buf == nil or not vim.api.nvim_buf_is_valid(term_buf) then
 		vim.cmd("split") -- Open a vertical split
 		term_buf = vim.api.nvim_create_buf(false, true) -- Create a new buffer
@@ -69,21 +73,21 @@ function M.Term(config)
 	vim.api.nvim_create_user_command("Term", function(args)
 		if args.bang then
 			if args.args and #args.args > 0 then
-				cachedCmd = args.args
-				M.run_in_termbang(cachedCmd)
+				M.cached_cmd = args.args
+				M.run_in_termbang(M.cached_cmd)
 			else
-				M.run_in_termbang(cachedCmd)
+				M.run_in_termbang(M.cached_cmd)
 			end
 		else
 			if args.args and #args.args >= 2 then
-				cachedCmd = args.args
+				M.cached_cmd = args.args
 			end
-			if cachedCmd then
-				vim.notify("Executing '" .. cachedCmd .. "' ..")
+			if M.cached_cmd then
+				vim.notify("Executing '" .. M.cached_cmd .. "' ..")
 				if term_buf and term_win then
 					M.close_term()
 				end
-				M.run_in_term(cachedCmd)
+				M.run_in_term(M.cached_cmd)
 			end
 		end
 	end, { nargs = "*", bang = true })
@@ -95,7 +99,6 @@ function M.Term(config)
 			-- options
 			vim.cmd([[resize 10]])
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight nomodifiable]])
-			cwd = vim.fn.getcwd()
 
 			-- mappings
 			util.Map("n", config.mappings.quit, function()
@@ -125,33 +128,17 @@ function M.Term(config)
 			end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = event.buf, silent = true })
 
 			util.Map("n", config.mappings.open_entry, function()
-				local cfile = vim.fn.expand("<cfile>")
-				local full_path = vim.fn.resolve(cwd .. "/" .. cfile)
-
-				if vim.fn.filereadable(full_path) == 1 then
-					vim.schedule(function()
-						vim.cmd.wincmd("k")
-						vim.cmd("e " .. full_path)
-					end)
-				elseif vim.fn.isdirectory(full_path) == 1 then
-					vim.schedule(function()
-						vim.cmd.wincmd("k")
-						vim.cmd("e " .. full_path .. "/")
-					end)
-				else
-					-- vim.cmd("normal! gF")
-					local ok = pcall(vim.cmd, "normal! gF")
-					if ok then
-						local entry_buf = vim.api.nvim_get_current_buf()
-						vim.api.nvim_set_current_buf(term_buf)
-						if entry_buf == term_buf then
-							return
-						end
-						vim.cmd.wincmd("k")
-						vim.api.nvim_set_current_buf(entry_buf)
-					else
-						util.Notify("can't open the current entry", "error", "oz")
+				local ok = pcall(vim.cmd, "normal! gF")
+				if ok then
+					local entry_buf = vim.api.nvim_get_current_buf()
+					vim.api.nvim_set_current_buf(term_buf)
+					if entry_buf == term_buf then
+						return
 					end
+					vim.cmd.wincmd("k")
+					vim.api.nvim_set_current_buf(entry_buf)
+				else
+					util.Notify("can't open the current entry", "error", "oz")
 				end
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 
