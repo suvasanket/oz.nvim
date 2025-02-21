@@ -14,13 +14,10 @@ function M.run_in_term(cmd, dir)
 		vim.api.nvim_set_current_buf(term_buf) -- Set it as current buffer
 		if dir then
 			vim.cmd("lcd " .. dir .. " | terminal")
-		elseif cmd:match("@") then
-			cmd = cmd:gsub("@", "")
-			local wd = util.GetProjectRoot() or vim.fn.getcwd()
-			vim.cmd("lcd " .. wd .. " | terminal")
 		else
 			vim.cmd("terminal")
 		end
+		vim.api.nvim_buf_set_name(term_buf, "oz_term:'" .. cmd .. "'") -- naming the terminal buffer
 		term_win = vim.api.nvim_get_current_win() -- Store the window
 		vim.api.nvim_create_autocmd("BufDelete", {
 			buffer = term_buf,
@@ -54,26 +51,32 @@ function M.close_term()
 	end
 end
 
+function M.run_in_termbang(cmd, dir)
+	local inside_tmux = os.getenv("TMUX") ~= nil
+
+	if inside_tmux then
+		local tmux_cmd = [[tmux neww -c {path} -n 'Term!' -d '{cmd}']]
+		dir = dir or "."
+		tmux_cmd = tmux_cmd:gsub("{cmd}", cmd):gsub("{path}", dir)
+		vim.fn.system(tmux_cmd)
+	else
+		if dir then
+			vim.cmd("tab term " .. "cd " .. dir .. " && " .. cmd)
+		else
+			vim.cmd("tab term " .. cmd)
+		end
+	end
+	vim.notify("Executing '" .. cmd .. "' ..")
+end
+
 function M.Term(config)
 	vim.api.nvim_create_user_command("Term", function(args)
-		local function run_extern(cmd)
-			if cmd then
-				local inside_tmux = os.getenv("TMUX") ~= nil
-				if inside_tmux then
-					vim.fn.system("tmux neww -n 'Term!' -d " .. "'" .. cmd .. "'")
-				else
-					vim.cmd("tab term " .. cmd)
-				end
-				vim.notify("Executing '" .. cmd .. "' ..")
-			end
-		end
-
 		if args.bang then
 			if args.args and #args.args > 0 then
 				cachedCmd = args.args
-				run_extern(cachedCmd)
+				M.run_in_termbang(cachedCmd)
 			else
-				run_extern(cachedCmd)
+				M.run_in_termbang(cachedCmd)
 			end
 		else
 			if args.args and #args.args >= 2 then
@@ -100,7 +103,10 @@ function M.Term(config)
 
 			-- mappings
 			util.Map("n", config.mappings.quit, function()
-				M.close_term()
+				local ans = vim.fn.confirm("Oz: quit oz_term?", "&quit\n&no", 2, "Error")
+				if ans == 1 then
+					M.close_term()
+				end
 			end, { desc = "close oz_term", buffer = event.buf, silent = true })
 
 			util.Map(
@@ -137,7 +143,19 @@ function M.Term(config)
 						vim.cmd("e " .. full_path .. "/")
 					end)
 				else
-					util.Notify("out of scope", "warn", "oz_term")
+					-- vim.cmd("normal! gF")
+					local ok = pcall(vim.cmd, "normal! gF")
+					if ok then
+						local entry_buf = vim.api.nvim_get_current_buf()
+						vim.api.nvim_set_current_buf(term_buf)
+						if entry_buf == term_buf then
+							return
+						end
+						vim.cmd.wincmd("k")
+						vim.api.nvim_set_current_buf(entry_buf)
+					else
+						util.Notify("can't open the current entry", "error", "oz")
+					end
 				end
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 

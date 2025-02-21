@@ -65,46 +65,57 @@ function M.predict_compiler(current_file, ft)
 		return makeprg
 	end
 end
+local function if_projectroot(cmd)
+	if cmd:match("^@") == nil then
+		return cmd
+	else
+	end
+end
 
 -- run command for both Compile-Term
-function M.cmd_func(type)
-    local current_file = vim.fn.expand("%")
-    local ft = vim.bo.filetype
-    local shebang = M.detect_shebang()
-    local project_path = util.GetProjectRoot() -- may return nil
-    -- p: 1
-    if not shebang then
-        -- p: 2 , 3
-        local cmd
-        if project_path then
-            cmd = p.getpersistCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
-        else
-            cmd = p.getftCMD(current_file, ft)
-        end
-        if not cmd then
-            -- p: 4
-            cmd = M.predict_compiler(current_file, ft)
-        end
-        local input = util.UserInput(":" .. type .. " ", cmd)
-        if input then
-            vim.cmd(type .. " " .. input)
-            -- modify for set
-            input = input:gsub('"', '\\"')
+function M.cmd_func(type, func)
+	local current_file = vim.fn.expand("%")
+	local ft = vim.bo.filetype
+	local shebang = M.detect_shebang()
+	local project_path = util.GetProjectRoot() -- may return nil
+	-- p: 1
+	if not shebang then
+		-- p: 2 , 3
+		local cmd
+		if project_path then
+			cmd = p.getpersistCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
+		else
+			cmd = p.getftCMD(current_file, ft)
+		end
+		if not cmd then
+			-- p: 4
+			cmd = M.predict_compiler(current_file, ft)
+		end
+		local input = util.UserInput(":" .. type .. " ", cmd)
+		if input then
+			if func then
+				func(input, cmd)
+			else
+				vim.cmd(type .. " " .. input)
+			end
 
-            if cmd ~= input and project_path then
-                p.setpersistCMD(project_path, current_file, ft, input)
-            end
-            if input:find(current_file) then
-                if project_path then
-                    p.setpersistCMD(project_path, current_file, ft, input)
-                else
-                    p.setftCMD(current_file, ft, input)
-                end
-            end
-        end
-    else
-        vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)
-    end
+			-- modify for set
+			input = input:gsub('"', '\\"')
+
+			if cmd ~= input and project_path then
+				p.setpersistCMD(project_path, current_file, ft, input)
+			end
+			if input:find(current_file) then
+				if project_path then
+					p.setpersistCMD(project_path, current_file, ft, input)
+				else
+					p.setftCMD(current_file, ft, input)
+				end
+			end
+		end
+	else
+		vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)
+	end
 end
 
 return M
