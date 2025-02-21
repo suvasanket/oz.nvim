@@ -30,12 +30,14 @@ local function split_input(input, middle, splitter)
 	end
 end
 
-function M.oil_init(config)
+function M.oil_init(config, g_mappings)
 	vim.api.nvim_create_autocmd("FileType", {
 		pattern = "oil",
 		callback = function(event)
-			-- open oz_term
-			util.Map("n", config.mappings.term, function()
+            -- open oz_term
+            local term_k = config.mappings.term == "<global>" and g_mappings.Term
+
+			util.Map("n", term_k, function()
 				local oil_cwd = oil.get_current_dir()
 				local cmd = p.getoilcmd(oil_cwd) or ""
 				local input = util.UserInput(":Term ", cmd)
@@ -47,8 +49,10 @@ function M.oil_init(config)
 				end
 			end, { buffer = event.buf, silent = true, desc = "run cmd in this dir with oz_term" })
 
-			-- open compile_mode
-			util.Map("n", config.mappings.compile, function()
+            -- open compile_mode
+            local compile_k = config.mappings.compile == "<global>" and g_mappings.Compile
+
+			util.Map("n", compile_k, function()
 				local oil_cwd = oil.get_current_dir()
 				vim.g.compilation_directory = oil_cwd
 				local cmd = p.getoilcmd(oil_cwd) or ""

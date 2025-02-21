@@ -61,8 +61,8 @@ default config:
          cur_entry_splitter = "$", -- This character is used to define the pre- and post-entry parts in commands
 
          mappings = {
-             term = "<leader>av", -- Execute a shell command using oz_term
-             compile = "<leader>ac", -- Execute a shell command using compile-mode
+             term = "<global>", -- Execute a shell command using oz_term | by default uses global keys
+             compile = "<global>", -- Execute a shell command using compile-mode | by default uses global keys
              cur_entry_cmd = "<C-g>", -- Execute a command on the entry (file or directory) under the cursor
              show_keybinds = "g?", -- Override the existing `g?` mapping
          },

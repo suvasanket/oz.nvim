@@ -2,7 +2,6 @@ local M = {}
 
 local term = require("oz.term")
 local mappings = require("oz.mappings")
-local util = require("oz.util")
 
 -- Default configuration
 local defaults = {
@@ -39,8 +38,8 @@ local defaults = {
 		cur_entry_fullpath = true, -- false: only file or dir name will be used
 		cur_entry_splitter = "$", -- this char will be used to define the pre and post of the entry
 		mappings = {
-			term = "<leader>av",
-			compile = "<leader>ac",
+			term = "<global>",
+			compile = "<global>",
 			cur_entry_cmd = "<C-g>",
 			show_keybinds = "g?", -- override existing g?
 		},
@@ -66,7 +65,7 @@ function M.setup(opts)
 
 	-- Initialize oil integration
 	if M.config.oil then
-		require("oz.integration.oil").oil_init(M.config.oil)
+		require("oz.integration.oil").oil_init(M.config.oil, M.config.mappings)
 	end
 end
 

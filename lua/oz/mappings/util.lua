@@ -65,12 +65,6 @@ function M.predict_compiler(current_file, ft)
 		return makeprg
 	end
 end
-local function if_projectroot(cmd)
-	if cmd:match("^@") == nil then
-		return cmd
-	else
-	end
-end
 
 -- run command for both Compile-Term
 function M.cmd_func(type, func)
@@ -93,6 +87,7 @@ function M.cmd_func(type, func)
 		end
 		local input = util.UserInput(":" .. type .. " ", cmd)
 		if input then
+            -- custom function, used for AKTUAL execution
 			if func then
 				func(input, cmd)
 			else
