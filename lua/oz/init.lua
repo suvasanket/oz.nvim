@@ -2,6 +2,7 @@ local M = {}
 
 local term = require("oz.term")
 local mappings = require("oz.mappings")
+local util = require("oz.util")
 
 -- Default configuration
 local defaults = {
@@ -12,7 +13,7 @@ local defaults = {
 		Rerun = "<leader>aa",
 	},
 
-    -- all oz_term options
+	-- all oz_term options
 	oz_term = {
 		mappings = {
 			open_entry = "<cr>",
@@ -34,12 +35,12 @@ local defaults = {
 
 	-- oil integration
 	oil = {
-		CurEntryAsync = true, -- false: run in oz_term instead of running async in background
-		CurEntryFullpath = true, -- false: only file or dir name will be used
-		CurEntryDelimiter_Char = "$", -- this char will be used to define the pre and post of the entry
+		cur_entry_async = true, -- false: run in oz_term instead of running async in background
+		cur_entry_fullpath = true, -- false: only file or dir name will be used
+		cur_entry_splitter = "$", -- this char will be used to define the pre and post of the entry
 		mappings = {
-			Term = "<leader>av",
-			Compile = "<leader>ac",
+			term = "<leader>av",
+			compile = "<leader>ac",
 			cur_entry_cmd = "<C-g>",
 			show_keybinds = "g?", -- override existing g?
 		},
@@ -53,26 +54,19 @@ function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
 
 	-- Initialize :Term
-	term.Term({ keys = M.config.oz_term.mappings })
+	term.Term(M.config.oz_term)
 
 	-- Initialize mappings
 	M.mappings_init()
 
 	-- Initialize compile-mode integration
-	if M.config.compile then
-		local c = require("oz.integration.compile")
-		c.compile_init({ keys = M.config.compile_mode.mappings })
+	if M.config.compile_mode then
+		require("oz.integration.compile").compile_init(M.config.compile_mode)
 	end
 
 	-- Initialize oil integration
 	if M.config.oil then
-		local o = require("oz.integration.oil")
-		o.oil_init({
-			cur_entry_async = M.config.oil.CurEntryAsync,
-			cur_entry_fullpath = M.config.oil.CurEntryFullpath,
-			cur_entry_delimeter_char = M.config.oil.CurEntryDelimiter_Char,
-			keys = M.config.oil.mappings,
-		})
+		require("oz.integration.oil").oil_init(M.config.oil)
 	end
 end
 

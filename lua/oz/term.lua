@@ -1,5 +1,6 @@
 local M = {}
 local util = require("oz.util")
+local mapping_util = require("oz.mappings.util")
 
 local cachedCmd = nil
 local cwd = nil
@@ -53,7 +54,7 @@ function M.close_term()
 	end
 end
 
-function M.Term(a)
+function M.Term(config)
 	vim.api.nvim_create_user_command("Term", function(args)
 		local function run_extern(cmd)
 			if cmd then
@@ -98,13 +99,18 @@ function M.Term(a)
 			cwd = vim.fn.getcwd()
 
 			-- mappings
-			util.Map("n", a.keys.quit, function()
+			util.Map("n", config.mappings.quit, function()
 				M.close_term()
 			end, { desc = "close oz_term", buffer = event.buf, silent = true })
 
-			util.Map("n", a.keys.rerun, ":Term<cr>", { desc = "rerun previous cmd", buffer = event.buf, silent = true })
+			util.Map(
+				"n",
+				config.mappings.rerun,
+				":Term<cr>",
+				{ desc = "rerun previous cmd", buffer = event.buf, silent = true }
+			)
 
-            util.Map("n", a.keys.add_to_quickfix, function()
+			util.Map("n", config.mappings.add_to_quickfix, function()
 				vim.cmd(
 					[[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|issue|stacktrace)"')]]
 				)
@@ -116,7 +122,7 @@ function M.Term(a)
 				end
 			end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = event.buf, silent = true })
 
-			util.Map("n", a.keys.open_entry, function()
+			util.Map("n", config.mappings.open_entry, function()
 				local cfile = vim.fn.expand("<cfile>")
 				local full_path = vim.fn.resolve(cwd .. "/" .. cfile)
 
@@ -135,11 +141,16 @@ function M.Term(a)
 				end
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 
-            util.Map("n", a.keys.show_keybinds, function()
+			util.Map("n", config.mappings.show_keybinds, function()
 				util.Show_buf_keymaps({
 					subtext = { "(*): have limited usablity" },
 				})
 			end, { desc = "show keymaps", noremap = true, silent = true, buffer = event.buf })
+
+			util.Map("n", config.mappings.open_in_compile_mode, function()
+				M.close_term()
+				mapping_util.cmd_func("Compile")
+			end, { buffer = event.buf, silent = true, desc = "open in compile_mode" })
 		end,
 	})
 end

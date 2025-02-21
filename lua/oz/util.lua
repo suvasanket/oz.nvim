@@ -1,5 +1,9 @@
 local M = {}
 
+function M.inspect(var)
+    return vim.inspect(var):gsub("%s+", " "):gsub("\n", "")
+end
+
 function M.GetProjectRoot(markers, path_or_bufnr)
 	if markers then
 		return vim.fs.root(path_or_bufnr or 0, markers) or nil
