@@ -56,13 +56,13 @@ default config:
 
      -- Oil integration
      oil = {
-         CurEntryAsync = true, -- If false, run in oz_term instead of running asynchronously in the background
-         CurEntryFullpath = true, -- If false, only the file or directory name will be used (instead of the full path)
-         CurEntryDelimiter_Char = "$", -- This character is used to define the pre- and post-entry parts in commands
+         cur_entry_async = true, -- If false, run in oz_term instead of running asynchronously in the background
+         cur_entry_fullpath = true, -- If false, only the file or directory name will be used (instead of the full path)
+         cur_entry_splitter = "$", -- This character is used to define the pre- and post-entry parts in commands
 
          mappings = {
-             Term = "<leader>av", -- Execute a shell command using oz_term
-             Compile = "<leader>ac", -- Execute a shell command using compile-mode
+             term = "<leader>av", -- Execute a shell command using oz_term
+             compile = "<leader>ac", -- Execute a shell command using compile-mode
              cur_entry_cmd = "<C-g>", -- Execute a command on the entry (file or directory) under the cursor
              show_keybinds = "g?", -- Override the existing `g?` mapping
          },

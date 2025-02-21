@@ -60,11 +60,7 @@ function M.run_in_termbang(cmd, dir)
 		tmux_cmd = tmux_cmd:gsub("{cmd}", cmd):gsub("{path}", dir)
 		vim.fn.system(tmux_cmd)
 	else
-		if dir then
-			vim.cmd("tab term " .. "cd " .. dir .. " && " .. cmd)
-		else
-			vim.cmd("tab term " .. cmd)
-		end
+		vim.cmd("tab term " .. "cd " .. dir .. " && " .. cmd)
 	end
 	vim.notify("Executing '" .. cmd .. "' ..")
 end
