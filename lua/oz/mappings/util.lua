@@ -77,7 +77,7 @@ function M.cmd_func(type, func)
 		-- p: 2 , 3
 		local cmd
 		if project_path then
-			cmd = p.getpersistCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
+			cmd = p.getprojectCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
 		else
 			cmd = p.getftCMD(current_file, ft)
 		end
@@ -98,11 +98,11 @@ function M.cmd_func(type, func)
 			input = input:gsub('"', '\\"')
 
 			if cmd ~= input and project_path then
-				p.setpersistCMD(project_path, current_file, ft, input)
+				p.setprojectCMD(project_path, current_file, ft, input)
 			end
 			if input:find(current_file) then
 				if project_path then
-					p.setpersistCMD(project_path, current_file, ft, input)
+					p.setprojectCMD(project_path, current_file, ft, input)
 				else
 					p.setftCMD(current_file, ft, input)
 				end

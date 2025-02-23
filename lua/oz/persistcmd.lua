@@ -9,8 +9,8 @@ local oil_json = data_dir .. "/oz/oilcmd.json"
 
 -- generate the command to get from json file
 local function gen_setcmd(key, value, json_path)
-    local jq_cmd = [[jq '. + {"{key}": "{value}"}' "{json_path}"]]
-    local data_writecmd = [[
+	local jq_cmd = [[jq '. + {"{key}": "{value}"}' "{json_path}"]]
+	local data_writecmd = [[
     mkdir -p "{data_dir}" && [ -f "{json_path}" ] || echo '{}' > "{json_path}" && {jq_cmd} > oz_temp.json && mv oz_temp.json "{json_path}"
     ]]
 	data_writecmd = data_writecmd
@@ -37,12 +37,20 @@ local function remove_tempjson()
 	end, nil)
 end
 
--- set file cmd
-function M.setpersistCMD(project_path, file, ft, cmd)
+-- set project cmd
+function M.setprojectCMD(project_path, file, ft, cmd)
 	local key = [[{project_path}${ft}]]
 	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
-	if cmd:find(file) then
-		cmd = cmd:gsub(file, "{filename}")
+
+    -- if more than one file name in cmd
+	local filenames = {} -- we can use file name in future
+	for filename in cmd:gmatch("[%w%-%_%.]+%.[%w]+") do
+		table.insert(filenames, filename)
+	end
+	if #filenames == 1 then
+		if cmd:find(file) then
+			cmd = cmd:gsub(file, "{filename}")
+		end
 	end
 
 	util.ShellCmd(gen_setcmd(key, cmd, data_json), nil, function()
@@ -51,8 +59,8 @@ function M.setpersistCMD(project_path, file, ft, cmd)
 	end)
 end
 
--- get file cmd
-function M.getpersistCMD(project_path, file, ft)
+-- get project cmd
+function M.getprojectCMD(project_path, file, ft)
 	local key = [[{project_path}${ft}]]
 	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
 
