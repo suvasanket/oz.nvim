@@ -1,15 +1,27 @@
 local M = {}
 local util = require("oz.util")
 local mapping_util = require("oz.mappings.util")
+local grep = require("oz.grep")
 
 M.cached_cmd = nil
 
 local term_buf = nil
 local term_win = nil
+
+-- run in term
 function M.run_in_term(cmd, dir)
 	if not cmd then
 		return
 	else
+		if grep.cmd_contains_grep(cmd) then
+			local ans = util.prompt("oz: add to quickfix?", "&quickfix\n&oz_term", 1, "Info")
+			if ans == 1 then
+				grep.run_vim_grep(cmd, dir)
+				return
+			elseif not ans then
+				return
+			end
+		end
 		M.cached_cmd = cmd
 	end
 	if term_buf == nil or not vim.api.nvim_buf_is_valid(term_buf) then
@@ -42,6 +54,7 @@ function M.run_in_term(cmd, dir)
 	vim.api.nvim_chan_send(vim.b.terminal_job_id, cmd .. "\n")
 end
 
+-- close term
 function M.close_term()
 	local job_id = vim.b[term_buf].terminal_job_id
 	if job_id then
@@ -55,6 +68,7 @@ function M.close_term()
 	end
 end
 
+-- run in term!
 function M.run_in_termbang(cmd, dir)
 	local inside_tmux = os.getenv("TMUX") ~= nil
 
@@ -69,6 +83,7 @@ function M.run_in_termbang(cmd, dir)
 	vim.notify("Executing '" .. cmd .. "' ..")
 end
 
+-- Term init
 function M.Term(config)
 	vim.api.nvim_create_user_command("Term", function(args)
 		if args.bang then
@@ -102,7 +117,7 @@ function M.Term(config)
 
 			-- mappings
 			util.Map("n", config.mappings.quit, function()
-				local ans = vim.fn.confirm("Oz: quit oz_term?", "&quit\n&no", 2, "Error")
+				local ans = util.prompt("oz: quit oz_term?", "&quit\n&no", 2, "Error")
 				if ans == 1 then
 					M.close_term()
 				end
@@ -128,7 +143,14 @@ function M.Term(config)
 			end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = event.buf, silent = true })
 
 			util.Map("n", config.mappings.open_entry, function()
+				if vim.api.nvim_get_current_line():match([[https?://[^\s]+]]) then
+					local ok = pcall(vim.cmd, "normal gx")
+					if ok then
+						return
+					end
+				end
 				local ok = pcall(vim.cmd, "normal! gF")
+
 				if ok then
 					local entry_buf = vim.api.nvim_get_current_buf()
 					vim.api.nvim_set_current_buf(term_buf)
