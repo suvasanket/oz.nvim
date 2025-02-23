@@ -74,12 +74,12 @@ function M.oil_init(config, g_mappings)
 
 					if config.cur_entry_async then
 						util.ShellCmd(cmd, function()
-							util.echoprint("Oz(oil): cmd executed successfully!", "MoreMsg")
+							util.echoprint("oz(oil): cmd executed successfully!", "MoreMsg")
 							vim.defer_fn(function()
 								require("oil.actions").refresh.callback()
 							end, 700)
 						end, function()
-							util.echoprint("Oz(oil): stderr on executaion!", "ErrorMsg")
+							util.echoprint("oz(oil): cmd execution return error!", "ErrorMsg")
 						end)
 					else
 						term.run_in_term(cmd, oil_cwd)

@@ -1,7 +1,7 @@
 local M = {}
 
 function M.inspect(var)
-    return vim.inspect(var):gsub("%s+", " "):gsub("\n", "")
+	return vim.inspect(var):gsub("%s+", " "):gsub("\n", "")
 end
 
 function M.GetProjectRoot(markers, path_or_bufnr)
@@ -77,6 +77,13 @@ function M.Notify(content, level, title)
 		level = vim.log.levels.WARN
 	end
 	vim.notify(content, level, { title = title })
+end
+
+function M.prompt(str, opts, choice, hl)
+	local ok, res = pcall(vim.fn.confirm, str, opts, choice, hl)
+	if ok then
+		return res
+	end
 end
 
 function M.Show_buf_keymaps(args)

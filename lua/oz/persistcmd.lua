@@ -9,10 +9,12 @@ local oil_json = data_dir .. "/oz/oilcmd.json"
 
 -- generate the command to get from json file
 local function gen_setcmd(key, value, json_path)
-	local data_writecmd = [[
-    mkdir -p "{data_dir}" && [ -f "{json_path}" ] || echo '{}' > "{json_path}" && jq '. + {"{key}": "{value}"}' "{json_path}" > oz_temp.json && mv oz_temp.json "{json_path}"
+    local jq_cmd = [[jq '. + {"{key}": "{value}"}' "{json_path}"]]
+    local data_writecmd = [[
+    mkdir -p "{data_dir}" && [ -f "{json_path}" ] || echo '{}' > "{json_path}" && {jq_cmd} > oz_temp.json && mv oz_temp.json "{json_path}"
     ]]
 	data_writecmd = data_writecmd
+		:gsub("{jq_cmd}", jq_cmd)
 		:gsub("{json_path}", json_path)
 		:gsub("{data_dir}", data_dir .. "/oz")
 		:gsub("{key}", key)
@@ -31,7 +33,7 @@ end
 -- remove oz_temp.json if error
 local function remove_tempjson()
 	util.ShellCmd('[ -f "oz_temp.json" ] && rm oz_temp.json', function()
-        util.Notify("Error: temp files removed", "error", "Oz")
+		util.Notify("Error: temp files removed", "error", "Oz")
 	end, nil)
 end
 
