@@ -87,7 +87,7 @@ function M.cmd_func(type, func)
 		end
 		local input = util.UserInput(":" .. type .. " ", cmd)
 		if input then
-            -- custom function, used for AKTUAL execution
+			-- custom function, used for AKTUAL execution
 			if func then
 				func(input, cmd)
 			else
@@ -97,14 +97,18 @@ function M.cmd_func(type, func)
 			-- modify for set
 			input = input:gsub('"', '\\"')
 
-			if cmd ~= input and project_path then
-				p.setprojectCMD(project_path, current_file, ft, input)
-			end
-			if input:find(current_file) then
-				if project_path then
+            -- check if its a valid cmd or not
+			if vim.fn.executable(input:match("^%s*([%w/%.-]+)")) == 1 then
+
+				if cmd ~= input and project_path then
 					p.setprojectCMD(project_path, current_file, ft, input)
-				else
-					p.setftCMD(current_file, ft, input)
+				end
+				if input:find(current_file) then
+					if project_path then
+						p.setprojectCMD(project_path, current_file, ft, input)
+					else
+						p.setftCMD(current_file, ft, input)
+					end
 				end
 			end
 		end
