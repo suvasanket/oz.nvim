@@ -94,12 +94,8 @@ function M.cmd_func(type, func)
 				vim.cmd(type .. " " .. input)
 			end
 
-			-- modify for set
-			input = input:gsub('"', '\\"')
-
-            -- check if its a valid cmd or not
-			if vim.fn.executable(input:match("^%s*([%w/%.-]+)")) == 1 then
-
+			-- check if its a valid cmd or not
+            if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
 				if cmd ~= input and project_path then
 					p.setprojectCMD(project_path, current_file, ft, input)
 				end
@@ -111,8 +107,8 @@ function M.cmd_func(type, func)
 					end
 				end
 			end
-        else
-            util.Notify("oz: oz_term requires at least one command to start.", "warn", "oz")
+		elseif input == "" then
+			util.Notify("oz: oz_term requires at least one command to start.", "warn", "oz")
 		end
 	else
 		vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)

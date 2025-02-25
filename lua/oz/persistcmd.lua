@@ -13,6 +13,8 @@ local function gen_setcmd(key, value, json_path)
 	local data_writecmd = [[
     mkdir -p "{data_dir}" && [ -f "{json_path}" ] || echo '{}' > "{json_path}" && {jq_cmd} > oz_temp.json && mv oz_temp.json "{json_path}"
     ]]
+    -- modify for set
+    value = value:gsub('"', '\\"')
 	data_writecmd = data_writecmd
 		:gsub("{jq_cmd}", jq_cmd)
 		:gsub("{json_path}", json_path)
@@ -33,7 +35,7 @@ end
 -- remove oz_temp.json if error
 local function remove_tempjson()
 	util.ShellCmd('[ -f "oz_temp.json" ] && rm oz_temp.json', function()
-		util.Notify("Error: temp files removed", "error", "Oz")
+		util.Notify("Error: temp files removed.", "error", "Oz")
 	end, nil)
 end
 
@@ -54,7 +56,7 @@ function M.setprojectCMD(project_path, file, ft, cmd)
 	end
 
 	util.ShellCmd(gen_setcmd(key, cmd, data_json), nil, function()
-		util.Notify("error occured saving command", "error", "Error")
+		util.Notify("error occured saving command.", "error", "Error")
 		remove_tempjson()
 	end)
 end
@@ -85,7 +87,7 @@ function M.setftCMD(file, ft, cmd)
 	end
 
 	util.ShellCmd({ "sh", "-c", gen_setcmd(ft, cmd, ft_json) }, nil, function()
-		util.Notify("error occured saving ft command", "error", "Error")
+		util.Notify("error occured saving ft command.", "error", "Error")
 		remove_tempjson()
 	end)
 end
@@ -111,7 +113,7 @@ end
 -- set Term! cmd
 function M.setTermBcmd(current_file, cmd)
 	util.ShellCmd({ "sh", "-c", gen_setcmd(current_file, cmd, termbang_json) }, nil, function()
-		util.Notify("error occured saving Term! command", "error", "Error")
+		util.Notify("error occured saving Term! command.", "error", "Error")
 		remove_tempjson()
 	end)
 end
@@ -129,10 +131,8 @@ end
 
 -- set oil cmd
 function M.setoilcmd(cwd, cmd)
-	cmd = cmd:gsub('"', '\\"')
-
 	util.ShellCmd({ "sh", "-c", gen_setcmd(cwd, cmd, oil_json) }, nil, function()
-		util.Notify("error occured saving oil command", "error", "Error")
+		util.Notify("error occured saving oil command.", "error", "Error")
 		remove_tempjson()
 	end)
 end

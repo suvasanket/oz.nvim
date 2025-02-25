@@ -164,7 +164,7 @@ function M.Term(config)
 
 					pcall(vim.api.nvim_win_set_cursor, 0, pos)
 				else
-					util.Notify("cannot open current entry under cursor", "warn", "oz")
+					util.Notify("cannot open current entry under cursor.", "warn", "oz")
 				end
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 

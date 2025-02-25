@@ -54,7 +54,7 @@ end
 function M.Compile_mode()
     u.cmd_func("Compile", function(input)
         if input:match("^@") then
-            util.Notify("compile-mode doesn't support project-root cmd execution", "warn", "oz")
+            util.Notify("compile-mode doesn't support project-root cmd execution.", "warn", "oz")
         end
         input = input:gsub("@", "")
         vim.cmd("Compile " .. input)
