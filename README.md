@@ -67,5 +67,10 @@ default config:
              show_keybinds = "g?", -- Override the existing `g?` mapping
          },
      },
+
+    -- Asynchronous :make
+	async_make = {
+		override_make = false, -- override the default make cmd
+	},
 }
 ```

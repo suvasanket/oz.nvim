@@ -44,6 +44,10 @@ local defaults = {
 			show_keybinds = "g?", -- override existing g?
 		},
 	},
+
+	async_make = {
+		override_make = false,
+	},
 }
 
 -- Setup function
@@ -66,6 +70,11 @@ function M.setup(opts)
 	-- Initialize oil integration
 	if M.config.oil then
 		require("oz.integration.oil").oil_init(M.config.oil, M.config.mappings)
+	end
+
+	-- async make cmd
+	if M.config.async_make then
+		require("oz.make").asyncmake_init(M.config.async_make)
 	end
 end
 
