@@ -86,7 +86,7 @@ function M.cmd_func(type, func)
 			cmd = M.predict_compiler(current_file, ft)
 		end
 		local input = util.UserInput(":" .. type .. " ", cmd)
-		if input then
+		if input and input ~= "" then
 			-- custom function, used for AKTUAL execution
 			if func then
 				func(input, cmd)
@@ -111,6 +111,8 @@ function M.cmd_func(type, func)
 					end
 				end
 			end
+        else
+            util.Notify("oz: oz_term requires at least one command to start.", "warn", "oz")
 		end
 	else
 		vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)

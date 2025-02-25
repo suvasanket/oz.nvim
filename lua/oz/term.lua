@@ -153,14 +153,18 @@ function M.Term(config)
 
 				if ok then
 					local entry_buf = vim.api.nvim_get_current_buf()
+					local pos = vim.api.nvim_win_get_cursor(0)
+
 					vim.api.nvim_set_current_buf(term_buf)
 					if entry_buf == term_buf then
 						return
 					end
 					vim.cmd.wincmd("k")
 					vim.api.nvim_set_current_buf(entry_buf)
+
+					pcall(vim.api.nvim_win_set_cursor, 0, pos)
 				else
-					util.Notify("can't open the current entry", "error", "oz")
+					util.Notify("cannot open current entry under cursor", "warn", "oz")
 				end
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 
