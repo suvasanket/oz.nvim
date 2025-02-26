@@ -9,7 +9,7 @@ function M.GetProjectRoot(markers, path_or_bufnr)
 		return vim.fs.root(path_or_bufnr or 0, markers) or nil
 	end
 
-	local patterns = { ".git", "Makefile", "package.json", "Cargo.toml", "go.mod", "pom.xml", "build.gradle" }
+	local patterns = { ".git", "Makefile", "Cargo.toml", "go.mod", "pom.xml", "build.gradle" }
 	local root_fpattern = vim.fs.root(path_or_bufnr or 0, patterns)
 	local workspace = vim.lsp.buf.list_workspace_folders()
 
@@ -37,7 +37,7 @@ function M.echoprint(str, hl)
 end
 
 function M.ShellCmd(cmd, on_success, on_error)
-	vim.fn.jobstart(cmd, {
+	local ok, id = pcall(vim.fn.jobstart, cmd, {
 		stdout_buffered = true,
 		stderr_buffered = true,
 		on_exit = function(_, code)
@@ -52,6 +52,10 @@ function M.ShellCmd(cmd, on_success, on_error)
 			end
 		end,
 	})
+    if not ok then
+        M.Notify("oz: something went wrong while executing cmd with jobstart().", "error", "Error")
+        return
+    end
 end
 
 function M.ShellOutput(cmd)

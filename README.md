@@ -69,8 +69,9 @@ default config:
      },
 
     -- Asynchronous :make
-	async_make = {
-		override_make = false, -- override the default make cmd
-	},
+    async_make = {
+        override_make = false, -- Override the default :make
+        autosave_makeprg = true, -- Auto save all the project scoped makeprg(:set makeprg=<cmd>)
+    },
 }
 ```

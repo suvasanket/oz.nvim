@@ -46,7 +46,8 @@ local defaults = {
 	},
 
 	async_make = {
-		override_make = false,
+		override_make = false, -- override the default :make
+        autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
 	},
 }
 
@@ -74,7 +75,7 @@ function M.setup(opts)
 
 	-- async make cmd
 	if M.config.async_make then
-		require("oz.make").asyncmake_init(M.config.async_make)
+        require("oz.make").asyncmake_init(M.config.async_make)
 	end
 end
 
