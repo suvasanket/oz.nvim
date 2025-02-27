@@ -52,13 +52,13 @@ end
 
 -- Compile mapping
 function M.Compile_mode()
-    u.cmd_func("Compile", function(input)
-        if input:match("^@") then
-            util.Notify("compile-mode doesn't support project-root cmd execution.", "warn", "oz")
-        end
-        input = input:gsub("@", "")
-        vim.cmd("Compile " .. input)
-    end)
+	u.cmd_func("Compile", function(input)
+		if input:match("^@") then
+			util.Notify("compile-mode doesn't support project-root cmd execution.", "warn", "oz")
+		end
+		input = input:gsub("@", "")
+		vim.cmd("Compile " .. input)
+	end)
 	M.RunnerCommandType = "Recompile"
 end
 function M.compilekey_init(key)
@@ -70,10 +70,11 @@ end
 -- Rerunner
 function M.Rerun()
 	if M.RunnerCommandType then
-		vim.cmd([[w]])
 		vim.cmd(M.RunnerCommandType)
 		if M.RunnerCommandType == "Term" then
-			vim.cmd.wincmd([[p]])
+			vim.schedule(function()
+				vim.cmd("wincmd p")
+			end)
 		end
 	end
 end

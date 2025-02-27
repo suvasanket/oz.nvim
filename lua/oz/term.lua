@@ -25,7 +25,7 @@ function M.run_in_term(cmd, dir)
 		M.cached_cmd = cmd
 	end
 	if term_buf == nil or not vim.api.nvim_buf_is_valid(term_buf) then
-		vim.cmd("split") -- Open a vertical split
+		vim.cmd("split | resize 10") -- Open a vertical split
 		term_buf = vim.api.nvim_create_buf(false, true) -- Create a new buffer
 		vim.api.nvim_set_current_buf(term_buf) -- Set it as current buffer
 		if dir then
@@ -33,8 +33,10 @@ function M.run_in_term(cmd, dir)
 		else
 			vim.cmd("terminal")
 		end
-		vim.api.nvim_buf_set_name(term_buf, "oz_term:'" .. cmd .. "'") -- naming the terminal buffer
+		vim.api.nvim_buf_set_name(term_buf, "oz_term") -- naming the terminal buffer
 		term_win = vim.api.nvim_get_current_win() -- Store the window
+
+		-- if got deleted
 		vim.api.nvim_create_autocmd("BufDelete", {
 			buffer = term_buf,
 			callback = function()
@@ -42,9 +44,20 @@ function M.run_in_term(cmd, dir)
 				term_win = nil
 			end,
 		})
+
+		-- if got hidden
+		vim.api.nvim_create_autocmd("BufHidden", {
+			buffer = term_buf,
+			callback = function()
+				local ans = util.prompt("oz: quit oz_term?", "&quit\n&hide", 2, "Error")
+				if term_buf and term_win and ans == 1 then
+					M.close_term()
+				end
+			end,
+		})
 		vim.bo.ft = "oz_term"
 	elseif term_win == nil or not vim.api.nvim_win_is_valid(term_win) then
-		vim.cmd("split") -- Open a vertical split again
+		vim.cmd("split | resize 10") -- Open a vertical split
 		vim.api.nvim_set_current_buf(term_buf) -- Reuse the existing terminal buffer
 		term_win = vim.api.nvim_get_current_win() -- Update window reference
 	else
@@ -56,16 +69,22 @@ end
 
 -- close term
 function M.close_term()
-	local job_id = vim.b[term_buf].terminal_job_id
-	if job_id then
-		vim.fn.jobstop(job_id)
-	end
-	if vim.api.nvim_win_is_valid(term_win) then
-		vim.api.nvim_win_close(term_win, true)
-	end
-	if vim.api.nvim_buf_is_valid(term_buf) then
-		vim.api.nvim_buf_delete(term_buf, { force = true })
-	end
+	-- disable BufHidden event
+	local ei_opt = vim.o.eventignore
+	vim.o.eventignore = "BufHidden"
+	vim.schedule(function()
+		local job_id = vim.b[term_buf].terminal_job_id
+		if job_id then
+			vim.fn.jobstop(job_id)
+		end
+		if vim.api.nvim_win_is_valid(term_win) then
+			vim.api.nvim_win_close(term_win, true)
+		end
+		if vim.api.nvim_buf_is_valid(term_buf) then
+			vim.api.nvim_buf_delete(term_buf, { force = true })
+		end
+		vim.o.eventignore = ei_opt
+	end)
 end
 
 -- run in term!
@@ -102,7 +121,9 @@ function M.Term(config)
 				if term_buf and term_win then
 					M.close_term()
 				end
-				M.run_in_term(M.cached_cmd)
+				vim.schedule(function()
+					M.run_in_term(M.cached_cmd)
+				end)
 			end
 		end
 	end, { nargs = "*", bang = true, desc = "oz_term" })
@@ -112,7 +133,6 @@ function M.Term(config)
 		pattern = { "oz_term" },
 		callback = function(event)
 			-- options
-			vim.cmd([[resize 10]])
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap winfixheight nomodifiable]])
 
 			-- mappings
@@ -143,12 +163,18 @@ function M.Term(config)
 			end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = event.buf, silent = true })
 
 			util.Map("n", config.mappings.open_entry, function()
+				-- disable BufHidden event
+				local ei_opt = vim.o.eventignore
+				vim.o.eventignore = "BufHidden"
+
+				-- if url
 				if vim.api.nvim_get_current_line():match([[https?://[^\s]+]]) then
 					local ok = pcall(vim.cmd, "normal gx")
 					if ok then
 						return
 					end
 				end
+				-- jump to file
 				local ok = pcall(vim.cmd, "normal! gF")
 
 				if ok then
@@ -166,6 +192,7 @@ function M.Term(config)
 				else
 					util.Notify("entry under cursor is out of scope.", "warn", "oz")
 				end
+				vim.o.eventignore = ei_opt
 			end, { desc = "open entry(file, dir) under cursor(*)", buffer = event.buf, silent = true })
 
 			util.Map("n", config.mappings.show_keybinds, function()
