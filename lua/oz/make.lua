@@ -13,8 +13,8 @@ local function inside_dir(dir)
 	return current_file:find(dir, 1, true) == 1 -- Check if it starts with target_dir
 end
 
-function M.Make_func(args)
-	local cmd = m_util.detect_makeprg(vim.fn.expand("%"))
+function M.Make_func(args, dir)
+	local cmd = m_util.detect_makeprg(vim.fn.expand("%")) or "make"
 	cmd = "sh -c " .. cmd
 	local output = {}
 
@@ -26,7 +26,7 @@ function M.Make_func(args)
 
 	-- Start the job
 	local ok, job_id = pcall(vim.fn.jobstart, cmd_parts, {
-		cwd = util.GetProjectRoot(),
+		cwd = dir,
 		stdout_buffered = true,
 		stderr_buffered = true,
 		on_stdout = function(_, data, _)
@@ -105,9 +105,14 @@ end
 
 function M.asyncmake_init(config)
 	-- Make cmd
-	vim.api.nvim_create_user_command("Make", function(opts)
-		M.Make_func(opts.args)
-	end, { nargs = "*", desc = "oz: async make" })
+	vim.api.nvim_create_user_command("Make", function(arg)
+		-- run make in cwd
+		if arg.bang then
+			M.Make_func(arg.args, nil)
+		else
+			M.Make_func(arg.args, util.GetProjectRoot()) -- run make in project root
+		end
+	end, { nargs = "*", desc = "oz: async make", bang = true })
 
 	-- override make
 	if config.override_make then
