@@ -1,9 +1,8 @@
 local M = {}
 
-local term = require("oz.term")
 local mappings = require("oz.mappings")
 
--- Default configuration
+--- Default configs:
 local defaults = {
 	mappings = {
 		Term = "<leader>av",
@@ -14,6 +13,7 @@ local defaults = {
 
 	-- all oz_term options
 	oz_term = {
+        bufhidden_behaviour = "prompt", -- |prompt, hide, quit|
 		mappings = {
 			open_entry = "<cr>",
 			add_to_quickfix = "<C-q>",
@@ -45,9 +45,10 @@ local defaults = {
 		},
 	},
 
+	-- Make
 	async_make = {
 		override_make = false, -- override the default :make
-        autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
+		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
 	},
 }
 
@@ -58,24 +59,36 @@ function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
 
 	-- Initialize :Term
-	term.Term(M.config.oz_term)
+	require("oz.term").Term_init(M.config.oz_term)
+
+	-- Initialize :Make
+	if M.config.async_make then
+		require("oz.make").asyncmake_init(M.config.async_make)
+	end
 
 	-- Initialize mappings
-	M.mappings_init()
+	vim.schedule(function()
+		M.mappings_init()
+	end)
 
 	-- Initialize compile-mode integration
 	if M.config.compile_mode then
-		require("oz.integration.compile").compile_init(M.config.compile_mode)
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = "compilation",
+			callback = function()
+				require("oz.integration.compile").compile_init(M.config.compile_mode)
+			end,
+		})
 	end
 
 	-- Initialize oil integration
 	if M.config.oil then
-		require("oz.integration.oil").oil_init(M.config.oil, M.config.mappings)
-	end
-
-	-- async make cmd
-	if M.config.async_make then
-        require("oz.make").asyncmake_init(M.config.async_make)
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = "oil",
+			callback = function()
+				require("oz.integration.oil").oil_init(M.config.oil, M.config.mappings)
+			end,
+		})
 	end
 end
 

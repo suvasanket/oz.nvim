@@ -1,4 +1,5 @@
 # Oz.nvim
+A zero-config task runner for neovim
 
 ## Requirement
 - Neovim >= 0.9.4
@@ -10,21 +11,12 @@ lazy:
 ```lua
 {
     "suvasanket/oz.nvim",
-    -- uncomment to lazy-load
-    -- keys = { "<leader>aa", "<leader>ac", "<leader>av", "<leader>at" },
-    -- cmd = "Term",
-    event = "VeryLazy",
-    dependencies = {
-        "ej-shafran/compile-mode.nvim", -- optional
-        "stevearc/oil.nvim", -- optional
-    },
     opts = {},
 }
 ```
 
 ## Config
 default config:
-
 ```lua
 {
     mappings = {
@@ -36,6 +28,7 @@ default config:
 
      -- All oz_term options
      oz_term = {
+         bufhidden_behaviour = "prompt", -- |prompt, hide, quit|
          mappings = {
              open_entry = "<cr>", -- Open the entry (file or directory) under the cursor
              add_to_quickfix = "<C-q>", -- Add any errors, warnings, or stack traces to the quickfix list and jump to the first item
@@ -61,8 +54,8 @@ default config:
          cur_entry_splitter = "$", -- This character is used to define the pre- and post-entry parts in commands
 
          mappings = {
-             term = "<global>", -- Execute a shell command using oz_term | by default uses global keys
-             compile = "<global>", -- Execute a shell command using compile-mode | by default uses global keys
+             term = "<global>", -- Execute a shell command using oz_term | by default uses global keys(<leader>av)
+             compile = "<global>", -- Execute a shell command using compile-mode | by default uses global keys(<leader>ac)
              cur_entry_cmd = "<C-g>", -- Execute a command on the entry (file or directory) under the cursor
              show_keybinds = "g?", -- Override the existing `g?` mapping
          },

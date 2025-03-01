@@ -45,14 +45,14 @@ function M.Term()
 	M.RunnerCommandType = "Term"
 end
 function M.termkey_init(key)
-	util.Map("n", key, function()
+    util.Map("n", key, function()
 		M.Term()
 	end, { desc = "oz term", silent = false })
 end
 
 -- Compile mapping
 function M.Compile_mode()
-	u.cmd_func("Compile", function(input)
+    u.cmd_func("Compile", function(input)
 		if input:match("^@") then
 			util.Notify("compile-mode doesn't support project-root cmd execution.", "warn", "oz")
 		end
@@ -70,10 +70,12 @@ end
 -- Rerunner
 function M.Rerun()
 	if M.RunnerCommandType then
+		local pos = vim.api.nvim_win_get_cursor(0)
 		vim.cmd(M.RunnerCommandType)
 		if M.RunnerCommandType == "Term" then
 			vim.schedule(function()
 				vim.cmd("wincmd p")
+				pcall(vim.api.nvim_win_set_cursor, 0, pos)
 			end)
 		end
 	end

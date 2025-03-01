@@ -26,7 +26,9 @@ function M.Map(mode, lhs, rhs, opts)
 	if not lhs then
 		return
 	end
-	return vim.keymap.set(mode, lhs, rhs, opts)
+    return vim.schedule_wrap(function()
+        vim.keymap.set(mode, lhs, rhs, opts)
+    end)()
 end
 
 function M.echoprint(str, hl)
@@ -52,10 +54,10 @@ function M.ShellCmd(cmd, on_success, on_error)
 			end
 		end,
 	})
-    if not ok then
-        M.Notify("oz: something went wrong while executing cmd with jobstart().", "error", "Error")
-        return
-    end
+	if not ok then
+		M.Notify("oz: something went wrong while executing cmd with jobstart().", "error", "Error")
+		return
+	end
 end
 
 function M.ShellOutput(cmd)
@@ -72,14 +74,16 @@ function M.UserInput(msg, def)
 end
 
 function M.Notify(content, level, title)
-	if not title then
-		title = "Info"
-	end
-	if level == "error" then
-		level = vim.log.levels.ERROR
-	elseif level == "warn" then
-		level = vim.log.levels.WARN
-	end
+	title = title or "Info"
+
+	local level_map = {
+		error = vim.log.levels.ERROR,
+		warn = vim.log.levels.WARN,
+		info = vim.log.levels.INFO,
+		debug = vim.log.levels.DEBUG,
+		trace = vim.log.levels.TRACE,
+	}
+	level = level_map[level] or vim.log.levels.INFO
 	vim.notify(content, level, { title = title })
 end
 
