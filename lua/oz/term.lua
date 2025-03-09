@@ -2,21 +2,25 @@ local M = {}
 local util = require("oz.util")
 local mapping_util = require("oz.mappings.util")
 local grep = require("oz.grep")
+local qf = require("oz.qf")
 
 M.cached_cmd = nil
+M.term_cmd_ft = nil
 
 local term_buf = nil
 local term_win = nil
 
 -- run in term
 function M.run_in_term(cmd, dir)
+    M.term_cmd_ft = vim.bo.ft
+
 	if not cmd then
 		return
 	else
 		if grep.cmd_contains_grep(cmd) then
 			local ans = util.prompt("oz: add to quickfix?", "&quickfix\n&oz_term", 1, "Info")
 			if ans == 1 then
-				grep.run_vim_grep(cmd, dir)
+				grep.grep_to_qf(cmd, dir)
 				return
 			elseif not ans then
 				return
@@ -33,7 +37,7 @@ function M.run_in_term(cmd, dir)
 		else
 			vim.cmd("terminal")
 		end
-		vim.api.nvim_buf_set_name(term_buf, "oz_term") -- naming the terminal buffer
+		vim.api.nvim_buf_set_name(term_buf, "oz_term:" .. cmd) -- naming the terminal buffer
 		term_win = vim.api.nvim_get_current_win() -- Store the window
 
 		-- if got deleted
@@ -130,7 +134,7 @@ local function term_buf_mappings(config)
 	util.Map("n", config.mappings.rerun, ":Term<cr>", { desc = "rerun previous cmd", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.add_to_quickfix, function()
-		vim.cmd([[cgetexpr filter(getline(1, '$'), 'v:val =~? "\\v(error|warn|warning|err|issue|stacktrace)"')]])
+        qf.capture_buf_to_qf(term_buf, M.term_cmd_ft)
 		if #vim.fn.getqflist() ~= 0 then
 			vim.cmd.wincmd("p")
 			vim.cmd("cfirst")
@@ -218,7 +222,7 @@ function M.Term_init(config)
 			vim.schedule(function()
 				term_buf_mappings(config)
 			end)
-            bufhidden_config(config.bufhidden_behaviour)
+			bufhidden_config(config.bufhidden_behaviour)
 		end,
 	})
 end

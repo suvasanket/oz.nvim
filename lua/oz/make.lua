@@ -1,7 +1,9 @@
 local M = {}
 local util = require("oz.util")
 local m_util = require("oz.mappings.util")
-local p = require("oz.persistcmd")
+local qf = require("oz.qf")
+local p = require("oz.caching")
+local json_name = "makeprg"
 
 M.previous_makeprg = vim.o.makeprg
 
@@ -45,19 +47,14 @@ function M.Make_func(args, dir)
 			end
 		end,
 		on_exit = function(_, exit_code, _)
-			local tempfile = vim.fn.tempname()
-			vim.fn.writefile(output, tempfile)
-
-			vim.cmd("cfile " .. tempfile)
+			qf.capture_lines_to_qf(output, vim.bo.ft)
 
 			if #vim.fn.getqflist() > 0 then
 				vim.cmd("copen | cfirst")
 			else
 				vim.cmd("cclose")
-				util.echoprint("oz: Command executed successfully! (exit_code:" .. exit_code .. ")")
+				util.echoprint("oz: Nothing in quickfixlist! (exit_code:" .. exit_code .. ")")
 			end
-
-			vim.fn.delete(tempfile)
 		end,
 	})
 
@@ -78,10 +75,10 @@ function M.makeprg_autosave()
 	vim.api.nvim_create_autocmd("OptionSet", {
 		pattern = "makeprg",
 		callback = function()
-			local makeprg = vim.o.makeprg
+			M.previous_makeprg = vim.o.makeprg
 			local project_root = util.GetProjectRoot()
 			if project_root then
-				p.set_makeprg(project_root, makeprg)
+				p.set_data(project_root, M.previous_makeprg, json_name)
 			end
 		end,
 	})
@@ -92,7 +89,7 @@ function M.makeprg_autosave()
 			local project_root = util.GetProjectRoot()
 			if inside_dir(project_root) then
 				M.previous_makeprg = vim.o.makeprg
-				local makeprg_cmd = p.get_makeprg(project_root)
+				local makeprg_cmd = p.get_data(project_root, json_name)
 				if makeprg_cmd then
 					vim.o.makeprg = makeprg_cmd
 				end

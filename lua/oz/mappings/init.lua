@@ -1,15 +1,20 @@
 local M = {}
 local util = require("oz.util")
-local p = require("oz.persistcmd")
+local p = require("oz.caching")
 local u = require("oz.mappings.util")
 local t = require("oz.term")
+local term_bang_json = "termbang"
 
 M.RunnerCommandType = nil
 
 -- TermBang mapping
 function M.Termbang()
+    -- check if in oz_term
+    if vim.bo.ft == "oz_term" then
+        vim.cmd("wincmd p")
+    end
 	local current_file = vim.fn.expand("%")
-	local cmd = p.getTermBcmd(current_file) or ""
+	local cmd = p.get_data(current_file, term_bang_json) or ""
 
 	local input = util.UserInput(":Term! ", cmd)
 	if input then
@@ -21,7 +26,7 @@ function M.Termbang()
 		end
 
 		if cmd ~= input then
-			p.setTermBcmd(current_file, input)
+			p.set_data(current_file, input, term_bang_json)
 		end
 		M.RunnerCommandType = "Term!"
 	end
@@ -34,6 +39,10 @@ end
 
 -- Term mapping
 function M.Term()
+    -- check if in oz_term
+    if vim.bo.ft == "oz_term" then
+        vim.cmd("wincmd p")
+    end
 	u.cmd_func("Term", function(input)
 		if input:match("^@") then
 			input = input:gsub("@", "")
@@ -45,14 +54,18 @@ function M.Term()
 	M.RunnerCommandType = "Term"
 end
 function M.termkey_init(key)
-    util.Map("n", key, function()
+	util.Map("n", key, function()
 		M.Term()
 	end, { desc = "oz term", silent = false })
 end
 
 -- Compile mapping
 function M.Compile_mode()
-    u.cmd_func("Compile", function(input)
+    -- check if in oz_term
+    if vim.bo.ft == "oz_term" then
+        vim.cmd("wincmd p")
+    end
+	u.cmd_func("Compile", function(input)
 		if input:match("^@") then
 			util.Notify("compile-mode doesn't support project-root cmd execution.", "warn", "oz")
 		end
@@ -72,12 +85,12 @@ function M.Rerun()
 	if M.RunnerCommandType then
 		local pos = vim.api.nvim_win_get_cursor(0)
 		vim.cmd(M.RunnerCommandType)
-		if M.RunnerCommandType == "Term" then
-			vim.schedule(function()
+		vim.fn.timer_start(10, function()
+			if M.RunnerCommandType == "Term" then
 				vim.cmd("wincmd p")
 				pcall(vim.api.nvim_win_set_cursor, 0, pos)
-			end)
-		end
+			end
+		end)
 	end
 end
 function M.rerunner_init(key)

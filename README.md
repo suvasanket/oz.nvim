@@ -3,8 +3,6 @@ A zero-config task runner for neovim
 
 ## Requirement
 - Neovim >= 0.9.4
-- [jq](https://github.com/jqlang/jq)
-- [compile-mode](https://github.com/ej-shafran/compile-mode.nvim) (optional)
 
 ## Installation
 lazy:

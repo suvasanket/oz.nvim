@@ -26,9 +26,9 @@ function M.Map(mode, lhs, rhs, opts)
 	if not lhs then
 		return
 	end
-    return vim.schedule_wrap(function()
-        vim.keymap.set(mode, lhs, rhs, opts)
-    end)()
+    -- return vim.schedule_wrap(function()
+    -- end)()
+    vim.keymap.set(mode, lhs, rhs, opts)
 end
 
 function M.echoprint(str, hl)

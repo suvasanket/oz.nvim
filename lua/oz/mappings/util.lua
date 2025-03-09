@@ -1,6 +1,6 @@
 local M = {}
 local util = require("oz.util")
-local p = require("oz.persistcmd")
+local p = require("oz.caching")
 
 function M.detect_compiler(ft)
 	-- Try common suffix variations dynamically

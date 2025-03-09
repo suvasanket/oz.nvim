@@ -1,8 +1,9 @@
 local M = {}
 local term = require("oz.term")
 local util = require("oz.util")
-local p = require("oz.persistcmd")
+local p = require("oz.caching")
 local oil = require("oil")
+local json_name = "oilcmd"
 
 local function get_cur_entry(short)
 	local cursor_entry = oil.get_cursor_entry()
@@ -38,11 +39,11 @@ local function oil_buf_mappings(config, g_mappings)
 
 	util.Map("n", term_k, function()
 		local oil_cwd = oil.get_current_dir()
-		local cmd = p.getoilcmd(oil_cwd) or ""
+		local cmd = p.get_data(oil_cwd, json_name) or ""
 		local input = util.UserInput(":Term ", cmd)
 		if input then
 			if cmd ~= input then
-				p.setoilcmd(oil_cwd, input)
+				p.set_data(oil_cwd, input, json_name)
 			end
 			term.run_in_term(input, oil_cwd)
 		end
@@ -54,11 +55,11 @@ local function oil_buf_mappings(config, g_mappings)
 	util.Map("n", compile_k, function()
 		local oil_cwd = oil.get_current_dir()
 		vim.g.compilation_directory = oil_cwd
-		local cmd = p.getoilcmd(oil_cwd) or ""
+		local cmd = p.get_data(oil_cwd, json_name) or ""
 		local input = util.UserInput(":Compile ", cmd)
 		if input then
 			if cmd ~= input then
-				p.setoilcmd(oil_cwd, input)
+				p.set_data(oil_cwd, input, json_name)
 			end
 			vim.cmd("Compile " .. input)
 		end
