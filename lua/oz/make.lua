@@ -47,12 +47,14 @@ function M.Make_func(args, dir)
 			end
 		end,
 		on_exit = function(_, exit_code, _)
-			qf.capture_lines_to_qf(output, vim.bo.ft)
+			qf.capture_lines_to_qf(output, vim.bo.ft, true)
 
-			if #vim.fn.getqflist() > 0 then
-				vim.cmd("copen | cfirst")
+			if #vim.fn.getqflist() == 1 then
+                vim.cmd("cfirst")
+            elseif #vim.fn.getqflist() > 0 then
+				vim.cmd("cw | cfirst")
 			else
-				vim.cmd("cclose")
+                vim.cmd("cw")
 				util.echoprint("oz: Nothing in quickfixlist! (exit_code:" .. exit_code .. ")")
 			end
 		end,

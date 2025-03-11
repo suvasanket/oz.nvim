@@ -60,9 +60,19 @@ default config:
      },
 
     -- Asynchronous :make
-    async_make = {
+    async_make = { -- Disable by making it false
         override_make = false, -- Override the default :make
         autosave_makeprg = true, -- Auto save all the project scoped makeprg(:set makeprg=<cmd>)
+    },
+
+    -- Asynchronous :grep
+    async_grep = { -- Disable by making it false
+        override_grep = true, -- override the default :grep
+    },
+
+    -- error_formats :help errorformat
+    efm = {
+        cache_efm = true,
     },
 }
 ```

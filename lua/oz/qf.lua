@@ -84,14 +84,18 @@ local function lines_contains_keyword(lines, words)
 end
 
 -- lines -> qf
-function M.capture_lines_to_qf(lines, ft)
-	if lines_contains_keyword(lines, keywords) then
+function M.capture_lines_to_qf(lines, ft, if_error)
+    if not if_error then
+        if_error = lines_contains_keyword(lines, keywords)
+    end
+
+	if if_error then
 		local parsed = parse_lines(lines, ft)
 
 		if parsed then
 			vim.fn.setqflist(parsed, "r")
 		else
-			util.Notify("No formats found, you can provide one with set efm=<pattern>.", "warn", "oz")
+            util.Notify("No pattern, :help efm", "warn", "oz")
 		end
 	end
 end

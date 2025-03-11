@@ -13,7 +13,7 @@ local defaults = {
 
 	-- all oz_term options
 	oz_term = {
-        bufhidden_behaviour = "prompt", -- |prompt, hide, quit|
+		bufhidden_behaviour = "prompt", -- |prompt, hide, quit|
 		mappings = {
 			open_entry = "<cr>",
 			add_to_quickfix = "<C-q>",
@@ -50,6 +50,12 @@ local defaults = {
 		override_make = false, -- override the default :make
 		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
 	},
+
+	-- Grep
+	async_grep = {
+		override_grep = true, -- override the default :grep
+	},
+
 	-- error_formats :help errorformat
 	efm = {
 		cache_efm = true,
@@ -68,6 +74,11 @@ function M.setup(opts)
 	-- Initialize :Make
 	if M.config.async_make then
 		require("oz.make").asyncmake_init(M.config.async_make)
+	end
+
+	-- Initialize :Grep
+	if M.config.async_grep then
+		require("oz.grep").asyncgrep_init(M.config.async_grep)
 	end
 
 	-- Initialize mappings
@@ -102,8 +113,7 @@ function M.setup(opts)
 end
 
 function M.mappings_init()
-
-    local map_configs = M.config.mappings
+	local map_configs = M.config.mappings
 	-- TermBang key
 	if map_configs.TermBang then
 		mappings.termbangkey_init(map_configs.TermBang)

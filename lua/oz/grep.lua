@@ -59,7 +59,7 @@ function M.grep_to_qf(cmd, dir)
 	local exe = parsed.exe
 	local target = dir or parsed.target or "."
 
-	local rg_flags = { "--vimgrep", "--color=never" }
+	local rg_flags = { "--vimgrep", "--color=never", "--no-heading" }
 	local grep_flags = { "-nrH", "--color=never" }
 
 	if exe == "rg" then
@@ -95,7 +95,9 @@ function M.async_grep(cmd, pattern, dir, opts)
 	local output_lines = {}
 
 	---@diagnostic disable-next-line: deprecated
-	vim.fn.jobstart({ cmd, unpack(args) }, {
+	local grep_shellcmd = { cmd, unpack(args) }
+	-- print(vim.inspect(grep_shellcmd))
+	vim.fn.jobstart(grep_shellcmd, {
 		stdout_buffered = true,
 		on_stdout = function(_, data, _)
 			if data then
@@ -120,9 +122,12 @@ function M.async_grep(cmd, pattern, dir, opts)
 				vim.fn.setqflist({}, " ", {
 					lines = output_lines,
 					efm = formatter,
+					title = opts.title or pattern,
 				})
-				if #vim.fn.getqflist() > 0 then
-					vim.cmd("copen")
+				if #vim.fn.getqflist() == 1 then
+					vim.cmd("cfirst")
+				elseif #vim.fn.getqflist() > 0 then
+					vim.cmd("cw | cfirst")
 				else
 					vim.notify("No matches found", vim.log.levels.INFO)
 				end
@@ -131,6 +136,95 @@ function M.async_grep(cmd, pattern, dir, opts)
 			end
 		end,
 	})
+end
+
+-- parse :Grep args
+local function parse_Grep_args(argstring)
+	local args = {}
+	for token in string.gmatch(argstring, "%S+") do
+		table.insert(args, token)
+	end
+
+	local flags = ""
+	local idx = 1
+
+	while args[idx] and args[idx]:match("^%-%-?") do
+		flags = flags .. args[idx] .. " "
+		idx = idx + 1
+	end
+
+	flags = flags:match("^%s*(.-)%s*$")
+	assert(args[idx], "A pattern is required")
+	local pattern = args[idx]
+	local target_dir = args[idx + 1] or nil
+
+	pattern = string.gsub(pattern, "^(['\"])(.*)%1$", "%2")
+
+	if target_dir and target_dir:find("%%") then
+		target_dir = vim.fn.expand(target_dir)
+	end
+
+	return pattern, flags, target_dir
+end
+
+-- :Grep init
+function M.asyncgrep_init(config)
+	-- Grep usercmd
+	vim.api.nvim_create_user_command("Grep", function(args)
+		-- parse the usercmd args.
+		local pattern, flags, target_dir = parse_Grep_args(args.args)
+		local project_root = util.GetProjectRoot()
+		if args.bang or not project_root then
+			target_dir = vim.fn.getcwd()
+		end
+
+		local grep_opt = vim.o.grepprg
+		if not grep_opt then
+			if vim.fn.executable("rg") == 1 then
+				grep_opt = "rg"
+			else
+				grep_opt = "grep"
+			end
+		end
+		-- parse the user option grepprg.
+		local parsed_opt = parse_search_cmd(grep_opt)
+		local opt_flags = parsed_opt.flags
+		local opt_exe = parsed_opt.exe
+		local grep_fm = vim.o.grepformat
+
+		-- add appropriate flags and efm
+		local grep_flags = { "-nrH", "--color=never" }
+		local rg_flags = { "--vimgrep", "--color=never", "--no-heading" }
+		if opt_exe == "rg" then
+			opt_flags = vim.tbl_deep_extend("keep", rg_flags, opt_flags)
+			grep_fm = "%f:%l:%c:%m"
+		elseif opt_exe == "grep" then
+			opt_flags = vim.tbl_deep_extend("keep", grep_flags, opt_flags)
+			grep_fm = "%f:%l:%m"
+		end
+
+		-- if flags passed as args
+		if flags ~= "" then
+			table.insert(opt_flags, flags)
+		end
+
+		M.async_grep(opt_exe, pattern, target_dir or project_root, {
+			flags = opt_flags,
+			formatter = grep_fm,
+		})
+	end, {
+		nargs = "+",
+		complete = "file",
+		bang = true,
+		desc = "async grep.",
+	})
+
+	-- override grep
+	if config.override_grep then
+		vim.cmd([[
+        cnoreabbrev <expr> grep getcmdline() == 'grep' ? 'Grep' : 'grep'
+        ]])
+	end
 end
 
 return M
