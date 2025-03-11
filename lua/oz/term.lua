@@ -134,7 +134,13 @@ local function term_buf_mappings(config)
 	util.Map("n", config.mappings.rerun, ":Term<cr>", { desc = "rerun previous cmd", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.add_to_quickfix, function()
-        qf.capture_buf_to_qf(term_buf, M.term_cmd_ft)
+        if not vim.api.nvim_buf_is_valid(term_buf) then
+            vim.notify("Invalid buffer number: " .. term_buf, vim.log.levels.ERROR)
+            return
+        end
+        local lines = vim.api.nvim_buf_get_lines(term_buf, 0, -1, false)
+
+        qf.capture_lines_to_qf(lines, M.term_cmd_ft)
 		if #vim.fn.getqflist() ~= 0 then
 			vim.cmd.wincmd("p")
 			vim.cmd("cfirst")

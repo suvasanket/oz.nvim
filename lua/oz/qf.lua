@@ -1,63 +1,99 @@
 local M = {}
 local p = require("oz.caching")
+local util = require("oz.util")
 local ft_efm_json = "ft_efm"
 
+-- efm patterns
 local custom_error_formats = {
 	json = "%f:%l:%c: %m",
 	java = "%A%f:%l: %m",
 }
 
-local function get_custom_efm(ft)
-	local cached_efm = p.get_data(ft, ft_efm_json)
-	cached_efm = cached_efm ~= "" and cached_efm or nil
-	return cached_efm or custom_error_formats[ft] or "%f:%l:%c:%m"
+-- regex patterns
+local language_patterns = {
+	python = {
+		file_line_pattern = '^%s*File%s+"([^"]+)",%s+line%s+(%d+)',
+		continuation_pattern = function(line)
+			return line:match("^%S") or line:match("^%a+Error:")
+		end,
+	},
+	c = {
+		file_line_pattern = "^(.-):(%d+):(%d+):%s*(.*)$",
+		continuation_pattern = function()
+			return false
+		end,
+	},
+	rust = {
+		file_line_pattern = "^%s*-->%s+([^:]+):(%d+):(%d+)",
+		continuation_pattern = function(line)
+			return line:match("^%s") or line:match("^error:")
+		end,
+	},
+}
+
+-- parse function
+local function parse_lines(lines, filetype)
+	local cached_efm = p.get_data(filetype, ft_efm_json)
+	if cached_efm or custom_error_formats[filetype] then
+		local efm_format = cached_efm or custom_error_formats[filetype]
+		local opts = { lines = lines, efm = efm_format }
+		print("oz: using cached efm: " .. efm_format)
+		vim.fn.setqflist({}, "r", opts)
+		local qflist = vim.fn.getqflist()
+		return qflist
+	elseif language_patterns[filetype] then
+		local patterns = language_patterns[filetype] or language_patterns["python"]
+
+		local results = {}
+		local prev = nil
+
+		for _, line in ipairs(lines) do
+			local filename, lnum, col, text = line:match(patterns.file_line_pattern)
+			if filename then
+				prev = {
+					filename = filename,
+					lnum = tonumber(lnum),
+					col = col and tonumber(col) or 0,
+					text = text or "",
+				}
+				table.insert(results, prev)
+			elseif prev and patterns.continuation_pattern(line) then
+				local clean_line = line:gsub("^%s+", "")
+				prev.text = (prev.text ~= "" and prev.text .. " " or "") .. clean_line
+				prev = nil
+			end
+		end
+
+		return results
+	else
+		return nil
+	end
 end
 
-local function filtered_lines(lines)
-	local f_lines = {}
+local keywords = { "error", "warn", "warning", "err", "issue", "trace", "file", "stacktrace" }
+
+local function lines_contains_keyword(lines, words)
 	for _, line in ipairs(lines) do
-		if
-			line:lower():match("error")
-			or line:lower():match("warn")
-			or line:lower():match("warning")
-			or line:lower():match("err")
-			or line:lower():match("issue")
-			or line:lower():match("trace")
-			or line:lower():match("file")
-			or line:lower():match("stacktrace")
-		then
-			table.insert(f_lines, line)
+		for _, keyword in ipairs(words) do
+			if line:lower():match(keyword) then
+				return true
+			end
 		end
 	end
-	return f_lines
+	return false
 end
 
-function M.capture_buf_to_qf(bufnr, ft)
-	if not vim.api.nvim_buf_is_valid(bufnr) then
-		vim.notify("Invalid buffer number: " .. bufnr, vim.log.levels.ERROR)
-		return
-	end
-	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-
-	local efm = get_custom_efm(ft)
-
-	lines = filtered_lines(lines)
-
-	vim.fn.setqflist({}, " ", {
-		lines = lines,
-		efm = efm,
-	})
-end
-
+-- lines -> qf
 function M.capture_lines_to_qf(lines, ft)
-	local f_lines = filtered_lines(lines)
+	if lines_contains_keyword(lines, keywords) then
+		local parsed = parse_lines(lines, ft)
 
-	local efm = get_custom_efm(ft)
-
-	vim.fn.setqflist({}, " ", {
-		lines = f_lines,
-		efm = efm,
-	})
+		if parsed then
+			vim.fn.setqflist(parsed, "r")
+		else
+			util.Notify("No formats found, you can provide one with set efm=<pattern>.", "warn", "oz")
+		end
+	end
 end
 
 -- initialize chaching

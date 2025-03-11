@@ -50,6 +50,10 @@ local defaults = {
 		override_make = false, -- override the default :make
 		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
 	},
+	-- error_formats :help errorformat
+	efm = {
+		cache_efm = true,
+	},
 }
 
 -- Setup function
@@ -90,11 +94,16 @@ function M.setup(opts)
 			end,
 		})
 	end
+
+    -- Initialize cache_efm
+	if M.config.efm.cache_efm then
+		require("oz.qf").cache_efm()
+	end
 end
 
 function M.mappings_init()
-	local map_configs = M.config.mappings
 
+    local map_configs = M.config.mappings
 	-- TermBang key
 	if map_configs.TermBang then
 		mappings.termbangkey_init(map_configs.TermBang)

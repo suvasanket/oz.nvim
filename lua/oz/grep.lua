@@ -65,7 +65,7 @@ function M.grep_to_qf(cmd, dir)
 	if exe == "rg" then
 		M.async_grep(exe, parsed.pattern, target, {
 			flags = vim.tbl_deep_extend("keep", rg_flags, flags),
-			formatter = "%f:%l:%c:%*\\t%m",
+			formatter = "%f:%l:%c:%m",
 		})
 	elseif exe == "grep" then
 		M.async_grep(exe, parsed.pattern, target, {

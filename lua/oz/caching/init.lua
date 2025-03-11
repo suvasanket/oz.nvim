@@ -36,6 +36,11 @@ function M.set_data(key, value, json_name)
 	local json_file = data_dir .. "/oz/" .. json_name .. ".json"
 	ensure_dir(json_file)
 
+    -- delete empty value
+    if value == "" then
+        value = nil
+    end
+
 	-- Read the JSON file (if exists) or start with an empty table.
 	local data = {}
 	if file_exists(json_file) then
