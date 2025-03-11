@@ -127,7 +127,7 @@ function M.async_grep(cmd, pattern, dir, opts)
 				if #vim.fn.getqflist() == 1 then
 					vim.cmd("cfirst")
 				elseif #vim.fn.getqflist() > 0 then
-					vim.cmd("cw | cfirst")
+					vim.cmd("cw")
 				else
 					vim.notify("No matches found", vim.log.levels.INFO)
 				end
@@ -172,11 +172,15 @@ function M.asyncgrep_init(config)
 	-- Grep usercmd
 	vim.api.nvim_create_user_command("Grep", function(args)
 		-- parse the usercmd args.
-		local pattern, flags, target_dir = parse_Grep_args(args.args)
-		local project_root = util.GetProjectRoot()
-		if args.bang or not project_root then
-			target_dir = vim.fn.getcwd()
-		end
+        local pattern, flags, target_dir = parse_Grep_args(args.args)
+        local project_root = util.GetProjectRoot()
+
+        if args.bang then
+            target_dir = vim.fn.getcwd()
+        else
+            target_dir = (vim.bo.ft == "oil" and require("oil").get_current_dir())
+            or (project_root or vim.fn.getcwd())
+        end
 
 		local grep_opt = vim.o.grepprg
 		if not grep_opt then
@@ -208,7 +212,7 @@ function M.asyncgrep_init(config)
 			table.insert(opt_flags, flags)
 		end
 
-		M.async_grep(opt_exe, pattern, target_dir or project_root, {
+		M.async_grep(opt_exe, pattern, target_dir, {
 			flags = opt_flags,
 			formatter = grep_fm,
 		})
