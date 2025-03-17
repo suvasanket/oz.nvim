@@ -9,10 +9,11 @@ M.term_cmd_ft = nil
 
 local term_buf = nil
 local term_win = nil
+local term_job_id = nil
 
 -- run in term
 function M.run_in_term(cmd, dir)
-    M.term_cmd_ft = vim.bo.ft
+	M.term_cmd_ft = vim.bo.ft
 
 	if not cmd then
 		return
@@ -37,7 +38,7 @@ function M.run_in_term(cmd, dir)
 		else
 			vim.cmd("terminal")
 		end
-		vim.api.nvim_buf_set_name(term_buf, "oz_term:" .. cmd) -- naming the terminal buffer
+		vim.api.nvim_buf_set_name(term_buf, "**oz_term**") -- naming the terminal buffer
 		term_win = vim.api.nvim_get_current_win() -- Store the window
 
 		-- if got deleted
@@ -46,6 +47,7 @@ function M.run_in_term(cmd, dir)
 			callback = function()
 				term_buf = nil
 				term_win = nil
+				term_job_id = nil
 			end,
 		})
 
@@ -57,28 +59,29 @@ function M.run_in_term(cmd, dir)
 	else
 		vim.api.nvim_set_current_win(term_win)
 	end
+	term_job_id = vim.b[term_buf].terminal_job_id
 
-	vim.api.nvim_chan_send(vim.b.terminal_job_id, cmd .. "\n")
+	vim.api.nvim_chan_send(term_job_id, cmd .. "\n")
 end
 
 -- close term
 function M.close_term()
-	-- disable BufHidden event
-	local ei_opt = vim.o.eventignore
-	vim.o.eventignore = "BufHidden"
-	vim.schedule(function()
+	if term_buf and term_win then
 		local job_id = vim.b[term_buf].terminal_job_id
+		-- close job
 		if job_id then
 			vim.fn.jobstop(job_id)
 		end
+
+		-- close win
 		if vim.api.nvim_win_is_valid(term_win) then
 			vim.api.nvim_win_close(term_win, true)
 		end
+		-- close buf
 		if vim.api.nvim_buf_is_valid(term_buf) then
 			vim.api.nvim_buf_delete(term_buf, { force = true })
 		end
-		vim.o.eventignore = ei_opt
-	end)
+	end
 end
 
 -- run in term!
@@ -97,29 +100,63 @@ function M.run_in_termbang(cmd, dir)
 end
 
 local function term_cmd_init()
+	-- Term - usercmd
 	vim.api.nvim_create_user_command("Term", function(args)
+		-- bang
 		if args.bang then
+			-- More than one args
 			if args.args and #args.args > 0 then
 				M.cached_cmd = args.args
 				M.run_in_termbang(M.cached_cmd)
 			else
+				-- Re-execution
 				M.run_in_termbang(M.cached_cmd)
 			end
 		else
+			-- not bang
+			-- More than one args
 			if args.args and #args.args >= 2 then
 				M.cached_cmd = args.args
-			end
-			if M.cached_cmd then
-				vim.notify("Executing '" .. M.cached_cmd .. "' ..")
-				if term_buf and term_win then
-					M.close_term()
-				end
-				vim.schedule(function()
+
+				if M.cached_cmd then
 					M.run_in_term(M.cached_cmd)
-				end)
+					util.Notify("running '" .. M.cached_cmd .. "'", nil, "oz_term")
+				end
+			else
+				-- re running
+				if M.cached_cmd then
+					M.close_term()
+					M.run_in_term(M.cached_cmd)
+					util.Notify("reruning '" .. M.cached_cmd .. "'", nil, "oz_term")
+				else
+					util.Notify("Give a initial cmd to start oz_term", "warn", "oz_term")
+				end
 			end
 		end
 	end, { nargs = "*", bang = true, desc = "oz_term" })
+
+	-- TermToggle - usercmd
+	vim.api.nvim_create_user_command("TermToggle", function()
+		if not term_buf or not term_buf or not term_job_id then
+			return
+		end
+		if term_buf and not vim.api.nvim_win_is_valid(term_win) then
+			vim.cmd("split | resize 10")
+			vim.api.nvim_set_current_buf(term_buf)
+			term_win = vim.api.nvim_get_current_win()
+		elseif vim.api.nvim_win_is_valid(term_win) then
+			vim.api.nvim_set_current_win(term_win)
+			vim.cmd("close")
+		end
+	end, { desc = "toggle oz_term" })
+
+	-- TermClose - usercmd
+	vim.api.nvim_create_user_command("TermClose", function()
+		if not term_buf or not term_buf or not term_job_id then
+			return
+		end
+		M.close_term()
+	end, { desc = "toggle oz_term" })
 end
 
 -- mappings
@@ -134,13 +171,13 @@ local function term_buf_mappings(config)
 	util.Map("n", config.mappings.rerun, ":Term<cr>", { desc = "rerun previous cmd", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.add_to_quickfix, function()
-        if not vim.api.nvim_buf_is_valid(term_buf) then
-            vim.notify("Invalid buffer number: " .. term_buf, vim.log.levels.ERROR)
-            return
-        end
-        local lines = vim.api.nvim_buf_get_lines(term_buf, 0, -1, false)
+		if not vim.api.nvim_buf_is_valid(term_buf) then
+			vim.notify("Invalid buffer number: " .. term_buf, vim.log.levels.ERROR)
+			return
+		end
+		local lines = vim.api.nvim_buf_get_lines(term_buf, 0, -1, false)
 
-        qf.capture_lines_to_qf(lines, M.term_cmd_ft)
+		qf.capture_lines_to_qf(lines, M.term_cmd_ft)
 		if #vim.fn.getqflist() ~= 0 then
 			vim.cmd.wincmd("p")
 			vim.cmd("cfirst")
@@ -150,10 +187,6 @@ local function term_buf_mappings(config)
 	end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.open_entry, function()
-		-- disable BufHidden event
-		local ei_opt = vim.o.eventignore
-		vim.o.eventignore = "BufHidden"
-
 		-- if url
 		if vim.api.nvim_get_current_line():match([[https?://[^\s]+]]) then
 			local ok = pcall(vim.cmd, "normal gx")
@@ -179,7 +212,6 @@ local function term_buf_mappings(config)
 		else
 			util.Notify("entry under cursor is out of scope.", "warn", "oz")
 		end
-		vim.o.eventignore = ei_opt
 	end, { desc = "open entry(file, dir) under cursor(*)", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.show_keybinds, function()
@@ -192,24 +224,6 @@ local function term_buf_mappings(config)
 		M.close_term()
 		mapping_util.cmd_func("Compile")
 	end, { buffer = 0, silent = true, desc = "open in compile_mode" })
-end
-
-local function bufhidden_config(opt)
-	vim.api.nvim_create_autocmd("BufHidden", {
-		buffer = term_buf,
-		callback = function()
-			if opt == "prompt" then
-				local ans = util.prompt("oz: quit oz_term?", "&quit\n&hide", 2, "Error")
-				if term_buf and term_win and ans == 1 then
-					M.close_term()
-				end
-			elseif opt == "quit" then
-				M.close_term()
-			elseif opt == "hide" then
-				util.Notify("oz_term running in background.", "info", "oz")
-			end
-		end,
-	})
 end
 
 -- Term init
@@ -228,7 +242,6 @@ function M.Term_init(config)
 			vim.schedule(function()
 				term_buf_mappings(config)
 			end)
-			bufhidden_config(config.bufhidden_behaviour)
 		end,
 	})
 end
