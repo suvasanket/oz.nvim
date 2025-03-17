@@ -20,7 +20,6 @@ default config:
     mappings = {
         Term = "<leader>av", -- Open a prompt to execute a shell command in oz_term
         TermBang = "<leader>at", -- Open a prompt to execute a shell command in a tmux window or Neovim tab
-        Compile = "<leader>ac", -- Open a prompt to execute a shell command in compile-mode
         Rerun = "<leader>aa", -- Re-execute the previous command (<Term|Compile|TermBang>)
     },
 

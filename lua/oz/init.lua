@@ -5,10 +5,9 @@ local mappings = require("oz.mappings")
 --- Default configs:
 local defaults = {
 	mappings = {
-		Term = "<leader>av",
+		Term = "<leader>ao",
 		TermBang = "<leader>at",
-		Compile = "<leader>ac",
-		Rerun = "<leader>aa",
+		Rerun = "<leader>ar",
 	},
 
 	-- all oz_term options
@@ -122,11 +121,6 @@ function M.mappings_init()
 	-- Term key
 	if map_configs.Term then
 		mappings.termkey_init(map_configs.Term)
-	end
-
-	-- Compile key
-	if map_configs.Compile then
-		mappings.compilekey_init(map_configs.Compile)
 	end
 
 	-- Rerunner

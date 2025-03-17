@@ -9,10 +9,10 @@ M.RunnerCommandType = nil
 
 -- TermBang mapping
 function M.Termbang()
-    -- check if in oz_term
-    if vim.bo.ft == "oz_term" then
-        vim.cmd("wincmd p")
-    end
+	-- check if in oz_term
+	if vim.bo.ft == "oz_term" then
+		vim.cmd("wincmd p")
+	end
 	local current_file = vim.fn.expand("%")
 	local cmd = p.get_data(current_file, term_bang_json) or ""
 
@@ -34,15 +34,15 @@ end
 function M.termbangkey_init(key)
 	util.Map("n", key, function()
 		M.Termbang()
-	end, { desc = "oz Term!", silent = false })
+	end, { desc = "[oz_term]Term!", silent = false })
 end
 
 -- Term mapping
 function M.Term()
-    -- check if in oz_term
-    if vim.bo.ft == "oz_term" then
-        vim.cmd("wincmd p")
-    end
+	-- check if in oz_term
+	if vim.bo.ft == "oz_term" then
+		vim.cmd("wincmd p")
+	end
 	u.cmd_func("Term", function(input)
 		if input:match("^@") then
 			input = input:gsub("@", "")
@@ -56,47 +56,19 @@ end
 function M.termkey_init(key)
 	util.Map("n", key, function()
 		M.Term()
-	end, { desc = "oz term", silent = false })
-end
-
--- Compile mapping
-function M.Compile_mode()
-    -- check if in oz_term
-    if vim.bo.ft == "oz_term" then
-        vim.cmd("wincmd p")
-    end
-	u.cmd_func("Compile", function(input)
-		if input:match("^@") then
-			util.Notify("compile-mode doesn't support project-root cmd execution.", "warn", "oz")
-		end
-		input = input:gsub("@", "")
-		vim.cmd("Compile " .. input)
-	end)
-	M.RunnerCommandType = "Recompile"
-end
-function M.compilekey_init(key)
-	util.Map("n", key, function()
-		M.Compile_mode()
-	end, { desc = "Compile with oz", silent = false })
+	end, { desc = "[oz_term]Term", silent = false })
 end
 
 -- Rerunner
 function M.Rerun()
 	if M.RunnerCommandType then
-		local pos = vim.api.nvim_win_get_cursor(0)
 		vim.cmd(M.RunnerCommandType)
-		vim.fn.timer_start(10, function()
-			if M.RunnerCommandType == "Term" then
-				vim.cmd("wincmd p")
-				pcall(vim.api.nvim_win_set_cursor, 0, pos)
-			end
-		end)
 	end
 end
 function M.rerunner_init(key)
 	util.Map("n", key, function()
 		M.Rerun()
-	end)
+	end, { desc = "[oz_term]Rerun" })
 end
 
 return M
