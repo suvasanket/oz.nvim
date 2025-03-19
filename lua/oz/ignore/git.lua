@@ -1,5 +1,6 @@
 local M = {}
 local util = require("oz.util")
+local g_util = require("oz.ignore.util")
 
 local function parse_git_suggestion(data)
 	local filtered_data = {}
@@ -228,7 +229,8 @@ local function run_git_command(args)
 		vim.notify("Please provide arguments for the Git command.")
 		return
 	end
-	local args_table = vim.split(args, "%s+")
+    args = g_util.expand_expressions(args)
+    local args_table = g_util.parse_args(args)
 
 	---@diagnostic disable-next-line: deprecated
 	local job_id = vim.fn.jobstart({ "git", unpack(args_table) }, {
@@ -241,7 +243,7 @@ local function run_git_command(args)
 			end
 		end,
 		on_stderr = function(_, data, _)
-			local suggestion, title = parse_git_suggestion(data)
+			local suggestion, trig = parse_git_suggestion(data)
 			if suggestion then
 				util.Notify("Error: " .. data[1], "warn", "oz_git")
 				vim.api.nvim_feedkeys(":Git " .. suggestion, "n", false)
