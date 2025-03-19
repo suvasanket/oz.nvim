@@ -138,12 +138,49 @@ function M.async_grep(cmd, pattern, dir, opts)
 	})
 end
 
+-- parse the arg_string
+local function parse_usercmd_argstring(argstring)
+	local args = {}
+	local i = 1
+	local len = #argstring
+
+	while i <= len do
+		while i <= len and argstring:sub(i, i):match("%s") do
+			i = i + 1
+		end
+		if i > len then
+			break
+		end
+		if argstring:sub(i, i) == '"' or argstring:sub(i, i) == "'" then
+			local quote = argstring:sub(i, i)
+			local start = i + 1
+			i = i + 1
+			while i <= len and argstring:sub(i, i) ~= quote do
+				i = i + 1
+			end
+
+			if i <= len then
+				table.insert(args, argstring:sub(start, i - 1))
+				i = i + 1
+			else
+				table.insert(args, argstring:sub(start))
+			end
+		else
+			local start = i
+			while i <= len and not argstring:sub(i, i):match("%s") do
+				i = i + 1
+			end
+
+			table.insert(args, argstring:sub(start, i - 1))
+		end
+	end
+
+	return args
+end
+
 -- parse :Grep args
 local function parse_Grep_args(argstring)
-	local args = {}
-	for token in string.gmatch(argstring, "%S+") do
-		table.insert(args, token)
-	end
+	local args = parse_usercmd_argstring(argstring)
 
 	local flags = ""
 	local idx = 1
@@ -172,15 +209,14 @@ function M.asyncgrep_init(config)
 	-- Grep usercmd
 	vim.api.nvim_create_user_command("Grep", function(args)
 		-- parse the usercmd args.
-        local pattern, flags, target_dir = parse_Grep_args(args.args)
-        local project_root = util.GetProjectRoot()
+		local pattern, flags, target_dir = parse_Grep_args(args.args)
+		local project_root = util.GetProjectRoot()
 
-        if args.bang then
-            target_dir = vim.fn.getcwd()
-        else
-            target_dir = (vim.bo.ft == "oil" and require("oil").get_current_dir())
-            or (project_root or vim.fn.getcwd())
-        end
+		if args.bang then
+			target_dir = vim.fn.getcwd()
+		else
+			target_dir = (vim.bo.ft == "oil" and require("oil").get_current_dir()) or (project_root or vim.fn.getcwd())
+		end
 
 		local grep_opt = vim.o.grepprg
 		if not grep_opt then
