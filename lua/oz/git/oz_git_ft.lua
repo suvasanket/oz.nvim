@@ -35,7 +35,7 @@ local function extract_git_command_and_flag(if_grab)
 					table.insert(grab_flags, flag)
 					vim.api.nvim_echo(
 						{ { ":Git " .. command .. " " }, { table.concat(grab_flags, " "), "@attribute" } },
-						true,
+						false,
 						{}
 					)
 				elseif #grab_flags ~= 0 then
@@ -82,13 +82,13 @@ local function ft_mappings(buf)
 
 		if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- grab hashes
 			table.insert(grab_hashs, cfile)
-			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, true, {})
+			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
 		else
 			local absolute_path = vim.fs.normalize(vim.fn.getcwd() .. "/" .. cfile)
 
 			if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then -- grab files
 				table.insert(grab_files, cfile)
-				vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_files, " "), "@attribute" } }, true, {})
+				vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_files, " "), "@attribute" } }, false, {})
 			else
 				if not extract_git_command_and_flag(true) then -- grab flags
 					util.Notify("Nothing to grab.", "warn", "oz_git")

@@ -210,7 +210,11 @@ local function term_buf_mappings(config)
 
 			pcall(vim.api.nvim_win_set_cursor, 0, pos)
 		else
-			util.Notify("entry under cursor is out of scope.", "warn", "oz")
+			vim.api.nvim_feedkeys(
+				vim.api.nvim_replace_termcodes(config.mappings.open_entry, true, false, true),
+				"n",
+				false
+			)
 		end
 	end, { desc = "open entry(file, dir) under cursor(*)", buffer = 0, silent = true })
 

@@ -1,4 +1,8 @@
 local M = {}
+local util = require("oz.util")
+
+local oz_git_buf = nil
+local oz_git_win = nil
 
 function M.expand_expressions(str)
 	local pattern = "%%[:%w]*"
@@ -66,6 +70,52 @@ function M.get_remote_cmd(str)
 	else
 		return false, nil, nil
 	end
+end
+
+function M.open_output_split(lines)
+	local height = math.min(math.max(#lines, 7), 15)
+
+	if oz_git_buf == nil or not vim.api.nvim_win_is_valid(oz_git_win) then
+		oz_git_buf = vim.api.nvim_create_buf(false, true)
+
+		vim.cmd("botright " .. height .. "split")
+		vim.cmd("resize " .. height)
+
+		oz_git_win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(oz_git_win, oz_git_buf)
+
+		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
+
+		-- vim.api.nvim_buf_set_name(oz_git_buf, "**oz_git**")
+		vim.api.nvim_buf_set_option(oz_git_buf, "ft", "oz_git")
+
+		vim.api.nvim_create_autocmd("BufDelete", {
+			buffer = oz_git_buf,
+			callback = function()
+				oz_git_buf = nil
+				oz_git_win = nil
+			end,
+		})
+	else
+		vim.api.nvim_set_current_win(oz_git_win)
+		vim.cmd("resize " .. height)
+		vim.api.nvim_buf_set_option(oz_git_buf, "modifiable", true)
+		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_option(oz_git_buf, "modifiable", false)
+	end
+
+	return oz_git_buf, oz_git_win
+end
+
+function M.check_flags(tbl, flag)
+	for _, str in pairs(tbl) do
+		if str:sub(1, 1) == "-" then
+			if str:find(flag) then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 return M

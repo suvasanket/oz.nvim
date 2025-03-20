@@ -44,6 +44,8 @@ local defaults = {
 		},
 	},
 
+	oz_git = true,
+
 	-- Make
 	async_make = {
 		override_make = false, -- override the default :make
@@ -105,7 +107,12 @@ function M.setup(opts)
 		})
 	end
 
-    -- Initialize cache_efm
+	-- Initialize oz git
+	if M.config.oz_git then
+		require("oz.git").oz_git_usercmd_init()
+	end
+
+	-- Initialize cache_efm
 	if M.config.efm.cache_efm then
 		require("oz.qf").cache_efm()
 	end
