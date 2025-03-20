@@ -1,6 +1,6 @@
 local M = {}
 local util = require("oz.util")
-local g_util = require("oz.ignore.util")
+local g_util = require("oz.git.util")
 
 local oz_git_buf = nil
 local oz_git_win = nil
@@ -212,10 +212,11 @@ local function parse_git_suggestion(data, arg_cmd)
 end
 
 local function open_output_split(lines)
+	local height = math.min(math.max(#lines, 7), 15)
+
 	if oz_git_buf == nil or not vim.api.nvim_win_is_valid(oz_git_win) then
 		oz_git_buf = vim.api.nvim_create_buf(false, true)
 
-		local height = math.min(math.max(#lines, 7), 15)
 		vim.cmd("botright " .. height .. "split")
 		vim.cmd("resize " .. height)
 
@@ -224,7 +225,7 @@ local function open_output_split(lines)
 
 		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
 
-		vim.api.nvim_buf_set_name(oz_git_buf, "**oz_git**")
+		-- vim.api.nvim_buf_set_name(oz_git_buf, "**oz_git**")
 		vim.api.nvim_buf_set_option(oz_git_buf, "ft", "oz_git")
 
 		vim.api.nvim_create_autocmd("BufDelete", {
@@ -236,6 +237,7 @@ local function open_output_split(lines)
 		})
 	else
 		vim.api.nvim_set_current_win(oz_git_win)
+		vim.cmd("resize " .. height)
 		vim.api.nvim_buf_set_option(oz_git_buf, "modifiable", true)
 		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
 		vim.api.nvim_buf_set_option(oz_git_buf, "modifiable", false)
@@ -250,12 +252,16 @@ local function run_git_command(args)
 	local std_out = {}
 	local std_err = {}
 
+	local is_remote, start, complete = g_util.get_remote_cmd(args_table[1])
+	if is_remote then
+		util.Notify(start, nil, "oz_git")
+	end
+
 	---@diagnostic disable-next-line: deprecated
 	local job_id = vim.fn.jobstart({ "git", unpack(args_table) }, {
 		stdout_buffered = true,
 		stderr_buffered = true,
 		on_stdout = function(_, data, _)
-			-- TODO: different on push, pull, clone
 			if data then
 				for _, line in ipairs(data) do
 					if line and line ~= "" then
@@ -276,17 +282,18 @@ local function run_git_command(args)
 			suggestion = parse_git_suggestion(data, cmd)
 		end,
 		on_exit = function()
-			if cmd == "add" then -- action when cmd is "add"
-                util.Notify("press enter to see status.", nil, "oz_git")
-				local char = vim.fn.getchar()
-				char = vim.fn.nr2char(char)
-				if char == "\r" or char == "\n" then
-					vim.cmd("Git status")
-				end
-			elseif #std_err ~= 0 then
-				open_output_split(std_err)
+			if is_remote and #std_err == 0 then -- remote dependant
+				util.Notify(complete, nil, "oz_git")
+				-- util.Notify("press enter to see status.", nil, "oz_git")
+				-- local char = vim.fn.getchar()
+				-- char = vim.fn.nr2char(char)
+				-- if char == "\r" or char == "\n" then
+				-- 	vim.cmd("Git status")
+				-- end
 			elseif #std_out ~= 0 then
 				open_output_split(std_out)
+			elseif #std_err ~= 0 then
+				open_output_split(std_err)
 			end
 			if suggestion then
 				util.Notify("press enter to continue with suggestion.", nil, "oz_git")
@@ -303,7 +310,7 @@ end
 -- Define the user command
 vim.api.nvim_create_user_command("Git", function(opts)
 	-- oz_git ft..
-	require("oz.ignore.oz_git_ft").oz_git_hl()
+	require("oz.git.oz_git_ft").oz_git_hl()
 	-- git cmd
 	run_git_command(opts.args)
 end, { nargs = "+" })
