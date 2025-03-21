@@ -2,6 +2,7 @@ local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
+local oz_git_win = require("oz.git.oz_git_win")
 
 local function git_commit(args_table)
 	if #args_table == 1 then
@@ -18,7 +19,7 @@ local function git_commit(args_table)
 	end
 end
 
-local function run_git_command(args)
+function RunGitCmd(args)
 	args = g_util.expand_expressions(args)
 	local args_table = g_util.parse_args(args)
 	local cmd = args_table[1]
@@ -31,7 +32,7 @@ local function run_git_command(args)
 		util.Notify(start, nil, "oz_git")
 	end
 
-    -- commit cmd
+	-- commit cmd
 	if cmd == "commit" then
 		args_table = git_commit(args_table)
 		if #args_table == 0 then
@@ -39,10 +40,10 @@ local function run_git_command(args)
 		end
 	end
 
-    -- help -> man
+	-- help -> man
 	if g_util.check_flags(args_table, "help") or g_util.check_flags(args_table, "h") then
 		vim.cmd("Man git-" .. cmd)
-        return
+		return
 	end
 
 	---@diagnostic disable-next-line: deprecated
@@ -57,7 +58,7 @@ local function run_git_command(args)
 					end
 				end
 			end
-			suggestion = wizard.parse_git_suggestion(data, cmd)
+			suggestion = wizard.parse_git_suggestion(data, args_table)
 		end,
 		on_stderr = function(_, data, _)
 			if data then
@@ -67,7 +68,7 @@ local function run_git_command(args)
 					end
 				end
 			end
-			suggestion = wizard.parse_git_suggestion(data, cmd)
+			suggestion = wizard.parse_git_suggestion(data, args_table)
 		end,
 		on_exit = function()
 			if is_remote and #std_err == 0 then -- remote dependant
@@ -75,13 +76,13 @@ local function run_git_command(args)
 			elseif cmd == "commit" then
 				wizard.commit_wizard()
 			elseif #std_out ~= 0 then
-				g_util.open_output_split(std_out)
+				oz_git_win.open_oz_git_win(std_out, args, "stdout")
 			elseif #std_err ~= 0 then
-				g_util.open_output_split(std_err)
+				oz_git_win.open_oz_git_win(std_err, args, "stderr")
 			end
 			if suggestion then
 				util.Notify("press enter to continue with suggestion.", nil, "oz_git")
-				vim.api.nvim_feedkeys(":Git " .. suggestion, "n", false)
+				g_util.set_cmdline("Git " .. suggestion)
 			end
 		end,
 	})
@@ -94,10 +95,8 @@ end
 -- Define the user command
 function M.oz_git_usercmd_init()
 	vim.api.nvim_create_user_command("Git", function(opts)
-		-- oz_git ft..
-		require("oz.git.oz_git_ft").oz_git_hl()
 		-- git cmd
-		run_git_command(opts.args)
+		RunGitCmd(opts.args)
 	end, { nargs = "+" })
 end
 

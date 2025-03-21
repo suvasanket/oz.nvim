@@ -1,7 +1,7 @@
 local M = {}
 local util = require("oz.util")
 
-function M.parse_git_suggestion(data, arg_cmd)
+function M.parse_git_suggestion(data, arg_tbl)
 	local filtered_data = {}
 	for _, line in ipairs(data) do
 		if line and line ~= "" then
@@ -14,18 +14,25 @@ function M.parse_git_suggestion(data, arg_cmd)
 	local patterns = {
 		-- Command similarity suggestions
 		{
-			trigger = "The most similar command",
-			extract = function(str)
-				local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
-				return match and vim.trim(match) or nil
-			end,
-		},
-		{
 			trigger = "The most similar commands are",
-			extract = function()
-				return arg_cmd
+			extract = function(str)
+                if #arg_tbl == 1 then
+                    return arg_tbl[1]
+                end
+				return arg_tbl[1] .. "| " .. table.concat(arg_tbl, " ", 2)
 			end,
 		},
+        {
+            trigger = "The most similar command",
+            extract = function(str)
+                local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
+                if #arg_tbl == 1 then
+                    return match
+                else
+                    return match .. "| " .. table.concat(arg_tbl, " ", 2)
+                end
+            end,
+        },
 		{
 			trigger = "Did you mean",
 			extract = function(str)
@@ -40,7 +47,8 @@ function M.parse_git_suggestion(data, arg_cmd)
 		{
 			trigger = "Please tell me who you are",
 			extract = function()
-				return "config --global user.email YOUR_EMAIL && config --global user.name YOUR_NAME"
+                local uname = util.ShellOutput("whoami")
+				return "config --global user.email | && config --global user.name " .. uname
 			end,
 		},
 		-- Upstream tracking suggestions
@@ -75,7 +83,7 @@ function M.parse_git_suggestion(data, arg_cmd)
 				if match then
 					return match:gsub("^git%s+", "")
 				end
-				return "remote add origin YOUR_REPOSITORY_URL"
+				return "remote add origin "
 			end,
 		},
 		-- Branch checkout suggestions
@@ -100,7 +108,8 @@ function M.parse_git_suggestion(data, arg_cmd)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-				return "status # Then fix conflicts and run 'add' followed by 'commit'"
+                vim.notify("Then fix conflicts and run 'add' followed by 'commit'")
+				return "status"
 			end,
 		},
 		-- Detached HEAD suggestions
@@ -134,7 +143,7 @@ function M.parse_git_suggestion(data, arg_cmd)
 			trigger = "forgot to add some files",
 			extract = function()
 				vim.notify("put your files.")
-				return "add [files] && commit --amend"
+				return "add | && commit --amend"
 			end,
 		},
 		-- Interactive rebase suggestion
@@ -208,23 +217,22 @@ function M.parse_git_suggestion(data, arg_cmd)
 end
 
 function M.commit_wizard()
-    local remote = util.ShellOutput("git config --get remote.origin.url")
-    local no_unpushed = util.ShellOutput("git rev-list --count @{u}..HEAD")
-    if remote ~= "" then
-        vim.api.nvim_echo({
-            { "[󱦲" .. no_unpushed .. "]", "ModeMsg" },
-            { " press " },
-            { "P", "ModeMsg" },
-            { " to push or any other key to dismiss:" },
-        }, false, {})
-        local char = vim.fn.getchar()
-        char = vim.fn.nr2char(char)
-        if char == "P" then
-            vim.cmd("Git push")
-        else
-            print(" ")
-        end
-    end
+	local remote = util.ShellOutput("git config --get remote.origin.url")
+	local no_unpushed = util.ShellOutput("git rev-list --count @{u}..HEAD")
+	if remote ~= "" then
+		vim.api.nvim_echo({
+			{ "[󱦲" .. no_unpushed .. "]", "ModeMsg" },
+			{ " press " },
+			{ "'P'", "ModeMsg" },
+			{ " to push or any other key to dismiss:" },
+		}, false, {})
+		local char = vim.fn.getchar()
+		char = vim.fn.nr2char(char)
+		if char == "P" then
+			vim.cmd("Git push")
+		end
+		vim.api.nvim_echo({ { "" } }, false, {})
+	end
 end
 
 return M
