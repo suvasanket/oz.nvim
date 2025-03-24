@@ -137,6 +137,23 @@ function M.oz_git_usercmd_init()
 		local args_table = vim.split(opts.args, "%s+")
 		require("oz.git.git_log").commit_log({ level = 1 }, args_table)
 	end, { nargs = "*", desc = "oz_git log" })
+
+	-- Gr
+	vim.api.nvim_create_user_command("Gr", function()
+		M.after_exec_complete(function()
+			vim.cmd("edit")
+		end)
+		vim.cmd("Git checkout -- %")
+		vim.api.nvim_echo({ { ":Git " }, { "checkout -- %", "ModeMsg" } }, false, {})
+	end, { nargs = "*", desc = "Git read" })
+
+	-- Gw
+	vim.api.nvim_create_user_command("Gw", function()
+		local ok = pcall(vim.cmd, "w")
+		if ok then
+			vim.cmd("Git add %")
+		end
+	end, { nargs = "*", desc = "Git write" })
 end
 
 return M
