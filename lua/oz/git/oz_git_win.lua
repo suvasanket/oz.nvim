@@ -4,12 +4,21 @@ local g_util = require("oz.git.util")
 
 local oz_git_buf = nil
 local oz_git_win = nil
-local oz_git_win_cmd = nil
+local git_cmd = {}
+
+local function set_cmd_history(cmd)
+	if git_cmd.prev_cmd == cmd then
+		git_cmd.next_cmd = git_cmd.cur_cmd
+	end
+	if git_cmd.cur_cmd then
+		git_cmd.prev_cmd = git_cmd.cur_cmd
+	end
+	git_cmd.cur_cmd = cmd
+end
 
 local function ft_options()
 	vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
 	vim.bo.bufhidden = "wipe"
-	vim.bo.buftype = "nofile"
 	vim.bo.swapfile = false
 end
 
@@ -37,7 +46,7 @@ local function extract_git_command_and_flag(if_grab)
 				local final_command = command .. " " .. flag
 				if if_grab then
 					util.tbl_insert(grab_flags, flag)
-                    vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
+					vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
 					vim.api.nvim_echo(
 						{ { ":Git " .. command .. " " }, { table.concat(grab_flags, " "), "@attribute" } },
 						false,
@@ -74,22 +83,23 @@ end
 local function ft_mappings(buf)
 	vim.keymap.set("n", "q", function()
 		vim.cmd("close")
-	end, { buffer = buf, silent = true, desc = "[oz_git]close" })
+	end, { buffer = buf, silent = true, desc = "close cmd buffer." })
 
+	-- FIXME: potential ref C-g and CR
 	-- GRAB key
 	vim.keymap.set("n", "<C-g>", function()
 		local cfile = vim.fn.expand("<cfile>")
 
 		if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- grab hashes
 			util.tbl_insert(grab_hashs, cfile)
-            vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
+			vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
 			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
 		else
 			local absolute_path = vim.fs.normalize(vim.fn.getcwd() .. "/" .. cfile)
 
 			if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then -- grab files
 				util.tbl_insert(grab_files, cfile)
-                vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
+				vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
 				vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_files, " "), "@attribute" } }, false, {})
 			else
 				if not extract_git_command_and_flag(true) then -- grab flags
@@ -97,7 +107,7 @@ local function ft_mappings(buf)
 				end
 			end
 		end
-	end, { buffer = buf, silent = true, desc = "[oz_git]GRAB." })
+	end, { buffer = buf, silent = true, desc = "pick any valid entry under cursor." })
 
 	-- ENTER key
 	vim.keymap.set("n", "<cr>", function()
@@ -105,6 +115,9 @@ local function ft_mappings(buf)
 			local cfile = vim.fn.expand("<cfile>")
 
 			if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- show hash
+				if vim.bo.buftype == "terminal" then
+					vim.cmd("close")
+				end
 				vim.cmd("Git show " .. cfile)
 			else
 				local cwd = vim.fn.getcwd()
@@ -122,32 +135,40 @@ local function ft_mappings(buf)
 					end
 				end
 			end
-		else
 		end
-	end, { buffer = buf, silent = true, desc = "[oz_git]open cursor entry." })
+	end, { buffer = buf, silent = true, desc = "open any valid entry under cursor." })
 
 	-- refresh
 	vim.keymap.set("n", "<C-r>", function()
-		RunGitCmd(oz_git_win_cmd)
-	end, { buffer = buf, silent = true, desc = "[oz_git]refresh." })
+		RunGitCmd(git_cmd.cur_cmd)
+	end, { buffer = buf, silent = true, desc = "refresh current cmd buffer(by rerunning prev cmd)." })
 
 	-- discard grab
 	vim.keymap.set("n", "<C-c>", function()
-		if #grab_hashs ~= 0 then
-			grab_hashs = {}
-		elseif #grab_files ~= 0 then
-			grab_files = {}
-		elseif #grab_flags ~= 0 then
-			grab_flags = {}
-		end
+		grab_hashs, grab_files, grab_flags =
+			#grab_hashs > 0 and {} or grab_hashs,
+			#grab_files > 0 and {} or grab_files,
+			#grab_flags > 0 and {} or grab_flags
 		vim.api.nvim_echo({ { "" } }, false, {})
 		util.Notify("All picked items have been removed.", nil, "oz_git")
-	end, { buffer = buf, silent = true, desc = "[oz_git]discard grab." })
+	end, { buffer = buf, silent = true, desc = "discard any picked entry." })
 
 	-- show help
 	vim.keymap.set("n", "g?", function()
 		util.Show_buf_keymaps()
-	end, { buffer = buf, silent = true, desc = "[oz_git]show keymaps." })
+	end, { buffer = buf, silent = true, desc = "show all keymaps." })
+
+	vim.keymap.set("n", "<C-o>", function()
+		if git_cmd.prev_cmd then
+			vim.cmd("Git " .. git_cmd.prev_cmd)
+		end
+	end, { remap = false, buffer = buf, silent = true, desc = "go back to previous cmd buffer." })
+
+	vim.keymap.set("n", "<C-i>", function()
+		if git_cmd.next_cmd then
+			vim.cmd("Git " .. git_cmd.next_cmd)
+		end
+	end, { remap = false, buffer = buf, silent = true, desc = "go to next cmd buffer." })
 end
 
 -- highlights
@@ -188,12 +209,12 @@ local function ft_hl()
 end
 
 -- In your plugin's Lua file
-local function oz_git_ft()
-	local oz_git_syntax = vim.api.nvim_create_augroup("OzGitSyntax", { clear = true })
+function M.oz_git_ft()
+	local oz_git_ft_gp = vim.api.nvim_create_augroup("OzGitFt", { clear = true })
 
 	vim.api.nvim_create_autocmd("FileType", {
 		pattern = "oz_git",
-		group = oz_git_syntax,
+		group = oz_git_ft_gp,
 		once = true,
 		callback = function(event)
 			ft_options()
@@ -205,7 +226,7 @@ local function oz_git_ft()
 end
 
 function M.open_oz_git_win(lines, cmd, type)
-	oz_git_win_cmd = cmd
+	set_cmd_history(cmd)
 	local height = math.min(math.max(#lines, 7), 15)
 
 	if oz_git_buf == nil or not vim.api.nvim_win_is_valid(oz_git_win) then
@@ -219,8 +240,8 @@ function M.open_oz_git_win(lines, cmd, type)
 
 		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
 
-		vim.api.nvim_buf_set_name(oz_git_buf, string.format("**%s**", type))
-		if oz_git_ft() then
+		vim.api.nvim_buf_set_name(oz_git_buf, string.format("oz_git://%s", type))
+		if M.oz_git_ft() then
 			vim.api.nvim_buf_set_option(oz_git_buf, "ft", "oz_git")
 		else
 			vim.api.nvim_buf_set_option(oz_git_buf, "ft", "git")
@@ -231,7 +252,7 @@ function M.open_oz_git_win(lines, cmd, type)
 			callback = function()
 				oz_git_buf = nil
 				oz_git_win = nil
-				oz_git_win_cmd = nil
+				git_cmd = {} -- FIXME will not clear the tbl.
 			end,
 		})
 	else

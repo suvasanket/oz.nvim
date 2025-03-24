@@ -14,25 +14,25 @@ function M.parse_git_suggestion(data, arg_tbl)
 	local patterns = {
 		-- Command similarity suggestions
 		{
-			trigger = "The most similar commands are",
+			trigger = "The most similar command is",
 			extract = function(str)
-                if #arg_tbl == 1 then
-                    return arg_tbl[1]
-                end
+				local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
+				if #arg_tbl == 1 then
+					return match
+				else
+					return match .. "| " .. table.concat(arg_tbl, " ", 2)
+				end
+			end,
+		},
+		{
+			trigger = "The most similar commands are",
+			extract = function()
+				if #arg_tbl == 1 then
+					return arg_tbl[1]
+				end
 				return arg_tbl[1] .. "| " .. table.concat(arg_tbl, " ", 2)
 			end,
 		},
-        {
-            trigger = "The most similar command",
-            extract = function(str)
-                local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
-                if #arg_tbl == 1 then
-                    return match
-                else
-                    return match .. "| " .. table.concat(arg_tbl, " ", 2)
-                end
-            end,
-        },
 		{
 			trigger = "Did you mean",
 			extract = function(str)
@@ -47,7 +47,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "Please tell me who you are",
 			extract = function()
-                local uname = util.ShellOutput("whoami")
+				local uname = util.ShellOutput("whoami")
 				return "config --global user.email | && config --global user.name " .. uname
 			end,
 		},
@@ -108,7 +108,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-                vim.notify("Then fix conflicts and run 'add' followed by 'commit'")
+				vim.notify("Then fix conflicts and run 'add' followed by 'commit'")
 				return "status"
 			end,
 		},

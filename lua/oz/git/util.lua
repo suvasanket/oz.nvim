@@ -50,34 +50,33 @@ function M.parse_args(argstring)
 	return args
 end
 
-function M.get_remote_cmd(str)
-	local git_subcommands = {
-		["push"] = { action = "pushing start.", completion = "pushing complete." },
-		["pull"] = { action = "pulling start.", completion = "pulling complete." },
-		["fetch"] = { action = "fetching start.", completion = "fetching complete." },
-		["clone"] = { action = "cloning start.", completion = "cloning complete." },
-		["remote"] = { action = "accessing remote", completion = "remote access complete." },
-		["ls-remote"] = { action = "connecting to remote repo", completion = "remote connection complete." },
-		["archive"] = { action = "archiving started.", completion = "archiving complete." },
-		["request-pull"] = { action = "requesting pull.", completion = "pull request complete." },
-		["svn"] = { action = "accessing svn.", completion = "svn access complete." },
-	}
-	if git_subcommands[str] then
-		return true, git_subcommands[str].action, git_subcommands[str].completion
-	else
-		return false, nil, nil
-	end
-end
-
 function M.check_flags(tbl, flag)
 	for _, str in pairs(tbl) do
-		if str:sub(1, 1) == "-" then
-			if str:find(flag) then
-				return true
-			end
+		if str:find(flag) then
+			return true
 		end
 	end
 	return false
+end
+
+function M.save_lines_to_commitfile(lines)
+	local git_dir_command = "git rev-parse --git-dir 2>/dev/null"
+	local git_dir = vim.fn.system(git_dir_command):gsub("%s+$", "")
+
+	if vim.v.shell_error ~= 0 then
+		return
+	end
+
+	local commit_msg_file = git_dir .. "/COMMIT_EDITMSG"
+
+	local file = io.open(commit_msg_file, "w")
+	if file then
+		-- Write all lines to the file
+		for _, line in ipairs(lines) do
+			file:write(line .. "\n")
+		end
+		file:close()
+	end
 end
 
 function M.set_cmdline(str)

@@ -3,19 +3,45 @@ local util = require("oz.util")
 local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
+local commit = require("oz.git.commit")
 
-local function git_commit(args_table)
-	if #args_table == 1 then
-		local message = util.UserInput("commit message:")
-
-		if message then
-			args_table = { "commit", "-m", message }
-			return args_table
-		else
-			return {}
+local function different_cmd_runner(args_table)
+	-- commit cmd
+	if args_table[1] == "commit" then
+		if #args_table == 0 then
+			return true
+		elseif #args_table == 1 then
+			args_table = commit.git_commit()
+			return true
 		end
-	else
-		return args_table
+	end
+	-- help -> man
+	if g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then
+		vim.cmd("Man git-" .. args_table[1])
+		return true
+	end
+
+	-- remote cmds
+	local remote = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
+	local is_remote = util.string_contains(args_table[1], remote)
+	if is_remote then
+		vim.cmd("hor term git " .. table.concat(args_table, " "))
+		if oz_git_win.oz_git_ft() then
+			vim.api.nvim_buf_set_option(0, "ft", "oz_git")
+		else
+			vim.api.nvim_buf_set_option(0, "ft", "git")
+		end
+		vim.cmd("resize 9")
+		vim.api.nvim_buf_set_name(0, "")
+		vim.cmd.wincmd("p")
+		return true
+	end
+end
+
+local exec_complete_callback = nil
+function M.after_exec_complete(callback)
+	if callback then
+		exec_complete_callback = callback
 	end
 end
 
@@ -27,22 +53,7 @@ function RunGitCmd(args)
 	local std_out = {}
 	local std_err = {}
 
-	local is_remote, start, complete = g_util.get_remote_cmd(args_table[1])
-	if is_remote then
-		util.Notify(start, nil, "oz_git")
-	end
-
-	-- commit cmd
-	if cmd == "commit" then
-		args_table = git_commit(args_table)
-		if #args_table == 0 then
-			return
-		end
-	end
-
-	-- help -> man
-	if g_util.check_flags(args_table, "help") or g_util.check_flags(args_table, "h") then
-		vim.cmd("Man git-" .. cmd)
+	if different_cmd_runner(args_table) then
 		return
 	end
 
@@ -70,19 +81,31 @@ function RunGitCmd(args)
 			end
 			suggestion = wizard.parse_git_suggestion(data, args_table)
 		end,
-		on_exit = function()
-			if is_remote and #std_err == 0 then -- remote dependant
-				util.Notify(complete, nil, "oz_git")
-			elseif cmd == "commit" then
-				wizard.commit_wizard()
-			elseif #std_out ~= 0 then
-				oz_git_win.open_oz_git_win(std_out, args, "stdout")
-			elseif #std_err ~= 0 then
-				oz_git_win.open_oz_git_win(std_err, args, "stderr")
+		on_exit = function(_, code, _)
+			if code == 0 then
+				if cmd == "commit" then
+					wizard.commit_wizard()
+				elseif #std_out == 1 then
+					util.Notify(std_out[1], "info", "oz_git")
+				elseif #std_out ~= 0 then
+					oz_git_win.open_oz_git_win(std_out, args, "stdout")
+				end
+			else
+				if #std_err == 1 then
+					util.Notify(std_err[1], "error", "oz_git")
+				elseif #std_err ~= 0 then
+					oz_git_win.open_oz_git_win(std_err, args, "stderr")
+				end
 			end
+
 			if suggestion then
-				util.Notify("press enter to continue with suggestion.", nil, "oz_git")
 				g_util.set_cmdline("Git " .. suggestion)
+			end
+
+			-- run exec complete callbacks
+			if exec_complete_callback then
+				exec_complete_callback(code, std_out, std_err)
+				exec_complete_callback = nil
 			end
 		end,
 	})
@@ -94,10 +117,26 @@ end
 
 -- Define the user command
 function M.oz_git_usercmd_init()
+	-- :Git
 	vim.api.nvim_create_user_command("Git", function(opts)
 		-- git cmd
-		RunGitCmd(opts.args)
-	end, { nargs = "+" })
+		if opts.args and #opts.args > 0 then
+			RunGitCmd(opts.args)
+		else
+			require("oz.git.status").GitStatus()
+		end
+	end, {
+		nargs = "*",
+		desc = "oz_git",
+		complete = function(arglead, cmdline, cursorpos)
+			return require("oz.git.complete").complete(arglead, cmdline, cursorpos)
+		end,
+	})
+
+	vim.api.nvim_create_user_command("GitLog", function(opts)
+		local args_table = vim.split(opts.args, "%s+")
+		require("oz.git.git_log").commit_log({ level = 1 }, args_table)
+	end, { nargs = "*", desc = "oz_git log" })
 end
 
 return M

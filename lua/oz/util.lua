@@ -1,7 +1,9 @@
 local M = {}
 
-function M.inspect(var)
-	return vim.inspect(var):gsub("%s+", " "):gsub("\n", "")
+function M.tbl_insert(tbl, item)
+	if not vim.tbl_contains(tbl, item) then
+		table.insert(tbl, item)
+	end
 end
 
 function M.GetProjectRoot(markers, path_or_bufnr)
@@ -26,9 +28,9 @@ function M.Map(mode, lhs, rhs, opts)
 	if not lhs then
 		return
 	end
-    -- return vim.schedule_wrap(function()
-    -- end)()
-    vim.keymap.set(mode, lhs, rhs, opts)
+	-- return vim.schedule_wrap(function()
+	-- end)()
+	vim.keymap.set(mode, lhs, rhs, opts)
 end
 
 function M.echoprint(str, hl)
@@ -183,6 +185,16 @@ function M.Show_buf_keymaps(args)
 	local temp_win = vim.api.nvim_open_win(temp_buf, true, win_opts)
 	vim.api.nvim_buf_set_option(temp_buf, "modifiable", false)
 	vim.api.nvim_buf_set_keymap(temp_buf, "n", "q", "<cmd>close<CR>", { noremap = true, silent = true })
+    return temp_win, temp_buf
+end
+
+function M.string_contains(str, string_table)
+    for _, substring in ipairs(string_table) do
+        if string.find(str, substring) then
+            return true
+        end
+    end
+    return false
 end
 
 return M
