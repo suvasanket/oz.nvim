@@ -80,11 +80,11 @@ local function log_buf_keymaps(buf)
 	-- edit picked
 	vim.keymap.set("n", "a", function()
 		if #grab_hashs ~= 0 then
-            require("oz.git").after_exec_complete(function(code, stdout)
-                if code == 0 and #stdout == 0 then
-                    M.refresh_commit_log()
-                end
-            end)
+			require("oz.git").after_exec_complete(function(code, stdout)
+				if code == 0 and #stdout == 0 then
+					M.refresh_commit_log()
+				end
+			end)
 			g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 			grab_hashs = {}
 		end
@@ -215,7 +215,7 @@ local function get_commit_log_lines(level, args)
 	if args and #args > 0 then
 		user_set_args = args
 		log = vim.fn.systemlist("git log " .. table.concat(args, " ") .. " " .. fmt_flags)
-	elseif user_set_args then
+	elseif user_set_args and user_set_args ~= "" then
 		log = vim.fn.systemlist("git log " .. table.concat(user_set_args, " ") .. " " .. fmt_flags)
 		vim.api.nvim_echo({ { ":Git log " }, { table.concat(user_set_args, " "), "@attribute" } }, false, {})
 	else

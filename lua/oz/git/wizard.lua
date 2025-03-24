@@ -108,7 +108,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-				vim.notify("Then fix conflicts and run 'add' followed by 'commit'")
+				vim.notify("First fix conflicts and run 'add' followed by 'commit'")
 				return "status"
 			end,
 		},
@@ -120,7 +120,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 				if branch then
 					return "checkout -b " .. branch
 				end
-				vim.notify("followed by new-branch name.")
+				vim.notify("put a new-branch name.")
 				return "checkout -b "
 			end,
 		},
@@ -150,7 +150,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "use interactive rebase",
 			extract = function()
-				vim.notify("followed by the number of commits.")
+				vim.notify("put the number of commits.")
 				return "rebase -i HEAD~"
 			end,
 		},
@@ -160,7 +160,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 			extract = function(str)
 				local config_key = str:match("git config ([^%s]+)")
 				if config_key then
-					return "config " .. config_key .. " VALUE"
+					return "config " .. config_key
 				end
 				return nil
 			end,

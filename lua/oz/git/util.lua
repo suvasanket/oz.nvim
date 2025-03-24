@@ -1,5 +1,5 @@
 local M = {}
--- local util = require("oz.util")
+local util = require("oz.util")
 
 function M.expand_expressions(str)
 	local pattern = "%%[:%w]*"
@@ -85,6 +85,16 @@ function M.set_cmdline(str)
 	local cursor_pos = str:find("%|")
 	if cursor_pos then
 		vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
+	end
+end
+
+function M.if_in_git()
+	local res = util.ShellOutput("git rev-parse --is-inside-work-tree 2>/dev/null")
+	res = vim.trim(res)
+	if res:find("true") then
+		return true
+	else
+		return false
 	end
 end
 

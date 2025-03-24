@@ -23,7 +23,7 @@ local function different_cmd_runner(args_table)
 
 	-- remote cmds
 	local remote = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
-	local is_remote = util.string_contains(args_table[1], remote)
+	local is_remote = util.string_in_tbl(args_table[1], remote)
 	if is_remote then
 		vim.cmd("hor term git " .. table.concat(args_table, " "))
 		if oz_git_win.oz_git_ft() then
@@ -119,11 +119,17 @@ end
 function M.oz_git_usercmd_init()
 	-- :Git
 	vim.api.nvim_create_user_command("Git", function(opts)
-		-- git cmd
-		if opts.args and #opts.args > 0 then
+		if g_util.if_in_git() then
+			if opts.args and #opts.args > 0 then
+				RunGitCmd(opts.args)
+			else
+				require("oz.git.status").GitStatus()
+			end
+		elseif opts.args and opts.args:find("init") then
 			RunGitCmd(opts.args)
 		else
-			require("oz.git.status").GitStatus()
+			vim.api.nvim_feedkeys(":Git init", "n", false)
+			util.Notify("You are not in a git repo.", "warn", "oz_git")
 		end
 	end, {
 		nargs = "*",
@@ -133,25 +139,38 @@ function M.oz_git_usercmd_init()
 		end,
 	})
 
+	-- log
 	vim.api.nvim_create_user_command("GitLog", function(opts)
-		local args_table = vim.split(opts.args, "%s+")
-		require("oz.git.git_log").commit_log({ level = 1 }, args_table)
+		if g_util.if_in_git() then
+			local args_table = vim.split(opts.args, "%s+")
+			require("oz.git.git_log").commit_log({ level = 1 }, args_table)
+		else
+			util.Notify("You are not in a git repo.", "warn", "oz_git")
+		end
 	end, { nargs = "*", desc = "oz_git log" })
 
 	-- Gr
 	vim.api.nvim_create_user_command("Gr", function()
-		M.after_exec_complete(function()
-			vim.cmd("edit")
-		end)
-		vim.cmd("Git checkout -- %")
-		vim.api.nvim_echo({ { ":Git " }, { "checkout -- %", "ModeMsg" } }, false, {})
+		if g_util.if_in_git() then
+			M.after_exec_complete(function()
+				vim.cmd("edit")
+			end)
+			vim.cmd("Git checkout -- %")
+			vim.api.nvim_echo({ { ":Git " }, { "checkout -- %", "ModeMsg" } }, false, {})
+		else
+			util.Notify("You are not in a git repo.", "warn", "oz_git")
+		end
 	end, { nargs = "*", desc = "Git read" })
 
 	-- Gw
 	vim.api.nvim_create_user_command("Gw", function()
-		local ok = pcall(vim.cmd, "w")
-		if ok then
-			vim.cmd("Git add %")
+		if g_util.if_in_git() then
+			local ok = pcall(vim.cmd, "w")
+			if ok then
+				vim.cmd("Git add %")
+			end
+		else
+			util.Notify("You are not in a git repo.", "warn", "oz_git")
 		end
 	end, { nargs = "*", desc = "Git write" })
 end

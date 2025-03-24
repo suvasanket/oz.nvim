@@ -188,7 +188,7 @@ function M.Show_buf_keymaps(args)
     return temp_win, temp_buf
 end
 
-function M.string_contains(str, string_table)
+function M.string_in_tbl(str, string_table)
     for _, substring in ipairs(string_table) do
         if string.find(str, substring) then
             return true

@@ -1,6 +1,5 @@
 local M = {}
 local util = require("oz.util")
--- TODO gl open the log buffer but in lg style
 
 local status_win = nil
 local status_buf = nil
@@ -10,10 +9,19 @@ local cwd = nil
 local headings_table = {}
 local diff_lines = {}
 
--- helper
-local function parse_buffer_for_headings(lines)
-	local headings = {} -- Table to store headings and their content
-	local current_heading = nil -- Track the current heading
+-- helper: heading tbl.
+local function get_heading_tbl(lines)
+	local current_heading = nil
+	local branch_line = vim.fn.systemlist("git branch")
+	local branch_heading = "On branch " .. vim.trim(util.ShellOutput("git branch --show-current"))
+
+	headings_table[branch_heading] = {}
+	for _, line in ipairs(branch_line) do
+		if line ~= "" then
+			line = "\t" .. line
+			table.insert(headings_table[branch_heading], line)
+		end
+	end
 
 	for _, line in ipairs(lines) do
 		if
@@ -21,23 +29,20 @@ local function parse_buffer_for_headings(lines)
 			or line:match("^Untracked files:")
 			or line:match("^Changes to be committed:")
 		then
-			current_heading = line -- Set the current heading
-			headings[current_heading] = {} -- Initialize an empty table for this heading's content
+			current_heading = line
+			headings_table[current_heading] = {}
 		elseif current_heading and line ~= "" then
-			table.insert(headings[current_heading], line)
+			table.insert(headings_table[current_heading], line)
 		elseif line == "" then
 			current_heading = nil
 		end
 	end
-
-	return headings
 end
 
 -- Function to toggle the visibility of a heading's content
 local function toggle_section()
 	local line_num = vim.fn.line(".") -- Get the current line number
-	local lines = vim.api.nvim_buf_get_lines(0, line_num - 1, line_num, false) -- Get the current line
-	local current_line = lines[1] -- Extract the line content
+	local current_line = vim.api.nvim_get_current_line()
 
 	-- Check if the current line is a heading
 	vim.bo.modifiable = true
@@ -82,7 +87,7 @@ local function get_file_under_cursor()
 		local tbl = { "deleted:", "renamed:", "copied:" }
 		if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
 			table.insert(entries, absolute_path)
-		elseif util.string_contains(line, tbl) then
+		elseif util.string_in_tbl(line, tbl) then
 			table.insert(entries, absolute_path)
 		end
 	end
@@ -236,6 +241,20 @@ local function status_buf_keymaps(buf)
 				vim.cmd.wincmd("p")
 				vim.cmd("edit " .. entry[1])
 			end
+		else
+            -- change branch
+			local current_line = vim.trim(vim.api.nvim_get_current_line())
+			local branch_heading = "On branch " .. vim.trim(util.ShellOutput("git branch --show-current"))
+			for _, str in pairs(headings_table[branch_heading]) do
+				local line = str:gsub("^[^w%s]+", ""):gsub("^%s+", "")
+				if line == current_line then
+					require("oz.git").after_exec_complete(function()
+						M.refresh_status_buf()
+					end)
+					line = vim.trim(line:gsub("%*", ""))
+					vim.cmd("Git checkout " .. line)
+				end
+			end
 		end
 	end, { remap = false, buffer = buf, silent = true, desc = "open entry under cursor." })
 
@@ -347,7 +366,7 @@ end
 function M.GitStatus()
 	cwd = nil
 	local status_lines = get_status_lines()
-	headings_table = parse_buffer_for_headings(status_lines)
+	get_heading_tbl(status_lines)
 
 	open_status_buf(status_lines)
 end
