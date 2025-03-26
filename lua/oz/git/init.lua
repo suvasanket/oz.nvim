@@ -3,27 +3,41 @@ local util = require("oz.util")
 local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
-local commit = require("oz.git.commit")
 
+-- CMD parser
 local function different_cmd_runner(args_table)
-	-- commit cmd
-	if args_table[1] == "commit" then
-		if #args_table == 0 then
-			return true
-		elseif #args_table == 1 then
-			args_table = commit.git_commit()
+	local cmd = args_table[1]
+
+	-- editor
+	local req_editor = { "commit", "rebase", "tag", "notes", "merge" }
+	local is_req_editor = util.string_in_tbl(cmd, req_editor)
+	if is_req_editor then
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = { "gitrebase", "gitcommit" },
+			once = true,
+			callback = function()
+				vim.bo.bufhidden = "delete"
+			end,
+		})
+	end
+
+	if cmd == "commit" and #args_table == 1 then
+		local changed = vim.fn.systemlist("git diff --name-only --cached")
+		if #changed < 1 then
+			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
 	end
+
 	-- help -> man
 	if g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then
-		vim.cmd("Man git-" .. args_table[1])
+		vim.cmd("Man git-" .. cmd)
 		return true
 	end
 
 	-- remote cmds
 	local remote = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
-	local is_remote = util.string_in_tbl(args_table[1], remote)
+	local is_remote = util.string_in_tbl(cmd, remote)
 	if is_remote then
 		vim.cmd("hor term git " .. table.concat(args_table, " "))
 		if oz_git_win.oz_git_ft() then
@@ -38,6 +52,7 @@ local function different_cmd_runner(args_table)
 	end
 end
 
+-- callback to run after :Git cmd complete
 local exec_complete_callback = nil
 function M.after_exec_complete(callback)
 	if callback then
@@ -45,6 +60,7 @@ function M.after_exec_complete(callback)
 	end
 end
 
+-- Run Git cmd
 function RunGitCmd(args)
 	args = g_util.expand_expressions(args)
 	local args_table = g_util.parse_args(args)
@@ -57,10 +73,13 @@ function RunGitCmd(args)
 		return
 	end
 
-	---@diagnostic disable-next-line: deprecated
 	local job_id = vim.fn.jobstart({ "git", unpack(args_table) }, {
 		stdout_buffered = true,
 		stderr_buffered = true,
+		env = {
+			GIT_EDITOR = "nvr -cc split --remote-wait",
+			GIT_SEQUENCE_EDITOR = "nvr -cc split --remote-wait",
+		},
 		on_stdout = function(_, data, _)
 			if data then
 				for _, line in ipairs(data) do
