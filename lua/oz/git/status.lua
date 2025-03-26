@@ -223,13 +223,16 @@ local function status_buf_keymaps(buf)
 			util.ShellCmd({ "git", "rm", "--cached", unpack(entries) }, function()
 				M.refresh_status_buf()
 			end, function()
-				util.Notify("cannot remove from tracking currently selected.", "error", "oz_git")
+				util.Notify("currently selected can't be removed from tracking.", "error", "oz_git")
 			end)
 		end
 	end, { remap = false, buffer = buf, silent = true, desc = "untrack entry under cursor or selected entries." })
 
 	-- commit
 	vim.keymap.set("n", "cc", function()
+		require("oz.git").after_exec_complete(function()
+			M.refresh_status_buf()
+		end)
 		vim.cmd("Git commit")
 	end, { remap = false, buffer = buf, silent = true, desc = "open commit buffer." })
 

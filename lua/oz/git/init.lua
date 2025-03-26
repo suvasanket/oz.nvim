@@ -16,15 +16,13 @@ local function different_cmd_runner(args_table, args_str)
 		if vim.fn.executable("nvr") ~= 1 then
 			util.Notify("neovim-remote not found, install it use editor required commands.")
 			return true
-		else
-			vim.api.nvim_create_autocmd("FileType", {
-				pattern = { "gitrebase", "gitcommit" },
-				once = true,
-				callback = function()
-					vim.bo.bufhidden = "delete"
-				end,
-			})
 		end
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = { "gitrebase", "gitcommit" },
+			callback = function()
+				vim.bo.bufhidden = "delete"
+			end,
+		})
 	end
 
 	if cmd == "commit" and #args_table == 1 then

@@ -185,16 +185,17 @@ function M.Show_buf_keymaps(args)
 	local temp_win = vim.api.nvim_open_win(temp_buf, true, win_opts)
 	vim.api.nvim_buf_set_option(temp_buf, "modifiable", false)
 	vim.api.nvim_buf_set_keymap(temp_buf, "n", "q", "<cmd>close<CR>", { noremap = true, silent = true })
-    return temp_win, temp_buf
+	return temp_win, temp_buf
 end
 
-function M.string_in_tbl(str, string_table)
-    for _, substring in ipairs(string_table) do
-        if string.find(str, substring) then
-            return true
-        end
-    end
-    return false
+function M.str_in_tbl(str, string_table)
+	str = vim.trim(str)
+	for _, substring in ipairs(string_table) do
+		if string.find(str, substring, 1, true) then
+			return true
+		end
+	end
+	return false
 end
 
 return M

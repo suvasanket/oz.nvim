@@ -220,18 +220,18 @@ function M.commit_wizard()
 	local remote = util.ShellOutput("git config --get remote.origin.url")
 	local no_unpushed = util.ShellOutput("git rev-list --count @{u}..HEAD")
 	if remote ~= "" then
-		vim.api.nvim_echo({
-			{ "[󱦲" .. no_unpushed .. "]", "ModeMsg" },
-			{ " press " },
-			{ "'P'", "ModeMsg" },
-			{ " to push or any other key to dismiss:" },
-		}, false, {})
+		vim.notify(
+			"[󱦲" .. no_unpushed .. "] press 'P' to push any other key to dismiss.",
+			vim.log.levels.INFO,
+			{ title = "oz_git", timeout = 3000 }
+		)
 		local char = vim.fn.getchar()
 		char = vim.fn.nr2char(char)
 		if char == "P" then
 			vim.cmd("Git push")
+		else
+			vim.api.nvim_replace_termcodes(char, true, false, true)
 		end
-		vim.api.nvim_echo({ { "" } }, false, {})
 	end
 end
 
