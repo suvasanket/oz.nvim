@@ -5,20 +5,26 @@ local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
 
 -- CMD parser
-local function different_cmd_runner(args_table)
+local function different_cmd_runner(args_table, args_str)
 	local cmd = args_table[1]
 
 	-- editor
-	local req_editor = { "commit", "rebase", "tag", "notes", "merge" }
-	local is_req_editor = util.string_in_tbl(cmd, req_editor)
+	local req_editor =
+		{ "commit", "commit --amend", "tag -a", "rebase -i", "merge --no-commit", "notes add", "filter-branch" }
+	local is_req_editor = util.str_in_tbl(args_str, req_editor)
 	if is_req_editor then
-		vim.api.nvim_create_autocmd("FileType", {
-			pattern = { "gitrebase", "gitcommit" },
-			once = true,
-			callback = function()
-				vim.bo.bufhidden = "delete"
-			end,
-		})
+		if vim.fn.executable("nvr") ~= 1 then
+			util.Notify("neovim-remote not found, install it use editor required commands.")
+			return true
+		else
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = { "gitrebase", "gitcommit" },
+				once = true,
+				callback = function()
+					vim.bo.bufhidden = "delete"
+				end,
+			})
+		end
 	end
 
 	if cmd == "commit" and #args_table == 1 then
@@ -37,7 +43,7 @@ local function different_cmd_runner(args_table)
 
 	-- remote cmds
 	local remote = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
-	local is_remote = util.string_in_tbl(cmd, remote)
+	local is_remote = util.str_in_tbl(cmd, remote)
 	if is_remote then
 		vim.cmd("hor term git " .. table.concat(args_table, " "))
 		if oz_git_win.oz_git_ft() then
@@ -69,7 +75,7 @@ function RunGitCmd(args)
 	local std_out = {}
 	local std_err = {}
 
-	if different_cmd_runner(args_table) then
+	if different_cmd_runner(args_table, args) then
 		return
 	end
 
