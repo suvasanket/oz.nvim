@@ -208,7 +208,7 @@ local function ft_hl()
 	vim.cmd("highlight default link ozGitCommitHash @attribute")
 end
 
--- In your plugin's Lua file
+-- oz git ft
 function M.oz_git_ft()
 	local oz_git_ft_gp = vim.api.nvim_create_augroup("OzGitFt", { clear = true })
 

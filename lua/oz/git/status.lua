@@ -87,7 +87,7 @@ local function get_file_under_cursor()
 		local tbl = { "deleted:", "renamed:", "copied:" }
 		if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
 			table.insert(entries, absolute_path)
-		elseif util.string_in_tbl(line, tbl) then
+		elseif util.str_in_tbl(line, tbl) then
 			table.insert(entries, absolute_path)
 		end
 	end
@@ -230,7 +230,7 @@ local function status_buf_keymaps(buf)
 
 	-- commit
 	vim.keymap.set("n", "cc", function()
-		require("oz.git.commit").git_commit()
+		vim.cmd("Git commit")
 	end, { remap = false, buffer = buf, silent = true, desc = "open commit buffer." })
 
 	-- open current entry
@@ -242,7 +242,7 @@ local function status_buf_keymaps(buf)
 				vim.cmd("edit " .. entry[1])
 			end
 		else
-            -- change branch
+			-- change branch
 			local current_line = vim.trim(vim.api.nvim_get_current_line())
 			local branch_heading = "On branch " .. vim.trim(util.ShellOutput("git branch --show-current"))
 			for _, str in pairs(headings_table[branch_heading]) do
@@ -274,24 +274,44 @@ end
 local function status_buf_hl()
 	vim.cmd("syntax clear")
 
-	vim.cmd("syntax match ozGitStatusBranchName '\\(On branch \\)\\@<=\\S\\+'")
-	vim.cmd("syntax match ozgitstatusUntracked /^Untracked files:$/")
-	vim.cmd("syntax match ozgitstatusNotStaged /^Changes not staged for commit:$/")
-	vim.cmd("syntax match ozgitstatusToBeCommitted /^Changes to be committed:$/")
 	vim.cmd([[syntax match ozgitstatusDeleted /^\s\+deleted:\s\+.*$/]])
 	vim.cmd([[syntax match ozgitstatusModified /^\s\+modified:\s\+.*$/]])
-	vim.cmd([[syntax match ozgitstatusDiffAdded /^    +.\+$/]])
-	vim.cmd([[syntax match ozgitstatusDiffRemoved /^    -.\+$/]])
-
-	-- Link syntax groups to the @function highlight group
-	vim.cmd("highlight link ozGitStatusBranchName Title")
-	vim.cmd("highlight link ozgitstatusUntracked @function")
-	vim.cmd("highlight link ozgitstatusNotStaged @function")
-	vim.cmd("highlight link ozgitstatusToBeCommitted @function")
 	vim.api.nvim_set_hl(0, "ozgitstatusDeleted", { fg = "#757575" })
 	vim.cmd("highlight default link ozgitstatusModified MoreMsg")
-	vim.cmd("highlight default link ozgitstatusDiffAdded @diff.plus")
-	vim.cmd("highlight default link ozgitstatusDiffRemoved @diff.minus")
+
+	-- diff
+	vim.cmd([[
+    syntax match ozgitstatusDiffAdded /^    +.\+$/
+    syntax match ozgitstatusDiffRemoved /^    -.\+$/
+    highlight default link ozgitstatusDiffAdded @diff.plus
+    highlight default link ozgitstatusDiffRemoved @diff.minus
+    ]])
+
+	-- headings
+	vim.cmd([[
+    syntax match NoIndentCapital /^[A-Z][^ \t].*/
+    highlight link NoIndentCapital @function
+    ]])
+
+	-- branch
+	vim.cmd([[
+    syntax match ozGitStatusHeader "^On branch " nextgroup=ozGitStatusBranchName
+    syntax match ozGitStatusBranchName "\S\+" contained
+
+    highlight default link ozGitStatusBranchName Title
+    highlight default link ozGitStatusHeader @function
+    ]])
+
+	-- remote branch
+	vim.cmd([[
+    highlight GitStatusLine guifg=#808080 ctermfg=244
+    highlight GitStatusQuoted guifg=#99BC85 ctermfg=46 gui=italic
+    highlight default link GitStatusNumber @warning
+
+    syntax match GitStatusLine /^Your branch is ahead of '.*' by \d\+ commits\.$/
+    syntax match GitStatusQuoted /'[^']*'/ contained containedin=GitStatusLine
+    syntax match GitStatusNumber /\d\+/ contained containedin=GitStatusLine
+    ]])
 end
 
 -- status buf FileType

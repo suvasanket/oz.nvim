@@ -12,19 +12,13 @@ local user_set_args = nil
 local grab_hashs = {}
 
 local function get_curline_hash()
-	local current_line = vim.api.nvim_get_current_line()
-	local words = {}
-	for word in current_line:gmatch("%S+") do
-		table.insert(words, word)
-	end
-	if #words > 1 then
-		local hash = words[2]
-		if hash:match("^[0-9a-f][0-9a-f]*$") and #hash >= 7 and #hash <= 40 then
+	local line = vim.api.nvim_get_current_line()
+	for hash in line:gmatch("[0-9a-f]%w[0-9a-f]%w[0-9a-f]%w[0-9a-f]+") do
+		if #hash >= 7 and #hash <= 40 then
 			return hash
-		else
-			return nil
 		end
 	end
+	return nil
 end
 
 -- awesome stuff
@@ -151,7 +145,7 @@ local function log_buf_hl()
 
 	vim.cmd([[
     syntax match PathSeparator /\w\+\/\w\+/
-    highlight PathSeparator guifg=#99BC85 guibg=NONE gui=bold
+    highlight PathSeparator guifg=#99BC85 guibg=NONE gui=italic
     ]])
 end
 
