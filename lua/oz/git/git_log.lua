@@ -67,7 +67,14 @@ local function log_buf_keymaps(buf)
 		if hash then
 			util.tbl_insert(grab_hashs, hash)
 			vim.notify_once("press a/i to enter cmdline, <C-c> to reset.")
-			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
+
+			g_util.start_monitoring(grab_hashs, {
+				interval = 2000,
+				buf = buf,
+				on_active = function(t)
+					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+				end,
+			})
 		end
 	end, { buffer = buf, silent = true, desc = "pick any valid entry under cursor." })
 
@@ -79,6 +86,7 @@ local function log_buf_keymaps(buf)
 					M.refresh_commit_log()
 				end
 			end)
+			g_util.stop_monitoring(grab_hashs)
 			g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 			grab_hashs = {}
 		end
@@ -91,6 +99,7 @@ local function log_buf_keymaps(buf)
 					M.refresh_commit_log()
 				end
 			end)
+			g_util.stop_monitoring(grab_hashs)
 			g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 			grab_hashs = {}
 		end
@@ -99,10 +108,13 @@ local function log_buf_keymaps(buf)
 	-- refresh
 	vim.keymap.set("n", "<C-r>", function()
 		M.refresh_commit_log()
+		g_util.toggle_monitoring(grab_hashs)
 	end, { buffer = buf, silent = true, desc = "refresh commit log buffer." })
 
 	-- discard picked
 	vim.keymap.set("n", "<C-c>", function()
+		g_util.stop_monitoring(grab_hashs)
+
 		grab_hashs = #grab_hashs > 0 and {} or grab_hashs
 		vim.api.nvim_echo({ { "" } }, false, {})
 		util.Notify("All picked hashes have been removed.", nil, "oz_git")

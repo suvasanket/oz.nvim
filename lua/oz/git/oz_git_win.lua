@@ -47,12 +47,19 @@ local function extract_git_command_and_flag(if_grab)
 				if if_grab then
 					util.tbl_insert(grab_flags, flag)
 					vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
-					vim.api.nvim_echo(
-						{ { ":Git " .. command .. " " }, { table.concat(grab_flags, " "), "@attribute" } },
-						false,
-						{}
-					)
+					g_util.start_monitoring(grab_flags, { -- keeps echoing ..
+						interval = 2000,
+						buf = oz_git_buf,
+						on_active = function(t)
+							vim.api.nvim_echo(
+								{ { ":Git " .. command .. " " }, { table.concat(t, " "), "@attribute" } },
+								false,
+								{}
+							)
+						end,
+					})
 				elseif #grab_flags ~= 0 then
+					g_util.stop_monitoring(grab_flags)
 					vim.api.nvim_feedkeys(":Git " .. command .. " " .. table.concat(grab_flags, " "), "n", false)
 					grab_flags = {}
 				else
@@ -68,9 +75,11 @@ end
 -- helper: if grabbed
 local function if_grabed_enter()
 	if #grab_hashs ~= 0 then
+		g_util.stop_monitoring(grab_hashs)
 		g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 		grab_hashs = {}
 	elseif #grab_files ~= 0 then
+		g_util.stop_monitoring(grab_files)
 		g_util.set_cmdline("Git | " .. table.concat(grab_files, " "))
 		grab_files = {}
 	else
@@ -93,14 +102,26 @@ local function ft_mappings(buf)
 		if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- grab hashes
 			util.tbl_insert(grab_hashs, cfile)
 			vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
-			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
+			g_util.start_monitoring(grab_hashs, { -- keeps echoing ..
+				interval = 2000,
+				buf = buf,
+				on_active = function(t)
+					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+				end,
+			})
 		else
 			local absolute_path = vim.fs.normalize(vim.fn.getcwd() .. "/" .. cfile)
 
 			if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then -- grab files
 				util.tbl_insert(grab_files, cfile)
 				vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
-				vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_files, " "), "@attribute" } }, false, {})
+				g_util.start_monitoring(grab_files, { -- keeps echoing ..
+					interval = 2000,
+					buf = buf,
+					on_active = function(t)
+						vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+					end,
+				})
 			else
 				if not extract_git_command_and_flag(true) then -- grab flags
 					util.Notify("Nothing to grab.", "warn", "oz_git")
@@ -151,6 +172,7 @@ local function ft_mappings(buf)
 			#grab_flags > 0 and {} or grab_flags
 		vim.api.nvim_echo({ { "" } }, false, {})
 		util.Notify("All picked items have been removed.", nil, "oz_git")
+		g_util.stop_all_monitoring()
 	end, { buffer = buf, silent = true, desc = "discard any picked entry." })
 
 	-- show help
