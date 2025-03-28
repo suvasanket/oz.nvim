@@ -108,14 +108,16 @@ function RunGitCmd(args)
             if code == 0 then
                 if cmd == "commit" then
                     wizard.commit_wizard()
-                elseif #std_out == 1 then
-                    util.Notify(std_out[1], "info", "oz_git")
-                elseif #std_out ~= 0 then
-                    oz_git_win.open_oz_git_win(std_out, args, "stdout")
+                elseif #std_out > 0 then
+                    if #std_out <= 2 then
+                        util.Notify(table.concat(std_out, "\n"), "info", "oz_git")
+                    else
+                        oz_git_win.open_oz_git_win(std_out, args, "stdout")
+                    end
                 end
             else
-                if #std_err == 1 then
-                    util.Notify(std_err[1], "error", "oz_git")
+                if #std_err > 0 and #std_err <= 2 then
+                    util.Notify(table.concat(std_err, "\n"), "error", "oz_git")
                 elseif #std_err ~= 0 then
                     oz_git_win.open_oz_git_win(std_err, args, "stderr")
                 end

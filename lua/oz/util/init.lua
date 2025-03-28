@@ -107,6 +107,7 @@ end
 function M.str_in_tbl(str, string_table)
 	str = vim.trim(str)
 	for _, substring in ipairs(string_table) do
+        substring = vim.trim(substring)
 		if string.find(str, substring, 1, true) then
 			return true
 		end

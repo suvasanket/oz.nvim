@@ -38,14 +38,14 @@ end
 -- awesome stuff
 local function log_buf_keymaps(buf)
     -- close
-    vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, silent = true, desc = "close git log buffer." })
+    vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, silent = true, desc = "Close git log buffer." })
 
     -- increase log level
     vim.keymap.set("n", ">", function()
         vim.cmd("close")
         log_level = (log_level % 3) + 1
         M.commit_log({ level = log_level, from = comming_from })
-    end, { remap = false, buffer = buf, silent = true, desc = "increase log level." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Increase log level." })
 
     -- decrease log level
     vim.keymap.set("n", "<", function()
@@ -53,7 +53,7 @@ local function log_buf_keymaps(buf)
         local log_levels = { [1] = 3, [2] = 1, [3] = 2 }
         log_level = log_levels[log_level]
         M.commit_log({ level = log_level, from = comming_from })
-    end, { remap = false, buffer = buf, silent = true, desc = "decrease log level." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Decrease log level." })
 
     -- back
     vim.keymap.set("n", "<C-o>", function()
@@ -61,7 +61,7 @@ local function log_buf_keymaps(buf)
             vim.cmd("close")
             vim.cmd(comming_from)
         end
-    end, { remap = false, buffer = buf, silent = true, desc = "go back." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Go back." })
 
     -- [G}oto mappings
     -- custom user args
@@ -71,14 +71,14 @@ local function log_buf_keymaps(buf)
             vim.cmd("close")
             M.commit_log({ level = 1 }, { input })
         end
-    end, { remap = false, buffer = buf, silent = true, desc = "add args to log command." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Add args to log command." })
 
     -- :Git
-    vim.keymap.set("n", "g<space>", ":Git ", { remap = false, buffer = buf, desc = "open :Git " })
+    vim.keymap.set("n", "g<space>", ":Git ", { remap = false, buffer = buf, desc = "Open :Git " })
     vim.keymap.set("n", "gs", function()
         vim.cmd("close")
         vim.cmd("Git")
-    end, { remap = false, buffer = buf, desc = "go to git status buffer." })
+    end, { remap = false, buffer = buf, desc = "Go to git status buffer." })
 
     -- pick hash
     vim.keymap.set("n", "p", function()
@@ -95,7 +95,7 @@ local function log_buf_keymaps(buf)
                 end,
             })
         end
-    end, { buffer = buf, silent = true, desc = "pick the hash from the current line." })
+    end, { buffer = buf, silent = true, desc = "Pick the hash from the current line." })
 
     -- unpick
     vim.keymap.set("n", "P", function()
@@ -110,7 +110,7 @@ local function log_buf_keymaps(buf)
                 vim.api.nvim_echo({ { "" } }, false, {})
             end
         end
-    end, { buffer = buf, silent = true, desc = "remove current hash on the line from picking list." })
+    end, { buffer = buf, silent = true, desc = "Remove current hash on the line from picking list." })
 
     -- edit picked
     vim.keymap.set("n", "a", function()
@@ -124,7 +124,7 @@ local function log_buf_keymaps(buf)
             g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
             grab_hashs = {}
         end
-    end, { buffer = buf, silent = true, desc = "enter cmdline to edit picked hashes." })
+    end, { buffer = buf, silent = true, desc = "Enter cmdline to edit picked hashes." })
 
     vim.keymap.set("n", "i", function()
         if #grab_hashs ~= 0 then
@@ -137,7 +137,7 @@ local function log_buf_keymaps(buf)
             g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
             grab_hashs = {}
         end
-    end, { buffer = buf, silent = true, desc = "enter cmdline to edit picked hashes." })
+    end, { buffer = buf, silent = true, desc = "Enter cmdline to edit picked hashes." })
 
     -- discard picked
     vim.keymap.set("n", "<C-c>", function()
@@ -146,7 +146,7 @@ local function log_buf_keymaps(buf)
         grab_hashs = #grab_hashs > 0 and {} or grab_hashs
         vim.api.nvim_echo({ { "" } }, false, {})
         util.Notify("All picked hashes have been removed.", nil, "oz_git")
-    end, { buffer = buf, silent = true, desc = "discard any picked hashes." })
+    end, { buffer = buf, silent = true, desc = "Discard any picked hashes." })
 
     -- [d]iff mode
     -- diff hash
@@ -175,7 +175,7 @@ local function log_buf_keymaps(buf)
                 vim.cmd("Git show " .. cur_hash[1])
             end
         end
-    end, { remap = false, buffer = buf, silent = true, desc = "diff the changes introduced by commit under cursor." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Diff the changes introduced by commit under cursor." })
 
     -- diff range
     local diff_range_hash = {}
@@ -199,28 +199,34 @@ local function log_buf_keymaps(buf)
                 diff_range_hash = {}
             end
         end
-    end, { remap = false, buffer = buf, silent = true, desc = "diff commits between a range." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Diff commits between a range of commits." })
 
     -- Rebase mappings
-    vim.keymap.set({ "n", "x" }, "ri", function()
+    -- inter rebase
+    vim.keymap.set("n", "ri", function()
         local current_hash = get_selected_hash()
-        if #current_hash > 1 then
-            require("oz.git").after_exec_complete(function()
-                M.refresh_commit_log()
-            end)
-            vim.cmd("Git rebase -i " .. current_hash[1] .. ".." .. current_hash[#current_hash])
-        elseif #current_hash == 1 then
-            require("oz.git").after_exec_complete(function()
-                M.refresh_commit_log()
-            end)
-            vim.cmd("Git rebase -i " .. current_hash[1])
+        if #current_hash == 1 then
+            vim.cmd("close")
+            vim.cmd("Git rebase -i " .. current_hash[1] .. "^")
         end
-    end, { buffer = buf, silent = true, desc = "refresh commit log buffer." })
+    end, { buffer = buf, silent = true, desc = "Start an interactive rebase inluding the commit under cursor." })
+
+    -- rebase with pick
+    vim.keymap.set("n", "rp", function()
+        local current_hash = get_selected_hash()
+        if #current_hash == 1 then
+            g_util.set_cmdline("Git rebase | " .. current_hash[1])
+        end
+    end, { buffer = buf, silent = true, desc = "Open cmdline with rebase command with the commit hash under cursor." })
+
+    -- rebase open in cmdline
+    vim.keymap.set("n", "r<space>", ":Git rebase ",
+        { buffer = buf, desc = ":Git rebase" })
 
     -- refresh
     vim.keymap.set("n", "<C-r>", function()
         M.refresh_commit_log()
-    end, { buffer = buf, silent = true, desc = "refresh commit log buffer." })
+    end, { buffer = buf, silent = true, desc = "Refresh commit log buffer." })
 
     -- show current hash
     vim.keymap.set("n", "<cr>", function()
@@ -228,7 +234,7 @@ local function log_buf_keymaps(buf)
         if #hash > 0 then
             vim.cmd("Git show " .. hash[1])
         end
-    end, { buffer = buf, silent = true, desc = "show current commit under cursor." })
+    end, { buffer = buf, silent = true, desc = "Show current commit under cursor." })
 
     -- help
     vim.keymap.set("n", "g?", function()
@@ -237,9 +243,10 @@ local function log_buf_keymaps(buf)
                 ["Pick mappings"] = { "p", "P", "<C-C>", "a", "i" },
                 ["Goto mappings"] = { "g:", "g<Space>", "g?", "gs" },
                 ["Diff mappings"] = { "dd", "dc", "dp" },
+                ["Rebase mappings"] = { "ri", "rp", "r<Space>" },
             },
         })
-    end, { remap = false, buffer = buf, silent = true, desc = "show all availble keymaps." })
+    end, { remap = false, buffer = buf, silent = true, desc = "Show all availble keymaps." })
 end
 
 -- highlight
@@ -356,11 +363,8 @@ end
 
 function M.refresh_commit_log()
     local pos = vim.api.nvim_win_get_cursor(0)
-
-    vim.api.nvim_buf_set_option(log_buf, "modifiable", true)
-    vim.api.nvim_buf_set_lines(log_buf, 0, -1, false, get_commit_log_lines())
-    vim.api.nvim_buf_set_option(log_buf, "modifiable", false)
-
+    vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()))
+    M.commit_log({ from = comming_from })
     pcall(vim.api.nvim_win_set_cursor, 0, pos)
 end
 

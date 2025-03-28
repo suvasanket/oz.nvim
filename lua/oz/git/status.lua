@@ -9,7 +9,8 @@ local cwd = nil
 
 local headings_table = {}
 local diff_lines = {}
-local grab_files = {}
+local status_grab_buffer = {}
+local current_branch = nil
 
 -- helper: heading tbl.
 local function get_heading_tbl(lines)
@@ -103,6 +104,20 @@ local function get_file_under_cursor(original)
     end
 
     return entries
+end
+
+-- get current branch under cursor
+local function get_branch_under_cursor()
+    local branch_heading = "On branch " .. current_branch
+    local tbl = headings_table[branch_heading]
+    local current_line = vim.api.nvim_get_current_line()
+
+    if util.str_in_tbl(current_line, tbl) then
+        current_line = vim.trim(current_line:gsub("%*", ""))
+        return vim.trim(current_line)
+    else
+        return nil
+    end
 end
 
 -- Function to generate diff for a file
@@ -271,17 +286,13 @@ local function status_buf_keymaps(buf)
             end
         else
             -- change branch
-            local current_line = vim.trim(vim.api.nvim_get_current_line())
-            local branch_heading = "On branch " .. vim.trim(util.ShellOutput("git branch --show-current"))
-            for _, str in pairs(headings_table[branch_heading]) do
-                local line = str:gsub("^[^w%s]+", ""):gsub("^%s+", "")
-                if line == current_line then
-                    require("oz.git").after_exec_complete(function()
-                        M.refresh_status_buf()
-                    end)
-                    line = vim.trim(line:gsub("%*", ""))
-                    vim.cmd("Git checkout " .. line)
-                end
+            current_branch = vim.trim(util.ShellOutput("git branch --show-current"))
+            local branch_under_cursor = get_branch_under_cursor()
+            if branch_under_cursor then
+                require("oz.git").after_exec_complete(function()
+                    M.refresh_status_buf()
+                end)
+                vim.cmd("Git checkout " .. branch_under_cursor)
             end
         end
     end, { remap = false, buffer = buf, silent = true, desc = "open entry under cursor / switch branches." })
@@ -341,9 +352,19 @@ local function status_buf_keymaps(buf)
         local files = get_file_under_cursor(true)
         if #files > 0 then
             for _, file in ipairs(files) do
-                util.tbl_insert(grab_files, file)
+                util.tbl_insert(status_grab_buffer, file)
             end
-            util.tbl_monitor().start_monitoring(grab_files, {
+        else
+            local branch = get_branch_under_cursor()
+            if branch then
+                util.tbl_insert(status_grab_buffer, branch)
+            else
+                util.Notify("You can only pick a branch or a file", "warn", "oz_git")
+            end
+        end
+        -- monitoring
+        if #status_grab_buffer > 0 then
+            util.tbl_monitor().start_monitoring(status_grab_buffer, {
                 interval = 2000,
                 buf = buf,
                 on_active = function(t)
@@ -356,49 +377,59 @@ local function status_buf_keymaps(buf)
     -- unpick
     vim.keymap.set("n", "P", function()
         local files = get_file_under_cursor(true)
+        local cur_entry = nil
         if #files > 0 then
-            if #grab_files > 1 then
-                util.remove_from_tbl(grab_files, files[1])
-                vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_files, " "), "@attribute" } }, false, {})
-            elseif grab_files[1] == files[1] then
-                util.tbl_monitor().stop_monitoring(grab_files)
-                grab_files = {}
-                vim.api.nvim_echo({ { "" } }, false, {})
+            cur_entry = files[1]
+        else
+            local branch = get_branch_under_cursor()
+            if branch then
+                cur_entry = branch
+            else
+                util.Notify("You can only unpick a branch or a file", "warn", "oz_git")
             end
+        end
+
+        if #status_grab_buffer > 1 then
+            util.remove_from_tbl(status_grab_buffer, cur_entry)
+            vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
+        elseif status_grab_buffer[1] == cur_entry then
+            util.tbl_monitor().stop_monitoring(status_grab_buffer)
+            status_grab_buffer = {}
+            vim.api.nvim_echo({ { "" } }, false, {})
         end
     end, { buffer = buf, silent = true, desc = "remove current file on the line from picking list." })
 
     -- edit picked
     vim.keymap.set("n", "a", function()
-        if #grab_files ~= 0 then
+        if #status_grab_buffer ~= 0 then
             require("oz.git").after_exec_complete(function(code, stdout)
                 if code == 0 and #stdout == 0 then
                     M.refresh_status_buf()
                 end
             end)
-            util.tbl_monitor().stop_monitoring(grab_files)
-            g_util.set_cmdline("Git | " .. table.concat(grab_files, " "))
-            grab_files = {}
+            util.tbl_monitor().stop_monitoring(status_grab_buffer)
+            g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
+            status_grab_buffer = {}
         end
     end, { buffer = buf, silent = true, desc = "enter cmdline to edit picked files." })
     vim.keymap.set("n", "i", function()
-        if #grab_files ~= 0 then
+        if #status_grab_buffer ~= 0 then
             require("oz.git").after_exec_complete(function(code, stdout)
                 if code == 0 and #stdout == 0 then
                     M.refresh_status_buf()
                 end
             end)
-            util.tbl_monitor().stop_monitoring(grab_files)
-            g_util.set_cmdline("Git | " .. table.concat(grab_files, " "))
-            grab_files = {}
+            util.tbl_monitor().stop_monitoring(status_grab_buffer)
+            g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
+            status_grab_buffer = {}
         end
     end, { buffer = buf, silent = true, desc = "enter cmdline to edit picked files." })
 
     -- discard picked
     vim.keymap.set("n", "<C-c>", function()
-        util.tbl_monitor().stop_monitoring(grab_files)
+        util.tbl_monitor().stop_monitoring(status_grab_buffer)
 
-        grab_files = #grab_files > 0 and {} or grab_files
+        status_grab_buffer = #status_grab_buffer > 0 and {} or status_grab_buffer
         vim.api.nvim_echo({ { "" } }, false, {})
         util.Notify("All picked files have been removed.", nil, "oz_git")
     end, { buffer = buf, silent = true, desc = "discard any picked files." })
@@ -524,6 +555,7 @@ end
 
 function M.refresh_status_buf()
     local pos = vim.api.nvim_win_get_cursor(0)
+    vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()))
     M.GitStatus()
     pcall(vim.api.nvim_win_set_cursor, 0, pos)
 end
@@ -531,6 +563,7 @@ end
 -- Initialize status
 function M.GitStatus()
     cwd = nil
+    current_branch = util.ShellOutput("git branch --show-current")
     local lines = get_status_lines()
 
     get_heading_tbl(lines)
