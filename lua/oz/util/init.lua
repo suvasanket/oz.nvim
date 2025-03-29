@@ -65,7 +65,19 @@ end
 function M.ShellOutput(cmd)
 	local obj = vim.system({ "sh", "-c", cmd }, { text = true }):wait()
 	local sout = obj.stdout:gsub("^%s+", ""):gsub("%s+$", "")
+	if vim.v.shell_error ~= 0 then
+		return ""
+	end
 	return sout
+end
+
+function M.ShellOutputList(cmd)
+	local sout = vim.fn.systemlist(cmd)
+	if vim.v.shell_error ~= 0 then
+		return {}
+	else
+		return sout
+	end
 end
 
 function M.UserInput(msg, def)
@@ -107,7 +119,7 @@ end
 function M.str_in_tbl(str, string_table)
 	str = vim.trim(str)
 	for _, substring in ipairs(string_table) do
-        substring = vim.trim(substring)
+		substring = vim.trim(substring)
 		if string.find(str, substring, 1, true) then
 			return true
 		end
@@ -116,12 +128,12 @@ function M.str_in_tbl(str, string_table)
 end
 
 function M.remove_from_tbl(tbl, item)
-    for i, v in ipairs(tbl) do
-        if v == item then
-            table.remove(tbl, i)
-            return
-        end
-    end
+	for i, v in ipairs(tbl) do
+		if v == item then
+			table.remove(tbl, i)
+			return
+		end
+	end
 end
 
 function M.usercmd_exist(name)

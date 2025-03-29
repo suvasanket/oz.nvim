@@ -85,7 +85,11 @@ function M.cmd_func(type, func)
 			-- p: 4
 			cmd = M.predict_compiler(current_file, ft)
 		end
+		vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+		vim.cmd("echohl ozInactivePrompt")
 		local input = util.UserInput(":" .. type .. " ", cmd)
+		vim.cmd("echohl None")
+
 		if input and input ~= "" then
 			-- custom function, used for AKTUAL execution
 			if func then
@@ -95,7 +99,7 @@ function M.cmd_func(type, func)
 			end
 
 			-- check if its a valid cmd or not
-            if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
+			if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
 				if cmd ~= input and project_path then
 					p.setprojectCMD(project_path, current_file, ft, input)
 				end
