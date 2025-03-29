@@ -1,6 +1,7 @@
 local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
+local git = require("oz.git")
 
 local status_win = nil
 local status_buf = nil
@@ -256,7 +257,7 @@ local function status_buf_keymaps(buf)
 
 	-- commit map
 	vim.keymap.set("n", "cc", function()
-		require("oz.git").after_exec_complete(function(code)
+		git.after_exec_complete(function(code)
 			if code == 0 then
 				M.refresh_status_buf()
 			end
@@ -265,19 +266,19 @@ local function status_buf_keymaps(buf)
 	end, { remap = false, buffer = buf, silent = true, desc = ":Git commit" })
 
 	vim.keymap.set("n", "ce", function()
-		require("oz.git").after_exec_complete(function(code)
-            if code == 0 then
-                M.refresh_status_buf()
-            end
+		git.after_exec_complete(function(code)
+			if code == 0 then
+				M.refresh_status_buf()
+			end
 		end)
 		vim.cmd("Git commit --amend --no-edit")
 	end, { remap = false, buffer = buf, silent = true, desc = ":Git commit --amend --no-edit" })
 
 	vim.keymap.set("n", "ca", function()
-		require("oz.git").after_exec_complete(function(code)
-            if code == 0 then
-                M.refresh_status_buf()
-            end
+		git.after_exec_complete(function(code)
+			if code == 0 then
+				M.refresh_status_buf()
+			end
 		end)
 		vim.cmd("Git commit --amend")
 	end, { remap = false, buffer = buf, silent = true, desc = ":Git commit --amend" })
@@ -295,7 +296,7 @@ local function status_buf_keymaps(buf)
 			current_branch = vim.trim(util.ShellOutput("git branch --show-current"))
 			local branch_under_cursor = get_branch_under_cursor()
 			if branch_under_cursor then
-				require("oz.git").after_exec_complete(function()
+				git.after_exec_complete(function()
 					M.refresh_status_buf()
 				end)
 				vim.cmd("Git checkout " .. branch_under_cursor)
@@ -329,9 +330,6 @@ local function status_buf_keymaps(buf)
 		if #cur_file > 0 then
 			if util.usercmd_exist("DiffviewFileHistory") then
 				vim.cmd("DiffviewFileHistory " .. cur_file[1])
-				vim.schedule(function()
-					vim.cmd("DiffviewToggleFiles")
-				end)
 			else
 				vim.cmd("Git diff " .. cur_file[1])
 			end
@@ -388,7 +386,7 @@ local function status_buf_keymaps(buf)
 	-- edit picked
 	vim.keymap.set("n", "a", function()
 		if #status_grab_buffer ~= 0 then
-			require("oz.git").after_exec_complete(function(code, stdout)
+			git.after_exec_complete(function(code, stdout)
 				if code == 0 and #stdout == 0 then
 					M.refresh_status_buf()
 				end
@@ -400,7 +398,7 @@ local function status_buf_keymaps(buf)
 	end, { buffer = buf, silent = true, desc = "Enter cmdline to edit picked entries." })
 	vim.keymap.set("n", "i", function()
 		if #status_grab_buffer ~= 0 then
-			require("oz.git").after_exec_complete(function(code, stdout)
+			git.after_exec_complete(function(code, stdout)
 				if code == 0 and #stdout == 0 then
 					M.refresh_status_buf()
 				end
@@ -420,6 +418,77 @@ local function status_buf_keymaps(buf)
 		util.Notify("All picked files have been removed.", nil, "oz_git")
 	end, { buffer = buf, silent = true, desc = "Discard any picked entries." })
 
+	-- Remote mappings
+	-- remote add
+	vim.keymap.set("n", "ma", function()
+		vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+		vim.cmd("echohl ozInactivePrompt")
+		local input = nil
+		if util.ShellOutput("git remote | grep origin") ~= "" then
+			input = util.UserInput(":Git remote add ")
+		else
+			input = util.UserInput(":Git remote add ", "origin ")
+		end
+		vim.cmd("echohl None")
+
+		if input then
+			input = g_util.parse_args(input)
+			local remote_name = input[1]
+			local remote_url = input[2]
+			util.ShellCmd({ "git", "remote", "add", remote_name, remote_url }, function()
+				util.Notify("Remote: " .. remote_name .. " added.", nil, "oz_git")
+			end, function()
+				local ans = vim.fn.confirm("url for " .. remote_name .. " exists do you want to update?", "&Yes\n&No")
+				if ans == 1 then
+					util.ShellCmd({ "git", "remote", "set-url", remote_name, remote_url }, function()
+						util.Notify("remote " .. remote_name .. " url has been updated!", nil, "oz_git")
+					end, function()
+						util.Notify("error occured while setting url", "error", "oz_git")
+					end)
+				end
+			end)
+		end
+	end, { buffer = buf, silent = true, desc = "Add or update remotes." })
+
+	-- remove remote
+	vim.keymap.set("n", "md", function()
+		local options = vim.fn.systemlist("git remote")
+		if vim.v.shell_error ~= 0 then
+			return
+		end
+
+		vim.ui.select(options, {
+			prompt = "select remote to delete:",
+		}, function(choice)
+			if choice then
+				util.ShellCmd({ "git", "remote", "remove", choice }, function()
+					util.Notify("remote " .. choice .. " has been removed!", nil, "oz_git")
+				end)
+			end
+		end)
+	end, { buffer = buf, silent = true, desc = "Remove remote." })
+
+	-- rename remote
+	vim.keymap.set("n", "mr", function()
+		local options = vim.fn.systemlist("git remote")
+		if vim.v.shell_error ~= 0 then
+			return
+		end
+
+		vim.ui.select(options, {
+			prompt = "select remote to rename:",
+		}, function(choice)
+			if choice then
+				local name = util.UserInput("New name:", choice)
+				if name then
+					util.ShellCmd({ "git", "remote", "rename", choice, name }, function()
+						util.Notify("remote renamed from " .. choice .. " -> " .. name, nil, "oz_git")
+					end)
+				end
+			end
+		end)
+	end, { buffer = buf, silent = true, desc = "Rename remote." })
+
 	-- help
 	vim.keymap.set("n", "g?", function()
 		util.Show_buf_keymaps({
@@ -429,6 +498,7 @@ local function status_buf_keymaps(buf)
 				["Diff mappings"] = { "dd", "dc", "de" },
 				["Tracking related mappings"] = { "s", "u", "K", "X" },
 				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
+				["Remote mappings"] = { "ma", "md", "mr" },
 			},
 		})
 	end, { remap = false, buffer = buf, silent = true, desc = "show all availble keymaps." })
