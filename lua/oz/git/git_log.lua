@@ -222,6 +222,11 @@ local function log_buf_keymaps(buf)
 	-- rebase open in cmdline
 	vim.keymap.set("n", "r<space>", ":Git rebase ", { buffer = buf, desc = ":Git rebase" })
 
+	vim.keymap.set("n", "rc", ":Git rebase --continue", { buffer = buf, desc = ":Git rebase --continue" })
+	vim.keymap.set("n", "ra", ":Git rebase --abort", { buffer = buf, desc = ":Git rebase --abort" })
+	vim.keymap.set("n", "rq", ":Git rebase --quit", { buffer = buf, desc = ":Git rebase --quit" })
+	vim.keymap.set("n", "rs", ":Git rebase --skip", { buffer = buf, desc = ":Git rebase --skip" })
+
 	-- refresh
 	vim.keymap.set("n", "<C-r>", function()
 		M.refresh_commit_log()
@@ -242,7 +247,7 @@ local function log_buf_keymaps(buf)
 				["Pick mappings"] = { "p", "P", "a", "i" },
 				["Goto mappings"] = { "g:", "g<Space>", "g?", "gs" },
 				["Diff mappings"] = { "dd", "dc", "dp" },
-				["Rebase mappings"] = { "ri", "rp", "r<Space>" },
+				["Rebase mappings"] = { "ri", "rp", "r<Space>", "rc", "ra", "rq", "rs" },
 			},
 		})
 	end, { remap = false, buffer = buf, silent = true, desc = "Show all availble keymaps." })
