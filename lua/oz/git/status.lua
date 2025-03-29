@@ -254,6 +254,29 @@ local function status_buf_keymaps(buf)
 			end)
 		end
 	end, { remap = false, buffer = buf, silent = true, desc = "untrack entry under cursor or selected entries." })
+	-- rename
+	vim.keymap.set("n", "grn", function()
+		local branch = get_branch_under_cursor()
+		local file = get_file_under_cursor(true)[1]
+
+		-- after complete
+		if file or branch then
+			git.after_exec_complete(function()
+				M.refresh_status_buf()
+			end, true)
+		end
+		if file then
+			local new_name = util.UserInput("New name: ", file)
+			if new_name then
+				vim.cmd("Git mv " .. file .. " " .. new_name)
+			end
+		elseif branch then
+			local new_name = util.UserInput("New name: ", branch)
+			if new_name then
+				vim.cmd("Git branch -m " .. branch .. " " .. new_name)
+			end
+		end
+	end, { remap = false, buffer = buf, silent = true, desc = "Rename file or branch under cursor." })
 
 	-- commit map
 	vim.keymap.set("n", "cc", function()
