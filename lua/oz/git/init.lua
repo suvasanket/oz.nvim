@@ -26,7 +26,7 @@ local function different_cmd_runner(args_table, args_str)
 	end
 
 	if cmd == "commit" and #args_table == 1 then
-		local changed = vim.fn.systemlist("git diff --name-only --cached")
+		local changed = util.ShellOutputList("git diff --name-only --cached")
 		if #changed < 1 then
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true

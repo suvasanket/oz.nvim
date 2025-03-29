@@ -130,7 +130,7 @@ function M.init(args)
         highlight link KeyMode Comment
         ]])
 		if has_headers then
-			vim.cmd("highlight HeaderName gui=bold guifg=#d9d9d9 guibg=#2F2F2F cterm=bold")
+			vim.cmd("highlight HeaderName gui=bold guifg=#C5BAFF guibg=#2F2F2F cterm=bold")
 			vim.cmd("highlight HeaderBlocks guifg=#2F2F2F ctermfg=green")
 			vim.cmd("syntax match HeaderName /█.*█/ contains=HeaderBlocks")
 			vim.cmd("syntax match HeaderBlocks /[██]/ contained")

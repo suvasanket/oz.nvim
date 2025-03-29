@@ -335,11 +335,11 @@ local function get_commit_log_lines(level, args)
 	end
 	if args and #args > 0 then
 		user_set_args = args
-		log = vim.fn.systemlist("git log " .. fmt_flags .. " " .. table.concat(args, " "))
+		log = util.ShellOutputList("git log " .. fmt_flags .. " " .. table.concat(args, " "))
 	elseif user_set_args and user_set_args ~= "" then
-		log = vim.fn.systemlist("git log " .. table.concat(user_set_args, " ") .. " " .. fmt_flags)
+		log = util.ShellOutputList("git log " .. table.concat(user_set_args, " ") .. " " .. fmt_flags)
 	else
-		log = vim.fn.systemlist("git log " .. fmt_flags)
+		log = util.ShellOutputList("git log " .. fmt_flags)
 	end
 
 	local function process_line(line)

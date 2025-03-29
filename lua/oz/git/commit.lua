@@ -105,7 +105,7 @@ local function get_initial_content()
 end
 
 function M.git_commit(callback)
-	local changed = vim.fn.systemlist("git diff --name-only --cached")
+	local changed = util.ShellOutputList("git diff --name-only --cached")
 	if #changed > 0 then
 		local initial_content = get_initial_content()
 		if callback then

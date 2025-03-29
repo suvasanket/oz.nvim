@@ -16,7 +16,7 @@ local current_branch = nil
 -- helper: heading tbl.
 local function get_heading_tbl(lines)
 	local current_heading = nil
-	local branch_line = vim.fn.systemlist("git branch")
+	local branch_line = util.ShellOutputList("git branch")
 	local branch_heading = "On branch " .. vim.trim(util.ShellOutput("git branch --show-current"))
 
 	headings_table[branch_heading] = {}
@@ -127,7 +127,7 @@ local function generate_diff(file)
 		return nil
 	end
 
-	local diff = vim.fn.systemlist("git diff " .. file)
+	local diff = util.ShellOutputList("git diff " .. file)
 	local new_diff = {}
 	local grab = false
 
@@ -175,7 +175,10 @@ end
 -- status buffer keymaps
 local function status_buf_keymaps(buf)
 	-- quit
-	vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, silent = true, desc = "close git status buffer." })
+	vim.keymap.set("n", "q", function()
+		vim.api.nvim_echo({ { "" } }, false, {})
+		vim.cmd("close")
+	end, { buffer = buf, silent = true, desc = "close git status buffer." })
 
 	-- tab
 	vim.keymap.set("n", "<tab>", function()
@@ -253,7 +256,8 @@ local function status_buf_keymaps(buf)
 				util.Notify("currently selected can't be removed from tracking.", "error", "oz_git")
 			end)
 		end
-	end, { remap = false, buffer = buf, silent = true, desc = "untrack entry under cursor or selected entries." })
+	end, { remap = false, buffer = buf, silent = true, desc = "Untrack file or selected files." })
+
 	-- rename
 	vim.keymap.set("n", "grn", function()
 		local branch = get_branch_under_cursor()
@@ -378,7 +382,7 @@ local function status_buf_keymaps(buf)
 	vim.keymap.set("n", "p", function()
 		local entry = get_branch_under_cursor() or get_file_under_cursor(true)[1]
 		if not entry then
-			util.Notify("Nothing to pick", "error", "oz_git")
+			util.Notify("You can only pick a file or branch", "error", "oz_git")
 			return
 		end
 
@@ -438,7 +442,7 @@ local function status_buf_keymaps(buf)
 
 		status_grab_buffer = #status_grab_buffer > 0 and {} or status_grab_buffer
 		vim.api.nvim_echo({ { "" } }, false, {})
-		util.Notify("All picked files have been removed.", nil, "oz_git")
+		util.Notify("All picked entries have been removed.", nil, "oz_git")
 	end, { buffer = buf, silent = true, desc = "Discard any picked entries." })
 
 	-- Remote mappings
@@ -447,7 +451,7 @@ local function status_buf_keymaps(buf)
 		vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 		vim.cmd("echohl ozInactivePrompt")
 		local input = nil
-		if util.ShellOutput("git remote | grep origin") ~= "" then
+		if util.ShellOutput("git remote") ~= "" then
 			input = util.UserInput(":Git remote add ")
 		else
 			input = util.UserInput(":Git remote add ", "origin ")
@@ -461,7 +465,8 @@ local function status_buf_keymaps(buf)
 			util.ShellCmd({ "git", "remote", "add", remote_name, remote_url }, function()
 				util.Notify("Remote: " .. remote_name .. " added.", nil, "oz_git")
 			end, function()
-				local ans = vim.fn.confirm("url for " .. remote_name .. " exists do you want to update?", "&Yes\n&No")
+				local ans =
+					vim.fn.confirm("url for " .. remote_name .. " already exists, do you want to update?", "&Yes\n&No")
 				if ans == 1 then
 					util.ShellCmd({ "git", "remote", "set-url", remote_name, remote_url }, function()
 						util.Notify("remote " .. remote_name .. " url has been updated!", nil, "oz_git")
@@ -475,7 +480,7 @@ local function status_buf_keymaps(buf)
 
 	-- remove remote
 	vim.keymap.set("n", "md", function()
-		local options = vim.fn.systemlist("git remote")
+		local options = util.ShellOutputList("git remote")
 		if vim.v.shell_error ~= 0 then
 			return
 		end
@@ -493,7 +498,7 @@ local function status_buf_keymaps(buf)
 
 	-- rename remote
 	vim.keymap.set("n", "mr", function()
-		local options = vim.fn.systemlist("git remote")
+		local options = util.ShellOutputList("git remote")
 		if vim.v.shell_error ~= 0 then
 			return
 		end
@@ -502,7 +507,7 @@ local function status_buf_keymaps(buf)
 			prompt = "select remote to rename:",
 		}, function(choice)
 			if choice then
-				local name = util.UserInput("New name:", choice)
+				local name = util.UserInput("New name: ", choice)
 				if name then
 					util.ShellCmd({ "git", "remote", "rename", choice, name }, function()
 						util.Notify("remote renamed from " .. choice .. " -> " .. name, nil, "oz_git")
@@ -522,6 +527,7 @@ local function status_buf_keymaps(buf)
 				["Tracking related mappings"] = { "s", "u", "K", "X" },
 				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
 				["Remote mappings"] = { "ma", "md", "mr" },
+				["Quick actions"] = { "grn", "<Tab>" },
 			},
 		})
 	end, { remap = false, buffer = buf, silent = true, desc = "show all availble keymaps." })
@@ -565,7 +571,7 @@ local function status_buf_hl()
     highlight GitStatusQuoted guifg=#99BC85 ctermfg=46 gui=italic
     highlight default link GitStatusNumber @warning
 
-    syntax match GitStatusLine /^Your branch is ahead of '.*' by \d\+ commits\.$/
+    syntax match GitStatusLine /^Your branch is .*$/
     syntax match GitStatusQuoted /'[^']*'/ contained containedin=GitStatusLine
     syntax match GitStatusNumber /\d\+/ contained containedin=GitStatusLine
     ]])
@@ -647,6 +653,8 @@ function M.GitStatus()
 
 	get_heading_tbl(lines)
 	open_status_buf(lines)
+	vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
+	vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 end
 
 return M
