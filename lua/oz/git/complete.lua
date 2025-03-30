@@ -38,7 +38,7 @@ local function get_git_commands()
 	local core_cmds = capture_git_output("git --help | grep -E '^   [a-z]' | awk '{print $1}'")
 
 	-- Capture additional commands from git help -a
-	local additional_cmds = capture_git_output("git help -a | grep -E '^  [a-z]' | awk '{print $1}'")
+    local additional_cmds = capture_git_output("git help --all | grep -E '^ +[a-z]' | awk '{print $1}'")
 
 	-- Combine and sort
 	local all_cmds = {}
@@ -233,28 +233,6 @@ function M.complete(arglead, cmdline, cursorpos)
 
 		return get_command_specific_completions(git_cmd, current_arg)
 	end
-end
-
--- Setup function to register the completion
-function M.setup()
-	vim.api.nvim_create_user_command("Git", function(opts)
-		vim.fn.system("git " .. opts.args)
-	end, {
-		nargs = "*",
-		complete = function(arglead, cmdline, cursorpos)
-			return M.complete(arglead, cmdline, cursorpos)
-		end,
-	})
-
-	-- Create G alias for Git
-	vim.api.nvim_create_user_command("G", function(opts)
-		vim.cmd("Git " .. opts.args)
-	end, {
-		nargs = "*",
-		complete = function(arglead, cmdline, cursorpos)
-			return M.complete(arglead, cmdline, cursorpos)
-		end,
-	})
 end
 
 -- Function to invalidate caches
