@@ -8,13 +8,11 @@ local oz_git_win = require("oz.git.oz_git_win")
 local function different_cmd_runner(args_table, args_str)
 	local cmd = args_table[1]
 
-	-- editor
-	local req_editor =
+	local editor_req_cmds =
 		{ "commit", "commit --amend", "tag -a", "rebase -i", "merge --no-commit", "notes add", "filter-branch" }
-	local is_req_editor = util.str_in_tbl(args_str, req_editor)
-	if is_req_editor then
+	if util.str_in_tbl(args_str, editor_req_cmds) then
 		if vim.fn.executable("nvr") ~= 1 then
-			util.Notify("neovim-remote not found, install it use editor required commands.")
+			util.Notify("neovim-remote not found, install to use editor required commands.")
 			return true
 		end
 		vim.api.nvim_create_autocmd("FileType", {
@@ -25,30 +23,28 @@ local function different_cmd_runner(args_table, args_str)
 		})
 	end
 
-	if cmd == "commit" and #args_table == 1 then
+	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
+
+	-- all the conditional commands here.
+	if cmd == "status" then
+		local oz_git_buf = require("oz.git.oz_git_win").oz_git_buf
+		if oz_git_buf then
+			vim.api.nvim_buf_delete(oz_git_buf, { force = true })
+		end
+		require("oz.git.status").GitStatus()
+		return true
+	elseif cmd == "commit" and #args_table == 1 then
 		local changed = util.ShellOutputList("git diff --name-only --cached")
 		if #changed < 1 then
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
-	end
-
-	-- help -> man
-	if g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then
+	elseif g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then
 		vim.cmd("Man git-" .. cmd)
 		return true
-	end
-
-	-- remote cmds
-	local remote = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
-	local is_remote = util.str_in_tbl(cmd, remote)
-	if is_remote then
+	elseif util.str_in_tbl(cmd, remote_cmds) then
 		vim.cmd("hor term git " .. table.concat(args_table, " "))
-		if oz_git_win.oz_git_ft() then
-			vim.api.nvim_buf_set_option(0, "ft", "oz_git")
-		else
-			vim.api.nvim_buf_set_option(0, "ft", "git")
-		end
+		vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
 		vim.cmd("resize 9")
 		vim.api.nvim_buf_set_name(0, "")
 		vim.cmd.wincmd("p")
@@ -67,7 +63,7 @@ function M.after_exec_complete(callback, ret)
 end
 
 -- Run Git cmd
-function RunGitCmd(args)
+function M.run_git_cmd(args)
 	args = g_util.expand_expressions(args)
 	local args_table = g_util.parse_args(args)
 	local cmd = args_table[1]
@@ -146,17 +142,19 @@ function RunGitCmd(args)
 end
 
 -- Define the user command
-function M.oz_git_usercmd_init()
+function M.oz_git_usercmd_init(config) -- FIXME toggle wizard
 	-- :Git
 	vim.api.nvim_create_user_command("Git", function(opts)
 		if g_util.if_in_git() then
 			if opts.args and #opts.args > 0 then
-				RunGitCmd(opts.args)
+				M.run_git_cmd(opts.args)
 			else
 				require("oz.git.status").GitStatus()
+				vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
+				vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 			end
 		elseif opts.args and opts.args:find("init") then
-			RunGitCmd(opts.args)
+			M.run_git_cmd(opts.args)
 		else
 			util.Notify("You are not in a git repo. Try :Git init", "warn", "oz_git")
 		end
@@ -170,12 +168,14 @@ function M.oz_git_usercmd_init()
 	vim.api.nvim_create_user_command("G", function(opts)
 		if g_util.if_in_git() then
 			if opts.args and #opts.args > 0 then
-				RunGitCmd(opts.args)
+				M.run_git_cmd(opts.args)
 			else
 				require("oz.git.status").GitStatus()
+				vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
+				vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 			end
 		elseif opts.args and opts.args:find("init") then
-			RunGitCmd(opts.args)
+			M.run_git_cmd(opts.args)
 		else
 			util.Notify("You are not in a git repo. Try doing :Git init", "warn", "oz_git")
 		end
@@ -229,7 +229,7 @@ function M.oz_git_usercmd_init()
 				if ok then
 					M.after_exec_complete(function(code)
 						if code == 0 then
-                            vim.cmd("edit " .. file_name)
+							vim.cmd("edit " .. file_name)
 						end
 					end)
 					vim.cmd("Git mv " .. old_name .. " " .. file_name)

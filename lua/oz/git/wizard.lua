@@ -1,5 +1,9 @@
 local M = {}
 local util = require("oz.util")
+local g_util = require("oz.git.util")
+
+M.on_conflict_resolution = false
+M.on_conflict_resolution_complete = nil
 
 function M.parse_git_suggestion(data, arg_tbl)
 	local filtered_data = {}
@@ -14,26 +18,6 @@ function M.parse_git_suggestion(data, arg_tbl)
 	local patterns = {
 		-- Command similarity suggestions
 		{
-			trigger = "The most similar command is",
-			extract = function(str)
-				local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
-				if #arg_tbl == 1 then
-					return match
-				else
-					return match .. "| " .. table.concat(arg_tbl, " ", 2)
-				end
-			end,
-		},
-		{
-			trigger = "The most similar commands are",
-			extract = function()
-				if #arg_tbl == 1 then
-					return arg_tbl[1]
-				end
-				return arg_tbl[1] .. "| " .. table.concat(arg_tbl, " ", 2)
-			end,
-		},
-		{
 			trigger = "Did you mean",
 			extract = function(str)
 				local match = str:match("Did you mean%s+([^%s]+)")
@@ -41,6 +25,28 @@ function M.parse_git_suggestion(data, arg_tbl)
 					return match:gsub("^git%s+", "")
 				end
 				return nil
+			end,
+		},
+		{
+			trigger = "The most similar commands are",
+			extract = function()
+                vim.notify("typo alert! :) fix it!", vim.log.levels.WARN)
+				if #arg_tbl == 1 then
+					return arg_tbl[1]
+				end
+				return arg_tbl[1] .. "| " .. table.concat(arg_tbl, " ", 2)
+			end,
+		},
+		{
+			trigger = "The most similar command",
+			extract = function(str)
+                vim.notify("silly you, we've fixed that! :) press enter")
+				local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
+				if #arg_tbl == 1 then
+					return match
+				else
+					return match .. "| " .. table.concat(arg_tbl, " ", 2)
+				end
 			end,
 		},
 		-- User identity setup
@@ -72,6 +78,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "Please commit or stash",
 			extract = function()
+				vim.notify("Stash or commit, your choice!")
 				return "stash"
 			end,
 		},
@@ -108,7 +115,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-				vim.notify("First fix conflicts and run 'add' followed by 'commit'")
+                vim.notify("Conflict alert! Don't worry, we've got your back :)")
 				return "status"
 			end,
 		},
@@ -135,6 +142,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "have you pulled",
 			extract = function()
+				vim.notify("Pull, baby, pull! Get the latest updates")
 				return "pull"
 			end,
 		},
@@ -142,7 +150,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "forgot to add some files",
 			extract = function()
-				vim.notify("put your files.")
+				vim.notify("Oops, forgot something? Add files now!")
 				return "add | && commit --amend"
 			end,
 		},
@@ -233,6 +241,79 @@ function M.commit_wizard()
 			vim.api.nvim_replace_termcodes(char, true, false, true)
 		end
 	end
+end
+
+function M.start_conflict_resolution()
+	local conflict_lines = util.ShellOutputList([[git status --short | awk '/^UU / {print $2}']])
+	if #conflict_lines > 0 then
+		vim.fn.setqflist({}, " ", {
+			lines = conflict_lines,
+			efm = "%f",
+			title = "OzGitMergeConflictFiles",
+		})
+
+		if #vim.fn.getqflist() == 1 then
+			vim.cmd("cfirst")
+		elseif #vim.fn.getqflist() > 0 then
+			vim.cmd("cw")
+			vim.cmd("cfirst")
+		end
+		-- set keymaps
+		g_util.temp_remap("n", "]x", function()
+			local patterns = { "^<<<<<<<", "^=====", "^>>>>>>" }
+			for _, pattern in ipairs(patterns) do
+				local result = vim.fn.search(pattern, "W")
+				if result ~= 0 then
+					return
+				end
+			end
+			print("next")
+		end, { remap = false, silent = true })
+
+		g_util.temp_remap("n", "[x", function()
+			local patterns = { "^>>>>>>", "^=====", "^<<<<<<<" }
+			for _, pattern in ipairs(patterns) do
+				local result = vim.fn.search(pattern, "Wb")
+				if result ~= 0 then
+					return
+				end
+			end
+			print("prev")
+		end, { remap = false, silent = true })
+
+		M.on_conflict_resolution = true
+	else
+		util.Notify("ShellError: git status --short | awk '/^UU / {print $2}", "error", "oz_git")
+	end
+end
+
+function M.complete_conflict_resolution()
+	local files = util.ShellOutputList([[git status --short | awk '/^UU / {print $2}']])
+	if #files == 0 then
+		util.Notify("ShellError: git status --short | awk '/^UU / {print $2}", "error", "oz_git")
+		return
+	end
+	g_util.restore_mapping("n", "[x")
+	g_util.restore_mapping("n", "]x")
+
+	-- util.clear_qflist("OzGitMergeConflictFiles")
+	vim.cmd("cclose")
+
+	for _, file in ipairs(files) do
+		local lines = vim.fn.readfile(file)
+		local new_lines = {}
+		for _, line in ipairs(lines) do
+			if not (line:match("^<<<<<<<") or line:match("^=======") or line:match("^>>>>>>>")) then
+				table.insert(new_lines, line)
+			end
+		end
+		local bufnr = vim.fn.bufnr(file)
+		if bufnr ~= -1 then
+			vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, new_lines)
+			vim.api.nvim_buf_set_option(bufnr, "modified", true)
+		end
+	end
+	M.on_conflict_resolution_complete = true
 end
 
 return M

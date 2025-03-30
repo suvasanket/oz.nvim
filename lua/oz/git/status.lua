@@ -2,6 +2,7 @@ local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
 local git = require("oz.git")
+local wizard = require("oz.git.wizard")
 
 local status_win = nil
 local status_buf = nil
@@ -12,6 +13,7 @@ local headings_table = {}
 local diff_lines = {}
 local status_grab_buffer = {}
 local current_branch = nil
+local in_conflict = false
 
 -- helper: heading tbl.
 local function get_heading_tbl(lines)
@@ -82,6 +84,7 @@ local function get_file_under_cursor(original)
 		local start_line = vim.fn.line("v")
 		local end_line = vim.fn.line(".")
 		lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+		vim.api.nvim_input("<Esc>")
 	end
 
 	for _, line in ipairs(lines) do
@@ -170,6 +173,22 @@ local function toggle_diff()
 		vim.bo.modifiable = false
 		diff_lines[file] = diff
 	end
+end
+
+local function is_conflict(lines)
+	for _, line in pairs(lines) do
+		if
+			line:match("both modified:")
+			or line:match("added by us:")
+			or line:match("added by them:")
+			or line:match("deleted by us:")
+			or line:match("deleted by them:")
+			or line:match("unmerged:")
+		then
+			return true
+		end
+	end
+	return false
 end
 
 -- status buffer keymaps
@@ -377,6 +396,66 @@ local function status_buf_keymaps(buf)
 		end
 	end, { remap = false, buffer = buf, silent = true, desc = "diff unstaged changes of file under cursor." })
 
+	-- Merge helper
+	if in_conflict then
+		if wizard.on_conflict_resolution_complete then
+			vim.notify_once(
+				"Stage the changes then perform the commit.",
+				vim.log.levels.INFO,
+				{ title = "oz_git", timeout = 3000 }
+			)
+		else
+			vim.notify_once(
+				"Press 'xo' to start conflict resolution.",
+				vim.log.levels.INFO,
+				{ title = "oz_git", timeout = 3000 }
+			)
+		end
+		-- start resolution
+		vim.keymap.set("n", "xo", function()
+			vim.cmd("close")
+			wizard.start_conflict_resolution()
+			vim.notify_once(
+				"Press ]x and [x to navigate between conflict marker.",
+				vim.log.levels.INFO,
+				{ title = "oz_git", timeout = 4000 }
+			)
+			vim.defer_fn(function()
+				vim.notify_once(
+					"Run :CompleteResolution to complete conflict resolution.",
+					vim.log.levels.INFO,
+					{ title = "oz_git", timeout = 4000 }
+				)
+			end, 7000)
+
+			vim.api.nvim_create_user_command("CompleteConflictResolution", function()
+				wizard.complete_conflict_resolution()
+				vim.api.nvim_del_user_command("CompleteConflictResolution")
+			end, {})
+		end, { remap = false, buffer = buf, silent = true, desc = "Start conflict resolution." })
+
+		-- complete
+		vim.keymap.set("n", "xc", function()
+			if wizard.on_conflict_resolution then
+				wizard.complete_conflict_resolution()
+			else
+				util.Notify("Start the resolution with 'xo' first.", "warn", "oz_git")
+			end
+		end, { remap = false, buffer = buf, silent = true, desc = "Complete conflict resolution." })
+
+		-- diffview
+		if util.usercmd_exist("DiffviewOpen") then
+			vim.keymap.set("n", "xp", function()
+				vim.cmd("DiffviewOpen")
+			end, {
+				remap = false,
+				buffer = buf,
+				silent = true,
+				desc = "Open Diffview to perform conflict resolution.",
+			})
+		end
+	end
+
 	-- Pick Mode
 	-- pick files
 	vim.keymap.set("n", "p", function()
@@ -462,19 +541,21 @@ local function status_buf_keymaps(buf)
 			input = g_util.parse_args(input)
 			local remote_name = input[1]
 			local remote_url = input[2]
-			util.ShellCmd({ "git", "remote", "add", remote_name, remote_url }, function()
-				util.Notify("Remote: " .. remote_name .. " added.", nil, "oz_git")
-			end, function()
-				local ans =
-					vim.fn.confirm("url for " .. remote_name .. " already exists, do you want to update?", "&Yes\n&No")
-				if ans == 1 then
-					util.ShellCmd({ "git", "remote", "set-url", remote_name, remote_url }, function()
-						util.Notify("remote " .. remote_name .. " url has been updated!", nil, "oz_git")
-					end, function()
-						util.Notify("error occured while setting url", "error", "oz_git")
-					end)
+
+			if remote_name and remote_url then
+				local remotes = util.ShellOutputList("git remote")
+				if util.str_in_tbl(remote_name, remotes) then
+					local ans = util.prompt(
+						"url for " .. remote_name .. " already exists, do you want to update?",
+						"&Yes\n&No"
+					)
+					if ans == 1 then
+						vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
+					end
+				else
+					vim.cmd("G remote add " .. remote_name .. " " .. remote_url)
 				end
-			end)
+			end
 		end
 	end, { buffer = buf, silent = true, desc = "Add or update remotes." })
 
@@ -528,6 +609,7 @@ local function status_buf_keymaps(buf)
 				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
 				["Remote mappings"] = { "ma", "md", "mr" },
 				["Quick actions"] = { "grn", "<Tab>" },
+				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 			},
 		})
 	end, { remap = false, buffer = buf, silent = true, desc = "show all availble keymaps." })
@@ -538,9 +620,11 @@ local function status_buf_hl()
 	vim.cmd("syntax clear")
 
 	vim.cmd([[syntax match ozgitstatusDeleted /^\s\+deleted:\s\+.*$/]])
+	vim.cmd([[syntax match ozgitstatusBothModified /^\s\+both modified:\s\+.*$/]])
 	vim.cmd([[syntax match ozgitstatusModified /^\s\+modified:\s\+.*$/]])
 	vim.api.nvim_set_hl(0, "ozgitstatusDeleted", { fg = "#757575" })
 	vim.cmd("highlight default link ozgitstatusModified MoreMsg")
+	vim.cmd("highlight default link ozgitstatusBothModified WarningMsg")
 
 	-- diff
 	vim.cmd([[
@@ -651,10 +735,9 @@ function M.GitStatus()
 	current_branch = util.ShellOutput("git branch --show-current")
 	local lines = get_status_lines()
 
+	in_conflict = is_conflict(lines)
 	get_heading_tbl(lines)
 	open_status_buf(lines)
-	vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
-	vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 end
 
 return M

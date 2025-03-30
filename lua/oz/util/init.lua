@@ -141,4 +141,12 @@ function M.usercmd_exist(name)
 	return commands[name] ~= nil
 end
 
+function M.clear_qflist(title)
+	local qf_list = vim.fn.getqflist({ title = 1 })
+	if qf_list.title == title then
+		vim.fn.setqflist({}, "r")
+		vim.cmd("cclose")
+	end
+end
+
 return M

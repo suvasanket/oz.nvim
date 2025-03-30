@@ -44,7 +44,9 @@ local defaults = {
 		},
 	},
 
-	oz_git = true,
+	oz_git = {
+		-- wizard = true,
+	},
 
 	-- Make
 	async_make = {
@@ -109,7 +111,7 @@ function M.setup(opts)
 
 	-- Initialize oz git
 	if M.config.oz_git then
-		require("oz.git").oz_git_usercmd_init()
+		require("oz.git").oz_git_usercmd_init(M.config.oz_git)
 	end
 
 	-- Initialize cache_efm

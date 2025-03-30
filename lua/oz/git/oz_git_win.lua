@@ -2,8 +2,8 @@ local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
 
-local oz_git_buf = nil
-local oz_git_win = nil
+M.oz_git_buf = nil
+M.oz_git_win = nil
 local git_cmd = {}
 
 local function set_cmd_history(cmd)
@@ -49,7 +49,7 @@ local function extract_git_command_and_flag(if_grab)
 					vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
 					g_util.start_monitoring(grab_flags, { -- keeps echoing ..
 						interval = 2000,
-						buf = oz_git_buf,
+						buf = M.oz_git_buf,
 						on_active = function(t)
 							vim.api.nvim_echo(
 								{ { ":Git " .. command .. " " }, { table.concat(t, " "), "@attribute" } },
@@ -161,7 +161,7 @@ local function ft_mappings(buf)
 
 	-- refresh
 	vim.keymap.set("n", "<C-r>", function()
-		RunGitCmd(git_cmd.cur_cmd)
+		require("oz.git").run_git_cmd(git_cmd.cur_cmd)
 	end, { buffer = buf, silent = true, desc = "refresh current cmd buffer(by rerunning prev cmd)." })
 
 	-- discard grab
@@ -251,41 +251,41 @@ function M.open_oz_git_win(lines, cmd, type)
 	set_cmd_history(cmd)
 	local height = math.min(math.max(#lines, 7), 15)
 
-	if oz_git_buf == nil or not vim.api.nvim_win_is_valid(oz_git_win) then
-		oz_git_buf = vim.api.nvim_create_buf(false, true)
+	if M.oz_git_buf == nil or not vim.api.nvim_win_is_valid(M.oz_git_win) then
+		M.oz_git_buf = vim.api.nvim_create_buf(false, true)
 
 		vim.cmd("botright " .. height .. "split")
 		vim.cmd("resize " .. height)
 
-		oz_git_win = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_buf(oz_git_win, oz_git_buf)
+		M.oz_git_win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(M.oz_git_win, M.oz_git_buf)
 
-		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_lines(M.oz_git_buf, 0, -1, false, lines)
 
-		vim.api.nvim_buf_set_name(oz_git_buf, string.format("oz_git://%s", type))
+		vim.api.nvim_buf_set_name(M.oz_git_buf, string.format("oz_git://%s", type))
 		if M.oz_git_ft() then
-			vim.api.nvim_buf_set_option(oz_git_buf, "ft", "oz_git")
+			vim.api.nvim_buf_set_option(M.oz_git_buf, "ft", "oz_git")
 		else
-			vim.api.nvim_buf_set_option(oz_git_buf, "ft", "git")
+			vim.api.nvim_buf_set_option(M.oz_git_buf, "ft", "git")
 		end
 
 		vim.api.nvim_create_autocmd("BufDelete", {
-			buffer = oz_git_buf,
+			buffer = M.oz_git_buf,
 			callback = function()
-				oz_git_buf = nil
-				oz_git_win = nil
+				M.oz_git_buf = nil
+				M.oz_git_win = nil
 				git_cmd = {} -- FIXME will not clear the tbl.
 			end,
 		})
 	else
-		vim.api.nvim_set_current_win(oz_git_win)
+		vim.api.nvim_set_current_win(M.oz_git_win)
 		vim.cmd("resize " .. height)
-		vim.api.nvim_buf_set_option(oz_git_buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(oz_git_buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(oz_git_buf, "modifiable", false)
+		vim.api.nvim_buf_set_option(M.oz_git_buf, "modifiable", true)
+		vim.api.nvim_buf_set_lines(M.oz_git_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_option(M.oz_git_buf, "modifiable", false)
 	end
 
-	return oz_git_buf, oz_git_win
+	return M.oz_git_buf, M.oz_git_win
 end
 
 return M
