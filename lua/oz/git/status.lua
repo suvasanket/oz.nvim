@@ -34,6 +34,7 @@ local function get_heading_tbl(lines)
 			line:match("^Changes not staged for commit:")
 			or line:match("^Untracked files:")
 			or line:match("^Changes to be committed:")
+			or line:match("Stash list:")
 		then
 			current_heading = line
 			headings_table[current_heading] = {}
@@ -89,20 +90,33 @@ local function get_file_under_cursor(original)
 
 	for _, line in ipairs(lines) do
 		local file = line:match("%S+$")
+		local dir = line:match("(%S+/)")
 		cwd = cwd or vim.fn.getcwd()
-		local absolute_path = vim.fs.normalize(cwd .. "/" .. file)
+
+		local absolute_file_path = vim.fs.normalize(cwd .. "/" .. file)
+		local absolute_dir_path
+		if dir then
+			absolute_dir_path = vim.fs.normalize(cwd .. "/" .. dir)
+		end
 		local tbl = { "deleted:", "renamed:", "copied:" }
-		if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
+
+		if vim.fn.filereadable(absolute_file_path) == 1 then
 			if original then
 				table.insert(entries, file)
 			else
-				table.insert(entries, absolute_path)
+				table.insert(entries, absolute_file_path)
+			end
+		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then
+			if original then
+				table.insert(entries, dir)
+			else
+				table.insert(entries, dir)
 			end
 		elseif util.str_in_tbl(line, tbl) then
 			if original then
 				table.insert(entries, file)
 			else
-				table.insert(entries, absolute_path)
+				table.insert(entries, absolute_file_path)
 			end
 		end
 	end
@@ -179,11 +193,13 @@ local function is_conflict(lines)
 	for _, line in pairs(lines) do
 		if
 			line:match("both modified:")
+			or line:match("both added:")
 			or line:match("added by us:")
 			or line:match("added by them:")
 			or line:match("deleted by us:")
 			or line:match("deleted by them:")
 			or line:match("unmerged:")
+			or line:match("Unmerged paths:")
 		then
 			return true
 		end
@@ -191,6 +207,7 @@ local function is_conflict(lines)
 	return false
 end
 
+-- TODO add keyamp when enter on git help msg it will populate the cmdline
 -- status buffer keymaps
 local function status_buf_keymaps(buf)
 	-- quit
@@ -301,6 +318,51 @@ local function status_buf_keymaps(buf)
 		end
 	end, { remap = false, buffer = buf, silent = true, desc = "Rename file or branch under cursor." })
 
+	-- stash mappings
+	-- stash apply
+	vim.keymap.set("n", "cza", function()
+		git.after_exec_complete(function(code)
+			if code == 0 then
+				M.refresh_status_buf()
+			end
+		end)
+		local current_line = vim.api.nvim_get_current_line()
+		local stash = current_line:match("^%s*(stash@{%d+})")
+		if stash then
+			vim.cmd("G stash apply -q " .. stash)
+		end
+	end, { remap = false, buffer = buf, silent = true, desc = "Apply stash under cursor." })
+	-- stash pop
+	vim.keymap.set("n", "czp", function()
+		git.after_exec_complete(function(code)
+			if code == 0 then
+				M.refresh_status_buf()
+			end
+		end)
+		local current_line = vim.api.nvim_get_current_line()
+		local stash = current_line:match("^%s*(stash@{%d+})")
+		if stash then
+			vim.cmd("G stash pop -q " .. stash)
+		end
+	end, { remap = false, buffer = buf, silent = true, desc = "Pop stash under cursor." })
+	-- stash drop
+	vim.keymap.set("n", "czd", function()
+		git.after_exec_complete(function(code)
+			if code == 0 then
+				M.refresh_status_buf()
+			end
+		end)
+		local current_line = vim.api.nvim_get_current_line()
+		local stash = current_line:match("^%s*(stash@{%d+})")
+		if stash then
+			vim.cmd("G stash drop -q " .. stash)
+		end
+	end, { remap = false, buffer = buf, silent = true, desc = "Drop stash under cursor." })
+	-- :G stash
+	vim.keymap.set("n", "cz<space>", function()
+		vim.api.nvim_feedkeys(":Git stash ", "n", false)
+	end, { remap = false, buffer = buf, silent = true, desc = ":Git stash " })
+
 	-- commit map
 	vim.keymap.set("n", "cc", function()
 		git.after_exec_complete(function(code)
@@ -406,7 +468,7 @@ local function status_buf_keymaps(buf)
 			)
 		else
 			vim.notify_once(
-				"Press 'xo' to start conflict resolution.",
+				"Press 'xo' or 'xp' to start conflict resolution.",
 				vim.log.levels.INFO,
 				{ title = "oz_git", timeout = 3000 }
 			)
@@ -416,23 +478,16 @@ local function status_buf_keymaps(buf)
 			vim.cmd("close")
 			wizard.start_conflict_resolution()
 			vim.notify_once(
-				"Press ]x and [x to navigate between conflict marker.",
+				"]x / [x => jump between conflict marker.\n:CompleteConflictResolution => complete",
 				vim.log.levels.INFO,
 				{ title = "oz_git", timeout = 4000 }
 			)
-			vim.defer_fn(function()
-				vim.notify_once(
-					"Run :CompleteResolution to complete conflict resolution.",
-					vim.log.levels.INFO,
-					{ title = "oz_git", timeout = 4000 }
-				)
-			end, 7000)
 
 			vim.api.nvim_create_user_command("CompleteConflictResolution", function()
 				wizard.complete_conflict_resolution()
 				vim.api.nvim_del_user_command("CompleteConflictResolution")
 			end, {})
-		end, { remap = false, buffer = buf, silent = true, desc = "Start conflict resolution." })
+		end, { remap = false, buffer = buf, silent = true, desc = "Start manual conflict resolution." })
 
 		-- complete
 		vim.keymap.set("n", "xc", function()
@@ -441,7 +496,7 @@ local function status_buf_keymaps(buf)
 			else
 				util.Notify("Start the resolution with 'xo' first.", "warn", "oz_git")
 			end
-		end, { remap = false, buffer = buf, silent = true, desc = "Complete conflict resolution." })
+		end, { remap = false, buffer = buf, silent = true, desc = "Complete manual conflict resolution." })
 
 		-- diffview
 		if util.usercmd_exist("DiffviewOpen") then
@@ -458,36 +513,49 @@ local function status_buf_keymaps(buf)
 
 	-- Pick Mode
 	-- pick files
-	vim.keymap.set("n", "p", function()
-		local entry = get_branch_under_cursor() or get_file_under_cursor(true)[1]
-		if not entry then
-			util.Notify("You can only pick a file or branch", "error", "oz_git")
-			return
-		end
-
-		-- unpick
-		if util.str_in_tbl(entry, status_grab_buffer) then
-			if #status_grab_buffer > 1 then
-				util.remove_from_tbl(status_grab_buffer, entry)
-				vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
-			elseif status_grab_buffer[1] == entry then
-				util.tbl_monitor().stop_monitoring(status_grab_buffer)
-				status_grab_buffer = {}
-				vim.api.nvim_echo({ { "" } }, false, {})
+	vim.keymap.set(
+		"n",
+		"p",
+		function()
+			local entry = vim.api.nvim_get_current_line():match("^%s*(stash@{%d+})")
+			if not entry then
+				entry = get_branch_under_cursor() or get_file_under_cursor(true)[1]
 			end
-		else
-			-- pick
-			util.tbl_insert(status_grab_buffer, entry)
 
-			util.tbl_monitor().start_monitoring(status_grab_buffer, {
-				interval = 2000,
-				buf = buf,
-				on_active = function(t)
-					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
-				end,
-			})
-		end
-	end, { remap = false, buffer = buf, silent = true, desc = "Pick or unpick any files or branch under cursor." })
+			if not entry then
+				util.Notify("You can only pick a file or branch", "error", "oz_git")
+				return
+			end
+
+			-- unpick
+			if util.str_in_tbl(entry, status_grab_buffer) then
+				if #status_grab_buffer > 1 then
+					util.remove_from_tbl(status_grab_buffer, entry)
+					vim.api.nvim_echo(
+						{ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } },
+						false,
+						{}
+					)
+				elseif status_grab_buffer[1] == entry then
+					util.tbl_monitor().stop_monitoring(status_grab_buffer)
+					status_grab_buffer = {}
+					vim.api.nvim_echo({ { "" } }, false, {})
+				end
+			else
+				-- pick
+				util.tbl_insert(status_grab_buffer, entry)
+
+				util.tbl_monitor().start_monitoring(status_grab_buffer, {
+					interval = 2000,
+					buf = buf,
+					on_active = function(t)
+						vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+					end,
+				})
+			end
+		end,
+		{ remap = false, buffer = buf, silent = true, desc = "Pick or unpick any file/dir/branch/stash under cursor." }
+	)
 
 	-- edit picked
 	vim.keymap.set("n", "a", function()
@@ -545,10 +613,8 @@ local function status_buf_keymaps(buf)
 			if remote_name and remote_url then
 				local remotes = util.ShellOutputList("git remote")
 				if util.str_in_tbl(remote_name, remotes) then
-					local ans = util.prompt(
-						"url for " .. remote_name .. " already exists, do you want to update?",
-						"&Yes\n&No"
-					)
+					local ans =
+						util.prompt("url for " .. remote_name .. " already exists, do you want to update?", "&Yes\n&No")
 					if ans == 1 then
 						vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
 					end
@@ -610,6 +676,7 @@ local function status_buf_keymaps(buf)
 				["Remote mappings"] = { "ma", "md", "mr" },
 				["Quick actions"] = { "grn", "<Tab>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
+				["Stash mappings"] = { "cza", "czp", "czd", "cz<Space>" },
 			},
 		})
 	end, { remap = false, buffer = buf, silent = true, desc = "show all availble keymaps." })
@@ -668,8 +735,11 @@ local function status_buf_ft()
 		once = true,
 		callback = function(event)
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-			status_buf_keymaps(event.buf)
-			status_buf_hl()
+			-- load async
+			vim.fn.timer_start(0, function()
+				status_buf_hl()
+				status_buf_keymaps(event.buf)
+			end)
 		end,
 	})
 	return true
@@ -692,14 +762,16 @@ local function open_status_buf(lines)
 			vim.api.nvim_buf_set_option(status_buf, "ft", "oz_git")
 		end
 
-		vim.api.nvim_create_autocmd("BufDelete", {
-			buffer = status_buf,
-			callback = function()
-				status_buf = nil
-				status_win = nil
-				cwd = nil
-			end,
-		})
+		vim.fn.timer_start(100, function()
+			vim.api.nvim_create_autocmd("BufDelete", {
+				buffer = status_buf,
+				callback = function()
+					status_buf = nil
+					status_win = nil
+					cwd = nil
+				end,
+			})
+		end)
 	else
 		vim.api.nvim_set_current_win(status_win)
 		vim.cmd("resize " .. status_win_height)
@@ -712,11 +784,24 @@ end
 -- get neccessry lines for status buffer
 local function get_status_lines()
 	local status_tbl = {}
-	local status_str = util.ShellOutput("git status")
+	local status_str = util.ShellOutputList("git status")
+	local stash_str = util.ShellOutputList("git stash list")
 
-	for substr in status_str:gmatch("([^\n]*)\n?") do
-		if substr ~= "" and not substr:match('%(use "git .-.%)') then
-			table.insert(status_tbl, substr)
+	if #status_str ~= 0 then
+		for _, substr in ipairs(status_str) do
+			if substr ~= "" and not substr:match('%(use "git .-.%)') then
+				-- substr = substr:gsub("^[%s\t]+", " ")
+				table.insert(status_tbl, substr)
+			end
+		end
+	end
+
+	if #stash_str ~= 0 then
+		table.insert(status_tbl, "Stash list:")
+		for _, substr in ipairs(stash_str) do
+			if substr ~= "" and not substr:match('%(use "git .-.%)') then
+				table.insert(status_tbl, "\t" .. substr)
+			end
 		end
 	end
 	return status_tbl
