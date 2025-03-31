@@ -248,6 +248,9 @@ function M.oz_git_ft()
 end
 
 function M.open_oz_git_win(lines, cmd, type)
+	if not lines then
+		return
+	end
 	set_cmd_history(cmd)
 	local height = math.min(math.max(#lines, 7), 15)
 

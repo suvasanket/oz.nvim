@@ -33,21 +33,20 @@ local function different_cmd_runner(args_table, args_str)
 		end
 		require("oz.git.status").GitStatus()
 		return true
-	elseif cmd == "commit" and #args_table == 1 then
+	elseif cmd == "commit" and #args_table == 1 then -- check if non staged commiting.
 		local changed = util.ShellOutputList("git diff --name-only --cached")
 		if #changed < 1 then
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
-	elseif g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then
+	elseif g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then -- man
 		vim.cmd("Man git-" .. cmd)
 		return true
-	elseif util.str_in_tbl(cmd, remote_cmds) then
-		vim.cmd("hor term git " .. table.concat(args_table, " "))
-		vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
-		vim.cmd("resize 9")
-		vim.api.nvim_buf_set_name(0, "")
-		vim.cmd.wincmd("p")
+	elseif util.str_in_tbl(cmd, remote_cmds) then -- remote related
+		local command = table.remove(args_table, 1)
+		require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
+			oz_git_win.open_oz_git_win(lines, args_str, "stderr")
+		end)
 		return true
 	end
 end

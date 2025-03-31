@@ -224,6 +224,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 	return nil
 end
 
+-- commit push wizard --
 function M.commit_wizard()
 	local remote = util.ShellOutput("git config --get remote.origin.url")
 	local no_unpushed = util.ShellOutput("git rev-list --count @{u}..HEAD")
@@ -238,13 +239,16 @@ function M.commit_wizard()
 		if char == "P" then
 			vim.cmd("Git push")
 		else
-			vim.api.nvim_replace_termcodes(char, true, false, true)
+			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(char, true, false, true), "n", false)
+			pcall(require("notify").dismiss)
+			pcall(require("snacks.notifier").hide)
+			pcall(require("mini.notify").clear)
 		end
 	end
 end
 
+-- conflict wizard --
 local conflicted_files = {}
-
 function M.start_conflict_resolution()
 	conflicted_files = util.ShellOutputList([[git status --short | awk '/^[ADU][ADU] / {print $2}']])
 	if #conflicted_files > 0 then

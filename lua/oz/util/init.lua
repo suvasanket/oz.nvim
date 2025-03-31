@@ -87,6 +87,14 @@ function M.UserInput(msg, def)
 	end
 end
 
+function M.inactive_input(str, def)
+	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+	vim.cmd("echohl ozInactivePrompt")
+	local input = M.UserInput(str, def)
+	vim.cmd("echohl None")
+	return input
+end
+
 function M.Notify(content, level, title)
 	title = title or "Info"
 
