@@ -30,7 +30,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "The most similar commands are",
 			extract = function()
-                vim.notify("typo alert! :) fix it!", vim.log.levels.WARN)
+				vim.notify("typo alert! :) fix it!", vim.log.levels.WARN)
 				if #arg_tbl == 1 then
 					return arg_tbl[1]
 				end
@@ -40,7 +40,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "The most similar command",
 			extract = function(str)
-                vim.notify("silly you, we've fixed that! :) press enter")
+				vim.notify("silly you, we've fixed that! :) press enter")
 				local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
 				if #arg_tbl == 1 then
 					return match
@@ -115,7 +115,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-                vim.notify("Conflict alert! Don't worry, we've got your back :)")
+				vim.notify("Conflict alert! Don't worry, we've got your back :)")
 				return "status"
 			end,
 		},
@@ -243,11 +243,13 @@ function M.commit_wizard()
 	end
 end
 
+local conflicted_files = {}
+
 function M.start_conflict_resolution()
-	local conflict_lines = util.ShellOutputList([[git status --short | awk '/^UU / {print $2}']])
-	if #conflict_lines > 0 then
+	conflicted_files = util.ShellOutputList([[git status --short | awk '/^[ADU][ADU] / {print $2}']])
+	if #conflicted_files > 0 then
 		vim.fn.setqflist({}, " ", {
-			lines = conflict_lines,
+			lines = conflicted_files,
 			efm = "%f",
 			title = "OzGitMergeConflictFiles",
 		})
@@ -283,14 +285,13 @@ function M.start_conflict_resolution()
 
 		M.on_conflict_resolution = true
 	else
-		util.Notify("ShellError: git status --short | awk '/^UU / {print $2}", "error", "oz_git")
+		util.Notify("ShellError: git status --short | awk '/^[ADU][ADU] / {print $2}", "error", "oz_git")
 	end
 end
 
 function M.complete_conflict_resolution()
-	local files = util.ShellOutputList([[git status --short | awk '/^UU / {print $2}']])
-	if #files == 0 then
-		util.Notify("ShellError: git status --short | awk '/^UU / {print $2}", "error", "oz_git")
+	if #conflicted_files == 0 then
+		util.Notify("ShellError: git status --short | awk '/^[ADU][ADU] / {print $2}", "error", "oz_git")
 		return
 	end
 	g_util.restore_mapping("n", "[x")
@@ -299,7 +300,7 @@ function M.complete_conflict_resolution()
 	-- util.clear_qflist("OzGitMergeConflictFiles")
 	vim.cmd("cclose")
 
-	for _, file in ipairs(files) do
+	for _, file in ipairs(conflicted_files) do
 		local lines = vim.fn.readfile(file)
 		local new_lines = {}
 		for _, line in ipairs(lines) do

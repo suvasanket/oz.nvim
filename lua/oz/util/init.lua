@@ -108,6 +108,7 @@ function M.prompt(str, opts, choice, hl)
 	end
 end
 
+-- big functions
 function M.Show_buf_keymaps(args)
 	return require("oz.util.help_keymaps").init(args)
 end
@@ -120,7 +121,11 @@ function M.str_in_tbl(str, string_table)
 	str = vim.trim(str)
 	for _, substring in ipairs(string_table) do
 		substring = vim.trim(substring)
-		if string.find(str, substring, 1, true) then
+
+		local normalized_str = str:gsub("%s+", "")
+		local normalized_substring = substring:gsub("%s+", "")
+
+		if normalized_str == normalized_substring then
 			return true
 		end
 	end
