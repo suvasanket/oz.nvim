@@ -9,6 +9,7 @@ local wizard = require("oz.git.wizard")
 local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
 
+-- map --
 local function map(mode, lhs, rhs, opts)
 	local options = { silent = true, remap = false }
 	if opts then
@@ -22,6 +23,13 @@ local function map(mode, lhs, rhs, opts)
 	else
 		vim.keymap.set(mode, lhs, rhs, options)
 	end
+end
+
+local function run_n_refresh(cmd)
+	git.after_exec_complete(function()
+		refresh()
+	end)
+	vim.cmd(cmd)
 end
 
 -- here --
@@ -137,45 +145,37 @@ function M.keymaps_init(buf)
 	-- stash mappings
 	-- stash apply
 	map("n", "cza", function()
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end)
 		local current_line = vim.api.nvim_get_current_line()
 		local stash = current_line:match("^%s*(stash@{%d+})")
 		if stash then
-			vim.cmd("G stash apply -q " .. stash)
+			run_n_refresh("G stash apply -q " .. stash)
 		end
 	end, { buffer = buf, desc = "Apply stash under cursor." })
 	-- stash pop
 	map("n", "czp", function()
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end)
 		local current_line = vim.api.nvim_get_current_line()
 		local stash = current_line:match("^%s*(stash@{%d+})")
 		if stash then
-			vim.cmd("G stash pop -q " .. stash)
+			run_n_refresh("G stash pop -q " .. stash)
 		end
 	end, { buffer = buf, desc = "Pop stash under cursor." })
 	-- stash drop
 	map("n", "czd", function()
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end)
 		local current_line = vim.api.nvim_get_current_line()
 		local stash = current_line:match("^%s*(stash@{%d+})")
 		if stash then
-			vim.cmd("G stash drop -q " .. stash)
+			run_n_refresh("G stash drop -q " .. stash)
 		end
 	end, { buffer = buf, desc = "Drop stash under cursor." })
 	-- :G stash
-	map("n", "cz<space>", ":Git stash ", { silent = false, buffer = buf, desc = ":Git stash " })
+	map("n", "cz<space>", function()
+		local input = util.inactive_input(":Git stash", " ")
+		if input then
+			run_n_refresh("Git stash " .. input)
+		elseif input == "" then
+			run_n_refresh("Git stash")
+		end
+	end, { silent = false, buffer = buf, desc = ":Git stash " })
 
 	-- commit map
 	map("n", "cc", function()
@@ -232,7 +232,14 @@ function M.keymaps_init(buf)
 		require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
 	end, { buffer = buf, desc = "goto commit logs." })
 	-- :Git
-	map("n", "g<space>", ":Git ", { silent = false, buffer = buf, desc = ":Git <cmd>" })
+	map("n", "g<space>", function()
+		local input = util.inactive_input(":Git", " ")
+		if input then
+			run_n_refresh("G " .. input)
+		elseif input == "" then
+			vim.cmd("Git")
+		end
+	end, { silent = false, buffer = buf, desc = ":Git <cmd>" })
 
 	map("n", "gu", function()
 		g_util.goto_str("Changes not staged for commit:")
@@ -387,15 +394,12 @@ function M.keymaps_init(buf)
 	-- Remote mappings
 	-- remote add
 	map("n", "ma", function()
-		vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
-		vim.cmd("echohl ozInactivePrompt")
 		local input = nil
 		if util.ShellOutput("git remote") ~= "" then
-			input = util.UserInput(":Git remote add ")
+			input = util.inactive_input(":Git remote add ")
 		else
-			input = util.UserInput(":Git remote add ", "origin ")
+			input = util.inactive_input(":Git remote add ", "origin ")
 		end
-		vim.cmd("echohl None")
 
 		if input then
 			input = g_util.parse_args(input)
@@ -420,9 +424,6 @@ function M.keymaps_init(buf)
 	-- remove remote
 	map("n", "md", function()
 		local options = util.ShellOutputList("git remote")
-		if vim.v.shell_error ~= 0 then
-			return
-		end
 
 		vim.ui.select(options, {
 			prompt = "select remote to delete:",
@@ -438,9 +439,6 @@ function M.keymaps_init(buf)
 	-- rename remote
 	map("n", "mr", function()
 		local options = util.ShellOutputList("git remote")
-		if vim.v.shell_error ~= 0 then
-			return
-		end
 
 		vim.ui.select(options, {
 			prompt = "select remote to rename:",
@@ -456,6 +454,48 @@ function M.keymaps_init(buf)
 		end)
 	end, { buffer = buf, desc = "Rename remote." })
 
+	-- remote push
+	map("n", "mP", function()
+		local branch = s_util.get_branch_under_cursor()
+		if branch then
+			local remote = util.ShellOutputList("git remote")
+			local input = util.inactive_input(":Git push", " " .. remote[1] .. " " .. branch)
+			if input then
+				run_n_refresh("Git push " .. input)
+			end
+		else
+			run_n_refresh("Git push")
+		end
+	end, { buffer = buf, desc = ":Git push or push to branch under cursor." })
+
+	-- remote pull
+	map("n", "mp", function()
+		local branch = s_util.get_branch_under_cursor()
+		if branch then
+			local remote = util.ShellOutputList("git remote")
+			local input = util.inactive_input(":Git pull", " " .. remote[1] .. " " .. branch)
+			if input then
+				run_n_refresh("Git pull " .. input)
+			end
+		else
+			run_n_refresh("Git pull")
+		end
+	end, { buffer = buf, desc = ":Git pull or pull using branch under cursor." })
+
+	-- remote fetch
+	map("n", "mf", function()
+		local branch = s_util.get_branch_under_cursor()
+		if branch then
+			local remote = util.ShellOutputList("git remote")
+			local input = util.inactive_input(":Git fetch", " " .. remote[1] .. " " .. branch)
+			if input then
+				run_n_refresh("Git fetch " .. input)
+			end
+		else
+			run_n_refresh("Git fetch")
+		end
+	end, { buffer = buf, desc = ":Git fetch or fetch using branch under cursor." })
+
 	-- help
 	map("n", "g?", function()
 		util.Show_buf_keymaps({
@@ -465,7 +505,7 @@ function M.keymaps_init(buf)
 				["Diff mappings"] = { "dd", "dc", "de" },
 				["Tracking related mappings"] = { "s", "u", "K", "X" },
 				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
-				["Remote mappings"] = { "ma", "md", "mr" },
+				["Remote mappings"] = { "ma", "md", "mr", "mp", "mP", "mf" },
 				["Quick actions"] = { "grn", "<Tab>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 				["Stash mappings"] = { "cza", "czp", "czd", "cz<Space>" },
