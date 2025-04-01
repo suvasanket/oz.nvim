@@ -45,7 +45,7 @@ local function different_cmd_runner(args_table, args_str)
 		vim.cmd("Man git-" .. cmd)
 		return true
 	elseif util.str_in_tbl(cmd, remote_cmds) then -- remote related
-		if user_config and user_config.remote_operation_exec_method == "background" then
+		if user_config and user_config.remote_operation_exec_method == "background" then -- user config
 			local command = table.remove(args_table, 1)
 			require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
 				oz_git_win.open_oz_git_win(lines, args_str, "stderr")
@@ -140,7 +140,9 @@ function M.run_git_cmd(args)
 			end
 
 			if suggestion then
-				g_util.set_cmdline("Git " .. suggestion)
+				vim.schedule(function()
+					g_util.set_cmdline("Git " .. suggestion)
+				end)
 			end
 		end,
 	})
@@ -151,7 +153,7 @@ function M.run_git_cmd(args)
 end
 
 -- Define the user command
-function M.oz_git_usercmd_init(config) -- FIXME toggle wizard
+function M.oz_git_usercmd_init(config)
 	user_config = config
 	-- :Git
 	vim.api.nvim_create_user_command("Git", function(opts)

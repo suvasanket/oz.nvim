@@ -3,6 +3,9 @@ A zero-config task runner for neovim
 
 ## Requirement
 - Neovim >= 0.9.4
+- [neovim-remote](https://github.com/mhinz/neovim-remote) (optional for oz_git)
+- [diffview.nvim](https://github.com/sindrets/diffview.nvim?tab=readme-ov-file) (optional for oz_git)
+- [nvim-notify](https://github.com/rcarriga/nvim-notify) or any notifier plugin (optional)
 
 ## Installation
 lazy:
