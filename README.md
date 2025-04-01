@@ -36,6 +36,11 @@ default config:
          },
      },
 
+     -- Git
+     oz_git = { -- false: to disable :Git or :G
+         remote_operation_exec_method = "background", -- |background,term|
+     },
+
      -- Compile-mode integration
      compile_mode = {
          mappings = {
