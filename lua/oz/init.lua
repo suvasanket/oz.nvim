@@ -44,8 +44,9 @@ local defaults = {
 		},
 	},
 
+    -- Git
 	oz_git = {
-		-- wizard = true,
+		remote_operation_exec_method = "background", -- |background,term|
 	},
 
 	-- Make

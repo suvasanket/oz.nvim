@@ -85,10 +85,7 @@ function M.cmd_func(type, func)
 			-- p: 4
 			cmd = M.predict_compiler(current_file, ft)
 		end
-		vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
-		vim.cmd("echohl ozInactivePrompt")
-		local input = util.UserInput(":" .. type .. " ", cmd)
-		vim.cmd("echohl None")
+		local input = util.inactive_input(":" .. type .. " ", cmd)
 
 		if input and input ~= "" then
 			-- custom function, used for AKTUAL execution

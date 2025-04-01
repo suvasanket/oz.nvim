@@ -1,143 +1,224 @@
 local M = {}
 
--- Check if fidget is available
 local has_fidget = pcall(require, "fidget")
-local fidget = has_fidget and require("fidget") or nil
+local fidget = has_fidget and require("fidget.progress") or nil
 
--- Spinner frames
 local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
 local current_spinner_frame = 1
+local spinner_active = false
+local spinner_timer = nil
+
+local progress_percentage = 0
+local progress_update_timer = nil
+local progress_increment_value = 5
+
+-- Clean ANSI codes and carriage returns from lines
+local function clean_line(line)
+	return line and line:gsub("\r", ""):gsub("\27%[%d+[mK]", "") or ""
+end
 
 -- Update spinner animation
 local function update_spinner()
+	if not spinner_active then
+		return
+	end
 	current_spinner_frame = current_spinner_frame % #spinner_frames + 1
 	return spinner_frames[current_spinner_frame]
 end
 
--- Show progress message
-local function show_progress(title, message, percentage)
-	if fidget then
-		if not M.progress_notification then
-			M.progress_notification = fidget.progress({
-				title = title,
-				lsp_client = { name = "git" },
-			})
-		end
-		M.progress_notification:report({
-			message = message,
-			percentage = percentage,
-		})
-	else
-		local spinner = update_spinner()
-		local progress_bar = percentage and string.format(" [%3d%%]", percentage) or ""
-		vim.api.nvim_echo({
-			{ spinner, "Comment" },
-			{ string.format(" %s%s: %s", title, progress_bar, message or "") },
-		}, false, {})
-	end
-end
-
--- Clear progress display
-local function clear_progress()
-	if fidget and M.progress_notification then
-		M.progress_notification:finish()
-		M.progress_notification = nil
-	else
-		-- Clear the echo area
-		vim.api.nvim_echo({ { "" } }, false, {})
-	end
-end
-
--- Parse git progress percentage from line
-local function parse_progress(line)
-	local percentage = line:match("(%d+)%%")
-	return percentage and tonumber(percentage) or nil
-end
-
--- Main git async function
-function M.run_git_with_progress(command, args, MY_FUNC)
-	-- Validate command
-	local valid_commands = {
-		push = true,
-		pull = true,
-		fetch = true,
-	}
-
-	if not valid_commands[command] then
-		if fidget then
-			fidget.notify("Invalid git command: " .. command, "error")
-		else
-			vim.api.nvim_echo({ { "Error: Invalid git command: " .. command, "ErrorMsg" } }, true, {})
-		end
+-- Start progress increment timer
+local function start_progress_updates()
+	if progress_update_timer then
 		return
 	end
 
-	-- Prepare command
+	-- Reset progress percentage
+	progress_percentage = 0
+
+	-- Start timer to increment progress
+	progress_update_timer = vim.loop.new_timer()
+	progress_update_timer:start(500, 500, function()
+		if not spinner_active then
+			if progress_update_timer then
+				progress_update_timer:stop()
+				progress_update_timer:close()
+				progress_update_timer = nil
+			end
+			return
+		end
+
+		-- Increment progress but cap at 95% (save 100% for completion)
+		if progress_percentage < 95 then
+			progress_percentage = progress_percentage + progress_increment_value
+
+			-- Update fidget progress
+			if fidget and M.progress_handle then
+				vim.schedule(function()
+					M.progress_handle:report({
+						percentage = progress_percentage,
+						message = "In progress...",
+					})
+				end)
+			end
+		end
+	end)
+end
+
+-- Start spinner
+local function start_spinner(title)
+	spinner_active = true
+	if fidget then
+		M.progress_handle = fidget.handle.create({
+			title = title,
+			message = "In progress...",
+			lsp_client = { name = "oz_git" },
+			percentage = 0,
+		})
+	else
+		-- Start spinner timer for echo area
+		spinner_timer = vim.loop.new_timer()
+		spinner_timer:start(0, 100, function()
+			if spinner_active then
+				local spinner = update_spinner()
+				vim.schedule(function()
+					vim.api.nvim_echo(
+						{ { spinner, "Comment" }, { " " .. title .. " (" .. progress_percentage .. "%)" } },
+						false,
+						{}
+					)
+				end)
+			else
+				spinner_timer:stop()
+			end
+		end)
+	end
+
+	-- Start progress updates
+	start_progress_updates()
+end
+
+-- Stop spinner
+local function stop_spinner(code)
+	spinner_active = false
+
+	-- Stop progress timer
+	if progress_update_timer then
+		progress_update_timer:stop()
+		progress_update_timer:close()
+		progress_update_timer = nil
+	end
+
+	if code == 0 then
+		if fidget and M.progress_handle then
+			M.progress_handle:report({
+				message = "Completed successfully",
+				percentage = 100,
+			})
+			M.progress_handle:finish()
+			M.progress_handle = nil
+		end
+	else
+		if fidget and M.progress_handle then
+			M.progress_handle:report({
+				message = "Failed!",
+			})
+			M.progress_handle:cancel()
+			M.progress_handle = nil
+		end
+	end
+
+	if spinner_timer then
+		spinner_timer:stop()
+		spinner_timer:close()
+		spinner_timer = nil
+	end
+
+	vim.api.nvim_echo({ { "" } }, false, {})
+end
+
+-- Main git async function
+function M.run_git_with_progress(command, args, output_callback)
 	local cmd = table.concat({ "git", command, unpack(args or {}) }, " ")
 	local title = "git " .. command:sub(1, 1) .. command:sub(2)
 
-	-- Buffer to collect all output lines
 	local all_output = {}
 
-	-- Start progress
-	show_progress(title, "Starting...")
+	progress_percentage = 0
 
-	-- Execute command
-	vim.fn.jobstart(cmd, {
+	start_spinner(title .. " in progress... ")
+
+	local job_id = vim.fn.jobstart(cmd, {
 		stdout_buffered = true,
 		stderr_buffered = true,
-		on_stdout = function(_, data, _)
+		on_stdout = function(_, data)
+			if not data then
+				return
+			end
 			for _, line in ipairs(data) do
-				if line ~= "" then
-					local clean_line = line:gsub("\r", ""):gsub("\27%[%d+[mK]", "")
-					table.insert(all_output, clean_line)
-					local percentage = parse_progress(clean_line)
-					show_progress(title, clean_line, percentage)
+				if line and line ~= "" then
+					local clean_output = clean_line(line)
+					all_output[#all_output + 1] = clean_output
+
+					if fidget and M.progress_handle then
+						M.progress_handle:report({
+							message = "In progress...",
+						})
+					end
 				end
 			end
 		end,
-		on_stderr = function(_, data, _)
+		on_stderr = function(_, data)
+			if not data then
+				return
+			end
 			for _, line in ipairs(data) do
-				if line ~= "" then
-					local clean_line = line:gsub("\r", ""):gsub("\27%[%d+[mK]", "")
-					table.insert(all_output, clean_line)
-					show_progress(title, clean_line)
+				if line and line ~= "" then
+					local clean_output = clean_line(line)
+					all_output[#all_output + 1] = clean_output
+
+					-- Update fidget message with latest error
+					if fidget and M.progress_handle then
+						M.progress_handle:report({
+							message = "In progress...",
+						})
+					end
 				end
 			end
 		end,
-		on_exit = function(_, exit_code, _)
+		on_exit = function(_, exit_code)
+			stop_spinner(exit_code)
+
 			if exit_code == 0 then
-				clear_progress()
 				if fidget then
-					fidget.notify(title .. " completed", "success")
+					-- Final progress report already done in stop_spinner
 				else
 					vim.api.nvim_echo(
-						{ { " ", "healthSuccess" }, { title .. " completed successfully." } },
+						{ { " ", "healthSuccess" }, { title .. " completed successfully (100%)." } },
 						false,
 						{}
 					)
 				end
 			else
-				clear_progress()
-				if fidget then
-					fidget.notify(title .. " failed", "error")
-					for _, line in ipairs(all_output) do
-						fidget.notify(line, "error")
-					end
+				if output_callback then
+					output_callback(all_output)
 				else
-					if MY_FUNC then
-						MY_FUNC(all_output)
+					if fidget then
+						fidget.notify(title .. " failed", "error")
+						for _, line in ipairs(all_output) do
+							fidget.notify(line, "error")
+						end
 					else
-						vim.api.nvim_echo(
-							{ { "󱎘 ", "healthError" }, { title .. " failed!", "ErrorMsg" } },
-							false,
-							{}
-						)
+						vim.api.nvim_echo({ { "✗ " .. title .. " failed!", "healthError" } }, false, {})
+						for _, line in ipairs(all_output) do
+							vim.api.nvim_echo({ { line, "ErrorMsg" } }, false, {})
+						end
 					end
 				end
 			end
 		end,
 	})
+
+	return job_id
 end
 
 return M

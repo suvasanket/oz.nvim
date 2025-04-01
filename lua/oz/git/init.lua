@@ -4,6 +4,8 @@ local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
 
+local user_config = nil
+
 -- CMD parser
 local function different_cmd_runner(args_table, args_str)
 	local cmd = args_table[1]
@@ -43,10 +45,18 @@ local function different_cmd_runner(args_table, args_str)
 		vim.cmd("Man git-" .. cmd)
 		return true
 	elseif util.str_in_tbl(cmd, remote_cmds) then -- remote related
-		local command = table.remove(args_table, 1)
-		require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
-			oz_git_win.open_oz_git_win(lines, args_str, "stderr")
-		end)
+		if user_config and user_config.remote_operation_exec_method == "background" then
+			local command = table.remove(args_table, 1)
+			require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
+				oz_git_win.open_oz_git_win(lines, args_str, "stderr")
+			end)
+		elseif user_config and user_config.remote_operation_exec_method == "term" then
+			vim.cmd("hor term git " .. table.concat(args_table, " "))
+			vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
+			vim.cmd("resize 9")
+			vim.api.nvim_buf_set_name(0, "")
+			vim.cmd.wincmd("p")
+		end
 		return true
 	end
 end
@@ -142,6 +152,7 @@ end
 
 -- Define the user command
 function M.oz_git_usercmd_init(config) -- FIXME toggle wizard
+	user_config = config
 	-- :Git
 	vim.api.nvim_create_user_command("Git", function(opts)
 		if g_util.if_in_git() then
