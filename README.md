@@ -1,5 +1,5 @@
 # Oz.nvim
-A zero-config task runner for neovim
+A Neovim plugin providing zero-config async :make, :grep, shell command caching, and a fugitive-style super cool git client.
 
 ## Requirement
 - Neovim >= 0.9.4

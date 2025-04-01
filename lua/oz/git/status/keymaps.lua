@@ -333,7 +333,8 @@ function M.keymaps_init(buf)
 
 	-- Pick Mode
 	-- pick files
-	map("n", "p", function()
+	local user_mappings = require("oz.git").user_config.mappings
+	map("n", user_mappings.toggle_pick, function()
 		local entry = vim.api.nvim_get_current_line():match("^%s*(stash@{%d+})")
 		if not entry then
 			entry = s_util.get_branch_under_cursor() or s_util.get_file_under_cursor(true)[1]
@@ -366,7 +367,7 @@ function M.keymaps_init(buf)
 				end,
 			})
 		end
-	end, { buffer = buf, desc = "Pick or unpick any file/dir/branch/stash under cursor." })
+	end, { nowait = true, buffer = buf, desc = "Pick or unpick any file/dir/branch/stash under cursor." })
 
 	-- edit picked
 	map("n", { "a", "i" }, function()
@@ -380,16 +381,15 @@ function M.keymaps_init(buf)
 			g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
 			status_grab_buffer = {}
 		end
-	end, { buffer = buf, desc = "Enter cmdline to edit picked entries." })
+	end, { nowait = true, buffer = buf, desc = "Enter cmdline to edit picked entries." })
 
 	-- discard picked
-	map("n", "P", function()
+	map("n", user_mappings.unpick_all, function()
 		util.tbl_monitor().stop_monitoring(status_grab_buffer)
 
 		status_grab_buffer = #status_grab_buffer > 0 and {} or status_grab_buffer
 		vim.api.nvim_echo({ { "" } }, false, {})
-		util.Notify("All picked entries have been removed.", nil, "oz_git")
-	end, { buffer = buf, desc = "Discard any picked entries." })
+	end, { nowait = true, buffer = buf, desc = "Discard any picked entries." })
 
 	-- Remote mappings
 	-- remote add
@@ -500,7 +500,7 @@ function M.keymaps_init(buf)
 	map("n", "g?", function()
 		util.Show_buf_keymaps({
 			header_name = {
-				["Pick mappings"] = { "p", "P", "a", "i" },
+				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
 				["Commit mappings"] = { "cc", "ca", "ce" },
 				["Diff mappings"] = { "dd", "dc", "de" },
 				["Tracking related mappings"] = { "s", "u", "K", "X" },

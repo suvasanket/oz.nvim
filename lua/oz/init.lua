@@ -47,6 +47,10 @@ local defaults = {
     -- Git
 	oz_git = {
 		remote_operation_exec_method = "background", -- |background,term|
+        mappings = {
+            toggle_pick = "p",
+            unpick_all = "P",
+        }
 	},
 
 	-- Make

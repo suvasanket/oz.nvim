@@ -36,6 +36,7 @@ local function get_selected_hash()
 end
 
 -- awesome stuff
+local user_mappings = require("oz.git").user_config.mappings
 local function log_buf_keymaps(buf)
 	-- close
 	vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, silent = true, desc = "Close git log buffer." })
@@ -81,7 +82,7 @@ local function log_buf_keymaps(buf)
 	end, { remap = false, buffer = buf, desc = "Go to git status buffer." })
 
 	-- pick hash
-	vim.keymap.set("n", "p", function()
+	vim.keymap.set("n", user_mappings.toggle_pick, function()
 		local entry = get_selected_hash()[1]
 		if not entry then
 			util.Notify("Nothing to pick", "error", "oz_git")
@@ -140,12 +141,11 @@ local function log_buf_keymaps(buf)
 	end, { buffer = buf, silent = true, desc = "Enter cmdline to edit picked hashes." })
 
 	-- discard picked
-	vim.keymap.set("n", "P", function()
+	vim.keymap.set("n", user_mappings.unpick_all, function()
 		util.tbl_monitor().stop_monitoring(grab_hashs)
 
 		grab_hashs = #grab_hashs > 0 and {} or grab_hashs
 		vim.api.nvim_echo({ { "" } }, false, {})
-		util.Notify("All picked hashes have been removed.", nil, "oz_git")
 	end, { buffer = buf, silent = true, desc = "Discard any picked hashes." })
 
 	-- [d]iff mode
@@ -244,7 +244,7 @@ local function log_buf_keymaps(buf)
 	vim.keymap.set("n", "g?", function()
 		util.Show_buf_keymaps({
 			header_name = {
-				["Pick mappings"] = { "p", "P", "a", "i" },
+				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
 				["Goto mappings"] = { "g:", "g<Space>", "g?", "gs" },
 				["Diff mappings"] = { "dd", "dc", "dp" },
 				["Rebase mappings"] = { "ri", "rp", "r<Space>", "rc", "ra", "rq", "rs" },
