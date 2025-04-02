@@ -39,8 +39,10 @@ local function status_buf_hl()
 	vim.cmd([[
     syntax match ozGitStatusHeader "^On branch " nextgroup=ozGitStatusBranchName
     syntax match ozGitStatusBranchName "\S\+" contained
+    syntax match ozGitStatusCurBranch /\*\s\w\+/
 
     highlight default link ozGitStatusBranchName Title
+    highlight default link ozGitStatusCurBranch Title
     highlight default link ozGitStatusHeader @function
     ]])
 
@@ -67,8 +69,8 @@ local function status_buf_ft()
 			vim.fn.timer_start(0, function()
 				status_buf_hl()
 			end)
-            vim.fn.timer_start(100, function()
-                require("oz.git.status.keymaps").keymaps_init(event.buf)
+			vim.fn.timer_start(100, function()
+				require("oz.git.status.keymaps").keymaps_init(event.buf)
 			end)
 		end,
 	})
@@ -130,7 +132,7 @@ local function is_conflict(lines)
 end
 
 -- get neccessry lines for status buffer
-local function get_status_lines()
+local function generate_status_content()
 	local status_tbl = {}
 	local status_str = util.ShellOutputList("git status")
 	local stash_str = util.ShellOutputList("git stash list")
@@ -155,21 +157,49 @@ local function get_status_lines()
 	return status_tbl
 end
 
+local function get_toggled_headings(tbl1, tbl2)
+	local result = {}
+	for _, f_key in pairs(tbl1) do
+		for s_key, _ in pairs(tbl2) do
+			if string.find(f_key, s_key:match("^(.-) ")) then
+				util.tbl_insert(result, s_key)
+			end
+		end
+	end
+
+    return result
+end
+
 function M.refresh_status_buf()
 	local pos = vim.api.nvim_win_get_cursor(0)
-	vim.cmd("lcd " .. CWD)
-	M.GitStatus()
-	pcall(vim.api.nvim_win_set_cursor, 0, pos)
+	vim.fn.timer_start(0, function()
+		local s_util = require("oz.git.status.util")
+		vim.cmd("lcd " .. CWD)
+
+		-- recall status
+		M.GitStatus()
+
+		-- retoggle any user toggeled headings
+		local toggled_headings = get_toggled_headings(s_util.opened_headings, s_util.headings_table)
+		for _, item in ipairs(toggled_headings) do
+			s_util.toggle_section(item)
+		end
+
+		pcall(vim.api.nvim_win_set_cursor, 0, pos)
+	end)
 end
 
 -- Initialize status
 function M.GitStatus()
+	local s_util = require("oz.git.status.util")
+
 	CWD = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
 	M.current_branch = util.ShellOutput("git branch --show-current")
-	local lines = get_status_lines()
+	local lines = generate_status_content()
 
 	M.in_conflict = is_conflict(lines)
-	require("oz.git.status.util").get_heading_tbl(lines)
+	s_util.headings_table = {}
+	s_util.get_heading_tbl(lines)
 	open_status_buf(lines)
 end
 

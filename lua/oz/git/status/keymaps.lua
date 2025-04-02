@@ -144,7 +144,7 @@ function M.keymaps_init(buf)
 
 	-- stash mappings
 	-- stash apply
-	map("n", "cza", function()
+	map("n", "za", function()
 		local current_line = vim.api.nvim_get_current_line()
 		local stash = current_line:match("^%s*(stash@{%d+})")
 		if stash then
@@ -152,7 +152,7 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "Apply stash under cursor." })
 	-- stash pop
-	map("n", "czp", function()
+	map("n", "zp", function()
 		local current_line = vim.api.nvim_get_current_line()
 		local stash = current_line:match("^%s*(stash@{%d+})")
 		if stash then
@@ -160,7 +160,7 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "Pop stash under cursor." })
 	-- stash drop
-	map("n", "czd", function()
+	map("n", "zd", function()
 		local current_line = vim.api.nvim_get_current_line()
 		local stash = current_line:match("^%s*(stash@{%d+})")
 		if stash then
@@ -168,7 +168,7 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "Drop stash under cursor." })
 	-- :G stash
-	map("n", "cz<space>", function()
+	map("n", "z<space>", function()
 		local input = util.inactive_input(":Git stash", " ")
 		if input then
 			run_n_refresh("Git stash " .. input)
@@ -508,7 +508,7 @@ function M.keymaps_init(buf)
 				["Remote mappings"] = { "ma", "md", "mr", "mp", "mP", "mf" },
 				["Quick actions"] = { "grn", "<Tab>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
-				["Stash mappings"] = { "cza", "czp", "czd", "cz<Space>" },
+				["Stash mappings"] = { "za", "zp", "zd", "z<Space>" },
 			},
 		})
 	end, { buffer = buf, desc = "show all availble keymaps." })

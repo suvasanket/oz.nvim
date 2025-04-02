@@ -5,16 +5,17 @@ local status = require("oz.git.status")
 --
 M.headings_table = {}
 M.diff_lines = {}
+M.opened_headings = {}
 
 function M.get_heading_tbl(lines)
 	local current_heading = nil
-	local branch_line = util.ShellOutputList("git branch")
+	local branch_line = util.ShellOutputList("git branch -v")
 	local branch_heading = "On branch " .. status.current_branch
 
 	M.headings_table[branch_heading] = {}
 	for _, line in ipairs(branch_line) do
 		if line ~= "" then
-			line = "\t" .. line
+			line = "  " .. line
 			table.insert(M.headings_table[branch_heading], line)
 		end
 	end
@@ -38,9 +39,19 @@ function M.get_heading_tbl(lines)
 	return M.headings_table
 end
 
-function M.toggle_section()
-	local line_num = vim.fn.line(".") -- Get the current line number
-	local current_line = vim.api.nvim_get_current_line()
+local function find_line_number(line_content)
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	for i, line in ipairs(lines) do
+		if line == line_content then
+			return i
+		end
+	end
+	return nil
+end
+
+function M.toggle_section(user_head)
+	local current_line = user_head or vim.api.nvim_get_current_line()
+	local line_num = find_line_number(current_line)
 
 	-- Check if the current line is a heading
 	vim.bo.modifiable = true
@@ -48,6 +59,8 @@ function M.toggle_section()
 		local next_line = line_num + 1
 		local next_lines = vim.api.nvim_buf_get_lines(0, next_line - 1, next_line, false)
 		local next_line_content = next_lines[1]
+
+		util.tbl_insert(M.opened_headings, current_line)
 
 		if next_line_content and next_line_content:match("^%s") then
 			-- If the next line is indented, collapse the content
@@ -114,14 +127,14 @@ function M.get_file_under_cursor(original)
 	return entries
 end
 
-function M.get_branch_under_cursor(current_branch)
+function M.get_branch_under_cursor()
 	local branch_heading = "On branch " .. status.current_branch
 	local tbl = M.headings_table[branch_heading]
 	local current_line = vim.api.nvim_get_current_line()
 
 	if util.str_in_tbl(current_line, tbl) then
 		current_line = vim.trim(current_line:gsub("%*", ""))
-		return vim.trim(current_line)
+		return vim.trim(current_line:match("^%s*(%S+)"))
 	else
 		return nil
 	end
