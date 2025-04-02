@@ -58,9 +58,9 @@ function M.toggle_section(user_head)
 	local buf = require("oz.git.status").status_buf
 	local current_line = user_head or vim.api.nvim_get_current_line()
 	local line_num = find_line_number(current_line)
-    if not line_num then
-        return nil
-    end
+	if not line_num then
+		return nil
+	end
 
 	-- Check if the current line is a heading
 	vim.api.nvim_buf_set_option(buf, "modifiable", true)
@@ -69,7 +69,11 @@ function M.toggle_section(user_head)
 		local next_lines = vim.api.nvim_buf_get_lines(buf, next_line - 1, next_line, false)
 		local next_line_content = next_lines[1]
 
-		util.tbl_insert(M.opened_headings, current_line)
+		if util.str_in_tbl(current_line, M.opened_headings) then
+			util.remove_from_tbl(M.opened_headings, current_line)
+		else
+			util.tbl_insert(M.opened_headings, current_line)
+		end
 
 		if next_line_content and next_line_content:match("^%s") then
 			-- If the next line is indented, collapse the content

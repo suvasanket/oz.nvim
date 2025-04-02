@@ -74,7 +74,6 @@ local function status_buf_ft()
 			end)
 		end,
 	})
-	return true
 end
 
 -- create and open the status
@@ -88,11 +87,8 @@ local function open_status_buf(lines)
 
 		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
 
-		if status_buf_ft() then
-			vim.api.nvim_buf_set_option(M.status_buf, "ft", "GitStatus")
-		else
-			vim.api.nvim_buf_set_option(M.status_buf, "ft", "oz_git")
-		end
+		status_buf_ft()
+		vim.api.nvim_buf_set_option(M.status_buf, "ft", "GitStatus")
 
 		vim.api.nvim_create_autocmd({ "BufDelete", "BufHidden" }, {
 			buffer = M.status_buf,
@@ -210,9 +206,9 @@ function M.GitStatus()
 	M.current_branch = util.ShellOutput("git branch --show-current")
 	local lines = generate_status_content()
 
+	open_status_buf(lines)
 	M.in_conflict = is_conflict(lines)
 	s_util.get_heading_tbl(lines)
-	open_status_buf(lines)
 end
 
 return M

@@ -13,8 +13,10 @@ local refresh = status.refresh_status_buf
 local map = g_util.map
 
 local function run_n_refresh(cmd)
-	git.after_exec_complete(function()
-		refresh()
+	git.after_exec_complete(function(code)
+		if code == 0 then
+			refresh()
+		end
 	end)
 	vim.cmd(cmd)
 end
@@ -112,8 +114,10 @@ function M.keymaps_init(buf)
 
 		-- after complete
 		if file or branch then
-			git.after_exec_complete(function()
-				refresh()
+			git.after_exec_complete(function(code)
+				if code == 0 then
+					refresh()
+				end
 			end, true)
 		end
 		if file then
@@ -166,32 +170,17 @@ function M.keymaps_init(buf)
 
 	-- commit map
 	map("n", "cc", function()
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end)
-		vim.cmd("Git commit")
+		run_n_refresh("Git commit")
 	end, { buffer = buf, desc = ":Git commit" })
 
 	-- commit ammend --no edit
 	map("n", "ce", function()
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end)
-		vim.cmd("Git commit --amend --no-edit")
+		run_n_refresh("Git commit --amend --no-edit")
 	end, { buffer = buf, desc = ":Git commit --amend --no-edit" })
 
 	-- commit amend
 	map("n", "ca", function()
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end)
-		vim.cmd("Git commit --amend")
+		run_n_refresh("Git commit --amend")
 	end, { buffer = buf, desc = ":Git commit --amend" })
 
 	-- G commit
@@ -216,9 +205,16 @@ function M.keymaps_init(buf)
 			-- change branch
 			local branch_under_cursor = s_util.get_branch_under_cursor()
 			if branch_under_cursor then
-				git.after_exec_complete(function()
-					refresh()
-				end)
+				git.after_exec_complete(function(code, out, err)
+					if code == 0 then
+						refresh()
+						vim.schedule(function()
+							util.Notify("You have checkout to '" .. branch_under_cursor .. "' branch.", nil, "oz_git")
+						end)
+					else
+						util.Notify("Cannot switch to '" .. branch_under_cursor .. "' branch", "error", "oz_git")
+					end
+				end, true)
 				vim.cmd("Git checkout " .. branch_under_cursor)
 			end
 		end
@@ -371,11 +367,6 @@ function M.keymaps_init(buf)
 	-- edit picked
 	map("n", { "a", "i" }, function()
 		if #status_grab_buffer ~= 0 then
-			git.after_exec_complete(function(code, stdout)
-				if code == 0 and #stdout == 0 then
-					refresh()
-				end
-			end)
 			util.tbl_monitor().stop_monitoring(status_grab_buffer)
 			g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
 			status_grab_buffer = {}
@@ -411,9 +402,19 @@ function M.keymaps_init(buf)
 					local ans =
 						util.prompt("url for " .. remote_name .. " already exists, do you want to update?", "&Yes\n&No")
 					if ans == 1 then
+						git.after_exec_complete(function(code)
+							if code == 0 then
+								util.Notify("Url of '" .. remote_name .. "' has been updated.", nil, "oz_git")
+							end
+						end)
 						vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
 					end
 				else
+					git.after_exec_complete(function(code)
+						if code == 0 then
+							util.Notify("A new remote '" .. remote_name .. "' added.", nil, "oz_git")
+						end
+					end)
 					vim.cmd("G remote add " .. remote_name .. " " .. remote_url)
 				end
 			end
@@ -429,7 +430,7 @@ function M.keymaps_init(buf)
 		}, function(choice)
 			if choice then
 				util.ShellCmd({ "git", "remote", "remove", choice }, function()
-					util.Notify("remote " .. choice .. " has been removed!", nil, "oz_git")
+					util.Notify("Remote " .. choice .. " has been removed!", nil, "oz_git")
 				end)
 			end
 		end)
@@ -446,7 +447,7 @@ function M.keymaps_init(buf)
 				local name = util.UserInput("New name: ", choice)
 				if name then
 					util.ShellCmd({ "git", "remote", "rename", choice, name }, function()
-						util.Notify("remote renamed from " .. choice .. " -> " .. name, nil, "oz_git")
+						util.Notify("Remote renamed from " .. choice .. " -> " .. name, nil, "oz_git")
 					end)
 				end
 			end
