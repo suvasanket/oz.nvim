@@ -1,8 +1,8 @@
 local M = {}
 local util = require("oz.util")
 
-local status_win = nil
-local status_buf = nil
+M.status_win = nil
+M.status_buf = nil
 local status_win_height = 14
 
 M.status_grab_buffer = {}
@@ -79,37 +79,35 @@ end
 
 -- create and open the status
 local function open_status_buf(lines)
-	if status_buf == nil or not vim.api.nvim_win_is_valid(status_win) then
-		status_buf = vim.api.nvim_create_buf(false, true)
+	if M.status_buf == nil or not vim.api.nvim_win_is_valid(M.status_win) then
+		M.status_buf = vim.api.nvim_create_buf(false, true)
 
 		vim.cmd("botright " .. status_win_height .. " split")
-		status_win = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_buf(status_win, status_buf)
+		M.status_win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(M.status_win, M.status_buf)
 
-		vim.api.nvim_buf_set_lines(status_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
 
 		if status_buf_ft() then
-			vim.api.nvim_buf_set_option(status_buf, "ft", "GitStatus")
+			vim.api.nvim_buf_set_option(M.status_buf, "ft", "GitStatus")
 		else
-			vim.api.nvim_buf_set_option(status_buf, "ft", "oz_git")
+			vim.api.nvim_buf_set_option(M.status_buf, "ft", "oz_git")
 		end
 
-		vim.fn.timer_start(100, function()
-			vim.api.nvim_create_autocmd("BufDelete", {
-				buffer = status_buf,
-				callback = function()
-					status_buf = nil
-					status_win = nil
-					CWD = nil
-				end,
-			})
-		end)
+		vim.api.nvim_create_autocmd({ "BufDelete", "BufHidden" }, {
+			buffer = M.status_buf,
+			callback = function()
+				M.status_buf = nil
+				M.status_win = nil
+				CWD = nil
+			end,
+		})
 	else
-		vim.api.nvim_set_current_win(status_win)
+		vim.api.nvim_set_current_win(M.status_win)
 		vim.cmd("resize " .. status_win_height)
-		vim.api.nvim_buf_set_option(status_buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(status_buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(status_buf, "modifiable", false)
+		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", true)
+		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", false)
 	end
 end
 
@@ -167,26 +165,41 @@ local function get_toggled_headings(tbl1, tbl2)
 		end
 	end
 
-    return result
+	return result
 end
 
-function M.refresh_status_buf()
-	local pos = vim.api.nvim_win_get_cursor(0)
-	vim.fn.timer_start(0, function()
-		local s_util = require("oz.git.status.util")
-		vim.cmd("lcd " .. CWD)
+function M.refresh_status_buf(passive)
+	local s_util = require("oz.git.status.util")
+	if passive then -- passive refresh
+		local lines = generate_status_content()
+		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", true)
+		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", false)
 
-		-- recall status
-		M.GitStatus()
+		s_util.get_heading_tbl(lines)
 
 		-- retoggle any user toggeled headings
 		local toggled_headings = get_toggled_headings(s_util.opened_headings, s_util.headings_table)
 		for _, item in ipairs(toggled_headings) do
 			s_util.toggle_section(item)
 		end
+	else -- active
+		local pos = vim.api.nvim_win_get_cursor(0)
+		vim.fn.timer_start(0, function()
+			vim.cmd("lcd " .. CWD)
 
-		pcall(vim.api.nvim_win_set_cursor, 0, pos)
-	end)
+			-- recall status
+			M.GitStatus()
+
+			-- retoggle any user toggeled headings
+			local toggled_headings = get_toggled_headings(s_util.opened_headings, s_util.headings_table)
+			for _, item in ipairs(toggled_headings) do
+				s_util.toggle_section(item)
+			end
+
+			pcall(vim.api.nvim_win_set_cursor, 0, pos)
+		end)
+	end
 end
 
 -- Initialize status
@@ -198,7 +211,6 @@ function M.GitStatus()
 	local lines = generate_status_content()
 
 	M.in_conflict = is_conflict(lines)
-	s_util.headings_table = {}
 	s_util.get_heading_tbl(lines)
 	open_status_buf(lines)
 end

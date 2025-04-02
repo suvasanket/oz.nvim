@@ -8,6 +8,10 @@ M.diff_lines = {}
 M.opened_headings = {}
 
 function M.get_heading_tbl(lines)
+	if #lines <= 0 then
+		return
+	end
+	M.headings_table = {}
 	local current_heading = nil
 	local branch_line = util.ShellOutputList("git branch -v")
 	local branch_heading = "On branch " .. status.current_branch
@@ -40,7 +44,8 @@ function M.get_heading_tbl(lines)
 end
 
 local function find_line_number(line_content)
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	local buf = require("oz.git.status").status_buf
+	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 	for i, line in ipairs(lines) do
 		if line == line_content then
 			return i
@@ -50,14 +55,18 @@ local function find_line_number(line_content)
 end
 
 function M.toggle_section(user_head)
+	local buf = require("oz.git.status").status_buf
 	local current_line = user_head or vim.api.nvim_get_current_line()
 	local line_num = find_line_number(current_line)
+    if not line_num then
+        return nil
+    end
 
 	-- Check if the current line is a heading
-	vim.bo.modifiable = true
+	vim.api.nvim_buf_set_option(buf, "modifiable", true)
 	if M.headings_table[current_line] then
 		local next_line = line_num + 1
-		local next_lines = vim.api.nvim_buf_get_lines(0, next_line - 1, next_line, false)
+		local next_lines = vim.api.nvim_buf_get_lines(buf, next_line - 1, next_line, false)
 		local next_line_content = next_lines[1]
 
 		util.tbl_insert(M.opened_headings, current_line)
@@ -65,17 +74,17 @@ function M.toggle_section(user_head)
 		if next_line_content and next_line_content:match("^%s") then
 			-- If the next line is indented, collapse the content
 			while next_line_content and next_line_content:match("^%s") do
-				vim.api.nvim_buf_set_lines(0, next_line - 1, next_line, false, {})
-				next_lines = vim.api.nvim_buf_get_lines(0, next_line - 1, next_line, false)
+				vim.api.nvim_buf_set_lines(buf, next_line - 1, next_line, false, {})
+				next_lines = vim.api.nvim_buf_get_lines(buf, next_line - 1, next_line, false)
 				next_line_content = next_lines[1]
 			end
 		else
 			-- If the next line is not indented, expand the content
 			local content = M.headings_table[current_line]
-			vim.api.nvim_buf_set_lines(0, line_num, line_num, false, content)
+			vim.api.nvim_buf_set_lines(buf, line_num, line_num, false, content)
 		end
 	end
-	vim.bo.modifiable = false
+	vim.api.nvim_buf_set_option(buf, "modifiable", false)
 end
 
 function M.get_file_under_cursor(original)

@@ -10,20 +10,7 @@ local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
 
 -- map --
-local function map(mode, lhs, rhs, opts)
-	local options = { silent = true, remap = false }
-	if opts then
-		options = vim.tbl_extend("force", options, opts)
-	end
-
-	if type(lhs) == "table" then
-		for _, key in ipairs(lhs) do
-			vim.keymap.set(mode, key, rhs, options)
-		end
-	else
-		vim.keymap.set(mode, lhs, rhs, options)
-	end
-end
+local map = g_util.map
 
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function()
@@ -187,6 +174,7 @@ function M.keymaps_init(buf)
 		vim.cmd("Git commit")
 	end, { buffer = buf, desc = ":Git commit" })
 
+	-- commit ammend --no edit
 	map("n", "ce", function()
 		git.after_exec_complete(function(code)
 			if code == 0 then
@@ -196,6 +184,7 @@ function M.keymaps_init(buf)
 		vim.cmd("Git commit --amend --no-edit")
 	end, { buffer = buf, desc = ":Git commit --amend --no-edit" })
 
+	-- commit amend
 	map("n", "ca", function()
 		git.after_exec_complete(function(code)
 			if code == 0 then
@@ -204,6 +193,16 @@ function M.keymaps_init(buf)
 		end)
 		vim.cmd("Git commit --amend")
 	end, { buffer = buf, desc = ":Git commit --amend" })
+
+	-- G commit
+	map("n", "c<space>", function()
+		local input = util.inactive_input(":Git commit", " ")
+		if input then
+			run_n_refresh("G commit " .. input)
+		elseif input == "" then
+			vim.cmd("Git commit")
+		end
+	end, { silent = false, buffer = buf, desc = ":Git commit" })
 
 	-- open current entry
 	map("n", "<cr>", function()
@@ -215,7 +214,7 @@ function M.keymaps_init(buf)
 			end
 		else
 			-- change branch
-			local branch_under_cursor = s_util.get_branch_under_cursor(status.current_branch)
+			local branch_under_cursor = s_util.get_branch_under_cursor()
 			if branch_under_cursor then
 				git.after_exec_complete(function()
 					refresh()
@@ -495,6 +494,11 @@ function M.keymaps_init(buf)
 			run_n_refresh("Git fetch")
 		end
 	end, { buffer = buf, desc = ":Git fetch or fetch using branch under cursor." })
+
+	-- Branch mappings
+	-- map("n", "bn", function ()
+	--
+	-- end, { buffer = buf, desc = ":Git fetch or fetch using branch under cursor." })
 
 	-- help
 	map("n", "g?", function()
