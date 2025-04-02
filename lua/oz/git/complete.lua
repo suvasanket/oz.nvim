@@ -28,6 +28,24 @@ local function capture_git_output(cmd)
 	return items
 end
 
+local function get_command_flags(command)
+	local handle = io.popen("git " .. command .. ' -h 2>&1 | grep -Eo " -[a-zA-Z0-9-]+| --[a-zA-Z0-9-]+"')
+	if not handle then
+		return {}
+	end
+
+	local flags = {}
+	for line in handle:lines() do
+		local flag = line:match("%S+")
+		if flag and not vim.tbl_contains(flags, flag) then
+			table.insert(flags, flag)
+		end
+	end
+	handle:close()
+
+	return flags
+end
+
 -- Get all available git commands
 local function get_git_commands()
 	if git_commands_cache then
@@ -38,7 +56,7 @@ local function get_git_commands()
 	local core_cmds = capture_git_output("git --help | grep -E '^   [a-z]' | awk '{print $1}'")
 
 	-- Capture additional commands from git help -a
-    local additional_cmds = capture_git_output("git help --all | grep -E '^ +[a-z]' | awk '{print $1}'")
+	local additional_cmds = capture_git_output("git help --all | grep -E '^ +[a-z]' | awk '{print $1}'")
 
 	-- Combine and sort
 	local all_cmds = {}
@@ -156,49 +174,47 @@ local function get_file_completions(arg)
 	return matches
 end
 
+local function get_tbl(cur_arg, tbl)
+	local matches = {}
+	if cur_arg == "" then
+		return tbl
+	end
+	for _, remote in ipairs(tbl) do
+		if remote:find(cur_arg, 1, true) == 1 then
+			table.insert(matches, remote)
+		end
+	end
+
+	return matches
+end
+
 -- Get completions for specific git commands
-local function get_command_specific_completions(cmd, arg)
-	if cmd == "checkout" or cmd == "switch" or cmd == "branch" then
-		-- Branches for checkout/switch/branch
+local function get_command_specific_completions(cmd, arg, args)
+	args = { select(3, unpack(args)) }
+
+	if arg:find("-") then -- return flags
+		return get_tbl(arg, get_command_flags(cmd))
+	elseif cmd == "checkout" or cmd == "switch" or cmd == "branch" then
 		local branches = get_git_branches(true)
-		local matches = {}
 
 		if arg == "" then
-			return branches
+			return get_tbl(arg, branches)
 		end
-
-		for _, branch in ipairs(branches) do
-			if branch:find(arg, 1, true) == 1 then
-				table.insert(matches, branch)
-			end
-		end
-
-		return matches
 	elseif cmd == "merge" or cmd == "rebase" then
-		-- Branches for merge/rebase
 		return get_command_specific_completions("checkout", arg)
 	elseif cmd == "pull" or cmd == "push" or cmd == "fetch" then
-		-- Remotes for pull/push/fetch
 		local remotes = get_git_remotes()
-		local matches = {}
+		local branches = get_git_branches(true)
 
-		if arg == "" then
-			return remotes
+		if #args == 1 then
+			return get_tbl(arg, remotes)
+		elseif #args == 2 then
+			return get_tbl(arg, branches)
 		end
-
-		for _, remote in ipairs(remotes) do
-			if remote:find(arg, 1, true) == 1 then
-				table.insert(matches, remote)
-			end
-		end
-
-		return matches
 	elseif cmd == "add" or cmd == "rm" or cmd == "mv" or cmd == "restore" then
-		-- Files for add/rm/mv
 		return get_file_completions(arg)
 	else
-		-- Default to files for other commands
-		return get_file_completions(arg)
+		return get_command_flags(cmd)
 	end
 end
 
@@ -231,7 +247,7 @@ function M.complete(arglead, cmdline, cursorpos)
 		-- Extract the current argument we're completing
 		local current_arg = arglead
 
-		return get_command_specific_completions(git_cmd, current_arg)
+		return get_command_specific_completions(git_cmd, current_arg, args)
 	end
 end
 
