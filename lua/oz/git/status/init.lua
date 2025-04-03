@@ -29,8 +29,8 @@ local function status_buf_hl()
         syntax match @function /^[A-Z][^ \t].*/ "heading
     ]])
 
-	vim.cmd("syntax match ozgitlogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
-	vim.cmd("highlight default link ozgitlogCommitHash ozInactivePrompt")
+	vim.cmd("syntax match ozgitstatusCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
+	vim.cmd("highlight default link ozgitstatusCommitHash ozInactivePrompt")
 
 	-- branch
 	vim.cmd([[

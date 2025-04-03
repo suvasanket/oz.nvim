@@ -41,7 +41,7 @@ local function different_cmd_runner(args_table, args_str)
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
-	elseif g_util.check_flags(args_table, "--help") or g_util.check_flags(args_table, "-h") then -- man
+	elseif util.str_in_tbl("--help", args_table) then -- man
 		vim.cmd("Man git-" .. cmd)
 		return true
 	elseif util.str_in_tbl(cmd, remote_cmds) then -- remote related

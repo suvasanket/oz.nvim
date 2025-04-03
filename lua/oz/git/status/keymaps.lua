@@ -10,7 +10,16 @@ local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
 
 -- map --
+local buf_id = nil
 local map = g_util.map
+local help_key = function(key, title)
+	map("n", key, function()
+		util.Show_buf_keymaps({
+			key = key,
+			title = title,
+		})
+	end, { buffer = buf_id })
+end
 
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function(code)
@@ -23,6 +32,7 @@ end
 
 -- here --
 function M.keymaps_init(buf)
+	buf_id = buf
 	-- quit
 	map("n", "q", function()
 		vim.api.nvim_echo({ { "" } }, false, {})
@@ -50,13 +60,13 @@ function M.keymaps_init(buf)
 			util.ShellCmd({ "git", "add", unpack(entries) }, function()
 				refresh()
 			end, function()
-				util.Notify("cannot stage selected.", "error", "oz_git")
+				util.Notify("Cannot stage selected.", "error", "oz_git")
 			end)
 		elseif current_line:find("Changes not staged for commit:") then
 			util.ShellCmd({ "git", "add", "-u" }, function()
 				refresh()
 			end, function()
-				util.Notify("cannot stage selected.", "error", "oz_git")
+				util.Notify("Cannot stage selected.", "error", "oz_git")
 			end)
 		elseif current_line:find("Untracked files:") then
 			vim.api.nvim_feedkeys(":Git add .", "n", false)
@@ -72,13 +82,13 @@ function M.keymaps_init(buf)
 			util.ShellCmd({ "git", "restore", "--staged", unpack(entries) }, function()
 				refresh()
 			end, function()
-				util.Notify("cannot unstage currently selected.", "error", "oz_git")
+				util.Notify("Cannot unstage currently selected.", "error", "oz_git")
 			end)
 		elseif current_line:find("Changes to be committed:") then
 			util.ShellCmd({ "git", "reset" }, function()
 				refresh()
 			end, function()
-				util.Notify("cannot unstage currently selected.", "error", "oz_git")
+				util.Notify("Cannot unstage currently selected.", "error", "oz_git")
 			end)
 		end
 	end, { buffer = buf, desc = "unstage entry under cursor or selected entries." })
@@ -90,7 +100,7 @@ function M.keymaps_init(buf)
 			util.ShellCmd({ "git", "restore", unpack(entries) }, function()
 				refresh()
 			end, function()
-				util.Notify("cannot discard currently selected.", "error", "oz_git")
+				util.Notify("Cannot discard currently selected.", "error", "oz_git")
 			end)
 		end
 	end, { buffer = buf, desc = "discard entry under cursor or selected entries." })
@@ -184,14 +194,7 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = ":Git commit --amend" })
 
 	-- G commit
-	map("n", "c<space>", function()
-		local input = util.inactive_input(":Git commit", " ")
-		if input then
-			run_n_refresh("G commit " .. input)
-		elseif input == "" then
-			vim.cmd("Git commit")
-		end
-	end, { silent = false, buffer = buf, desc = ":Git commit" })
+	map("n", "c<space>", ":Git commit ", { silent = false, buffer = buf, desc = "Open cmdline with :Git commit" })
 
 	-- open current entry
 	map("n", "<cr>", function()
@@ -209,10 +212,10 @@ function M.keymaps_init(buf)
 					if code == 0 then
 						refresh()
 						vim.schedule(function()
-							util.Notify("You have checkout to '" .. branch_under_cursor .. "' branch.", nil, "oz_git")
+							util.Notify("Checkout to '" .. branch_under_cursor .. "' branch.", nil, "oz_git")
 						end)
 					else
-						util.Notify("Cannot switch to '" .. branch_under_cursor .. "' branch", "error", "oz_git")
+						util.Notify("Cannot checkout to '" .. branch_under_cursor .. "' branch", "error", "oz_git")
 					end
 				end, true)
 				vim.cmd("Git checkout " .. branch_under_cursor)
@@ -506,17 +509,23 @@ function M.keymaps_init(buf)
 		util.Show_buf_keymaps({
 			header_name = {
 				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-				["Commit mappings"] = { "cc", "ca", "ce" },
-				["Diff mappings"] = { "dd", "dc", "de" },
+				["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "c" },
+				["Diff mappings"] = { "dd", "dc", "de", "d" },
 				["Tracking related mappings"] = { "s", "u", "K", "X" },
 				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
-				["Remote mappings"] = { "ma", "md", "mr", "mp", "mP", "mf" },
-				["Quick actions"] = { "grn", "<Tab>" },
+				["Remote mappings"] = { "ma", "md", "mr", "mp", "mP", "mf", "m" },
+				["Quick actions"] = { "grn", "<Tab>", "<CR>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
-				["Stash mappings"] = { "za", "zp", "zd", "z<Space>" },
+				["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
 			},
+			no_empty = true,
 		})
-	end, { buffer = buf, desc = "show all availble keymaps." })
+	end, { buffer = buf, desc = "Show all availble keymaps." })
+
+	help_key("m", "Remote mappings")
+	help_key("c", "Commit mappings")
+	help_key("z", "Stash mappings")
+	help_key("d", "Diff mappings")
 end
 
 return M

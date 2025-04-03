@@ -1,11 +1,39 @@
 local M = {}
+local key_help_win = nil
+local key_help_buf = nil
+
+local function filter_table(tbl, str)
+	local result = {}
+	local new_keys = {}
+	for key, value in pairs(tbl) do
+		if vim.startswith(key, str) then
+			local new_key = key:sub(#str + 1)
+			if new_key ~= "" then
+				result[new_key] = value
+				table.insert(new_keys, new_key)
+			end
+		end
+	end
+	return result, new_keys
+end
+
+local function set_keymaps(keymaps, arg_key)
+	for _, key in pairs(keymaps) do
+		key = key == "<Space>" and " " or key
+		vim.keymap.set("n", key, function()
+			vim.cmd("close")
+			vim.cmd.normal(arg_key .. key)
+		end, { nowait = true, buffer = key_help_buf, remap = false, silent = true })
+	end
+end
 
 function M.init(args)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local modes = { "n", "v", "i", "t" }
+	local sub_keys = {}
+	local all_keymaps = {}
 
 	-- First get all keymaps
-	local all_keymaps = {}
 	for _, mode in ipairs(modes) do
 		local maps = vim.api.nvim_buf_get_keymap(bufnr, mode)
 		for _, map in ipairs(maps) do
@@ -14,16 +42,24 @@ function M.init(args)
 			if desc then
 				desc = desc:gsub("<Cmd>", ""):gsub("<CR>", "")
 			else
-				desc = "[No Info]"
+				if not args.no_empty then -- set a empty description. for default
+					desc = "[No Info]"
+				end
 			end
-			if not all_keymaps[key] then
+			if not all_keymaps[key] and desc then -- don't add any no descriptive keys
 				all_keymaps[key] = {
 					modes = {},
 					desc = desc,
 				}
 			end
-			table.insert(all_keymaps[key].modes, mode)
+			if all_keymaps[key] then -- check if all_keymaps[key] is not nil
+				table.insert(all_keymaps[key].modes, mode)
+			end
 		end
+	end
+
+	if args.key then
+		all_keymaps, sub_keys = filter_table(all_keymaps, args.key)
 	end
 
 	local keymaps = {}
@@ -105,23 +141,22 @@ function M.init(args)
 	end
 
 	-- Add subtext (footer)
-	table.insert(keymaps, "")
-	if args and args.subtext then
+	if args.subtext then
+		table.insert(keymaps, "")
 		for _, i in ipairs(args.subtext) do
 			table.insert(keymaps, " " .. i)
 		end
 	end
-	table.insert(keymaps, " press 'q' to close this window.")
 
 	if #keymaps == 0 then
 		return
 	end
 
-	local temp_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(temp_buf, 0, -1, false, keymaps)
+	key_help_buf = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_lines(key_help_buf, 0, -1, false, keymaps)
 
 	-- highlight
-	vim.api.nvim_buf_call(temp_buf, function()
+	vim.api.nvim_buf_call(key_help_buf, function()
 		vim.cmd("syntax clear")
 		vim.cmd("highlight BoldKey gui=bold guifg=#99BC85 cterm=bold")
 		vim.cmd('syntax match BoldKey /"\\(.*\\)"/ contains=NONE')
@@ -130,7 +165,7 @@ function M.init(args)
         highlight link KeyMode Comment
         ]])
 		if has_headers then
-			vim.cmd("highlight HeaderName gui=bold guifg=#C5BAFF guibg=#2F2F2F cterm=bold")
+			vim.cmd("highlight HeaderName gui=bold guifg=#DFD3C3 guibg=#2F2F2F cterm=bold")
 			vim.cmd("highlight HeaderBlocks guifg=#2F2F2F ctermfg=green")
 			vim.cmd("syntax match HeaderName /█.*█/ contains=HeaderBlocks")
 			vim.cmd("syntax match HeaderBlocks /[██]/ contained")
@@ -138,25 +173,21 @@ function M.init(args)
 	end)
 
 	-- floating window dimensions and position
-	local fixed_width = 55
+	local fixed_width = 60
 	local max_height = 15
 
-	local wrapped_lines = {}
-	for _, line in ipairs(keymaps) do
-		for i = 1, #line, fixed_width do
-			table.insert(wrapped_lines, line:sub(i, i + fixed_width - 1))
-		end
-	end
 	local max_width = 0
 	for _, line in ipairs(keymaps) do
 		max_width = math.max(max_width, vim.fn.strwidth(line))
 	end
 
-	local height = math.min(#wrapped_lines, max_height)
+	local total_lines = vim.api.nvim_buf_line_count(key_help_buf)
+	local height = math.min(total_lines, max_height)
 	local width = (max_height > 100) and fixed_width or max_width + 2
 	local row = vim.o.lines - height - 4
-	local col = vim.o.columns - fixed_width - 2
+	local col = vim.o.columns
 
+	local title = args.title or "Show Keymaps"
 	local win_opts = {
 		relative = "editor",
 		width = width,
@@ -165,11 +196,21 @@ function M.init(args)
 		col = col,
 		style = "minimal",
 		border = "single",
+		title = " " .. title .. " ",
+		title_pos = "left",
 	}
-	local temp_win = vim.api.nvim_open_win(temp_buf, true, win_opts)
-	vim.api.nvim_buf_set_option(temp_buf, "modifiable", false)
-	vim.api.nvim_buf_set_keymap(temp_buf, "n", "q", "<cmd>close<CR>", { noremap = true, silent = true })
-	return temp_win, temp_buf
+	key_help_win = vim.api.nvim_open_win(key_help_buf, true, win_opts)
+	vim.api.nvim_buf_set_option(key_help_buf, "modifiable", false)
+	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "q", "<cmd>close<CR>", { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "<C-c>", "<cmd>close<CR>", { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+
+	if #sub_keys > 0 then
+		vim.fn.timer_start(100, function()
+			set_keymaps(sub_keys, args.key)
+		end)
+	end
+	return key_help_win, key_help_buf
 end
 
 return M
