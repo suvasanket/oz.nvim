@@ -14,47 +14,44 @@ CWD = nil
 local function status_buf_hl()
 	vim.cmd("syntax clear")
 
-	vim.cmd([[syntax match ozgitstatusDeleted /^\s\+deleted:\s\+.*$/]])
-	vim.cmd([[syntax match ozgitstatusBothModified /^\s\+both modified:\s\+.*$/]])
-	vim.cmd([[syntax match ozgitstatusModified /^\s\+modified:\s\+.*$/]])
-	vim.api.nvim_set_hl(0, "ozgitstatusDeleted", { fg = "#757575" })
-	vim.cmd("highlight default link ozgitstatusModified MoreMsg")
-	vim.cmd("highlight default link ozgitstatusBothModified WarningMsg")
+	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+    vim.fn.matchadd("@error", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("WarningMsg", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("MoreMsg", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
 
-	-- diff
+	vim.api.nvim_set_hl(0, "OzGitDiffPlus", { fg = "#000000", bg = "#A0C878" })
+	vim.api.nvim_set_hl(0, "OzGitDiffMinus", { fg = "#000000", bg = "#E17564" })
+	vim.fn.matchadd("OzGitDiffPlus", "^    +.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("OzGitDiffMinus", "^    -.*$", 0, -1, { extend = true })
+
 	vim.cmd([[
-    syntax match ozgitstatusDiffAdded /^    +.\+$/
-    syntax match ozgitstatusDiffRemoved /^    -.\+$/
-    highlight default link ozgitstatusDiffAdded @diff.plus
-    highlight default link ozgitstatusDiffRemoved @diff.minus
+        syntax match ozInactivePrompt /stash@{[0-9]}/ "stash
+        syntax match @function /^[A-Z][^ \t].*/ "heading
     ]])
 
-	-- headings
-	vim.cmd([[
-    syntax match NoIndentCapital /^[A-Z][^ \t].*/
-    highlight link NoIndentCapital @function
-    ]])
+	vim.cmd("syntax match ozgitlogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
+	vim.cmd("highlight default link ozgitlogCommitHash ozInactivePrompt")
 
 	-- branch
 	vim.cmd([[
-    syntax match ozGitStatusHeader "^On branch " nextgroup=ozGitStatusBranchName
-    syntax match ozGitStatusBranchName "\S\+" contained
-    syntax match ozGitStatusCurBranch /\*\s\w\+/
+        syntax match ozGitStatusHeader "^On branch " nextgroup=ozGitStatusBranchName
+        syntax match ozGitStatusBranchName "\S\+" contained
+        syntax match ozGitStatusCurBranch /\*\s\w\+/
 
-    highlight default link ozGitStatusBranchName Title
-    highlight default link ozGitStatusCurBranch Title
-    highlight default link ozGitStatusHeader @function
+        highlight default link ozGitStatusBranchName Title
+        highlight default link ozGitStatusCurBranch Title
+        highlight default link ozGitStatusHeader @function
     ]])
 
 	-- remote branch
 	vim.cmd([[
-    highlight GitStatusLine guifg=#808080 ctermfg=244
-    highlight GitStatusQuoted guifg=#99BC85 ctermfg=46 gui=italic
-    highlight default link GitStatusNumber @warning
+        highlight GitStatusLine guifg=#808080 ctermfg=244
+        highlight GitStatusQuoted guifg=#99BC85 ctermfg=46 gui=bold
+        highlight default link GitStatusNumber @warning
 
-    syntax match GitStatusLine /^Your branch is .*$/
-    syntax match GitStatusQuoted /'[^']*'/ contained containedin=GitStatusLine
-    syntax match GitStatusNumber /\d\+/ contained containedin=GitStatusLine
+        syntax match GitStatusLine /^Your branch is .*$/
+        syntax match GitStatusQuoted /'[^']*'/ contained containedin=GitStatusLine
+        syntax match GitStatusNumber /\d\+/ contained containedin=GitStatusLine
     ]])
 end
 

@@ -157,7 +157,7 @@ function M.run_git_cmd(args)
 
 			if suggestion then
 				vim.schedule(function()
-					g_util.set_cmdline("Git " .. suggestion)
+					g_util.set_cmdline([[Git ]] .. suggestion)
 				end)
 			end
 		end,

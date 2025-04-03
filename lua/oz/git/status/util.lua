@@ -116,24 +116,24 @@ function M.get_file_under_cursor(original)
 		end
 		local tbl = { "deleted:", "renamed:", "copied:" }
 
-		if vim.fn.filereadable(absolute_file_path) == 1 then
+		if vim.fn.filereadable(absolute_file_path) == 1 then -- file
 			if original then
 				table.insert(entries, file)
 			else
 				table.insert(entries, absolute_file_path)
 			end
-		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then
+		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then -- dir
 			if original then
 				table.insert(entries, dir)
 			else
 				table.insert(entries, absolute_dir_path)
 			end
-		elseif util.str_in_tbl(line, tbl) then
-			if original then
-				table.insert(entries, file)
-			else
-				table.insert(entries, absolute_file_path)
-			end
+		else
+            for _, string in pairs(tbl) do
+                if line:find(string) then
+                    table.insert(entries, file)
+                end
+            end
 		end
 	end
 
