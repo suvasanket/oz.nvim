@@ -5,7 +5,7 @@ local g_util = require("oz.git.util")
 M.on_conflict_resolution = false
 M.on_conflict_resolution_complete = nil
 
-function M.parse_git_suggestion(data, arg_tbl)
+function M.get_git_suggestions(data, arg_tbl)
 	local filtered_data = {}
 	for _, line in ipairs(data) do
 		if line and line ~= "" then
@@ -30,7 +30,6 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "The most similar commands are",
 			extract = function()
-				vim.notify("typo alert! :) fix it!", vim.log.levels.WARN)
 				if #arg_tbl == 1 then
 					return arg_tbl[1]
 				end
@@ -40,7 +39,6 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "The most similar command",
 			extract = function(str)
-				vim.notify("silly you, we've fixed that! :) press enter")
 				local match = str:match("The most similar command is%s*['\"]?([^'\"]+)['\"]?")
 				if #arg_tbl == 1 then
 					return match
@@ -78,19 +76,8 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "Please commit or stash",
 			extract = function()
-				vim.notify("Stash or commit, your choice!")
+				vim.notify_once("Chief, please commit or stash before we proceed.")
 				return "stash"
-			end,
-		},
-		-- Remote repository setup
-		{
-			trigger = "configure a remote repository",
-			extract = function(str)
-				local match = str:match("git remote add [^%s]+ [^%s]+")
-				if match then
-					return match:gsub("^git%s+", "")
-				end
-				return "remote add origin "
 			end,
 		},
 		-- Branch checkout suggestions
@@ -115,7 +102,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-				vim.notify("Conflict alert! Don't worry, we've got your back :)")
+				vim.notify_once("We've got your back, Chief.")
 				return "status"
 			end,
 		},
@@ -127,7 +114,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 				if branch then
 					return "checkout -b " .. branch
 				end
-				vim.notify("put a new-branch name.")
+				vim.notify_once("You should checkout to a working branch.")
 				return "checkout -b "
 			end,
 		},
@@ -142,7 +129,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "have you pulled",
 			extract = function()
-				vim.notify("Pull, baby, pull! Get the latest updates")
+				vim.notify("Chief, you should pull first.")
 				return "pull"
 			end,
 		},
@@ -150,16 +137,8 @@ function M.parse_git_suggestion(data, arg_tbl)
 		{
 			trigger = "forgot to add some files",
 			extract = function()
-				vim.notify("Oops, forgot something? Add files now!")
+				vim.notify("Chief, it seems you forgot to add some files.")
 				return "add | && commit --amend"
-			end,
-		},
-		-- Interactive rebase suggestion
-		{
-			trigger = "use interactive rebase",
-			extract = function()
-				vim.notify("put the number of commits.")
-				return "rebase -i HEAD~"
 			end,
 		},
 		-- Config suggestions
@@ -198,6 +177,7 @@ function M.parse_git_suggestion(data, arg_tbl)
 					if find_suggestion then
 						local cmd = line:match("^%s*git%s+([%w%s%-]+)")
 						if cmd then
+							vim.notify_once("Chief we got some suggestions, press enter to proceed.")
 							return vim.trim(cmd)
 						end
 					end
@@ -216,12 +196,10 @@ function M.parse_git_suggestion(data, arg_tbl)
 		if output_str:find(pattern.trigger) then
 			local suggestion = pattern.extract(output_str)
 			if suggestion then
-				return suggestion, pattern.trigger
+				return "Git " .. suggestion
 			end
 		end
 	end
-
-	return nil
 end
 
 -- commit push wizard --

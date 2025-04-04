@@ -13,7 +13,9 @@ function M.get_heading_tbl(lines)
 	end
 	M.headings_table = {}
 	local current_heading = nil
-	local branch_line = util.ShellOutputList("git branch -v")
+	local branch_line = util.ShellOutputList(
+        "git branch -vv"
+	)
 	local branch_heading = "On branch " .. status.current_branch
 
 	M.headings_table[branch_heading] = {}
@@ -109,31 +111,32 @@ function M.get_file_under_cursor(original)
 		local file = line:match("%S+$")
 		local dir = line:match("(%S+/)")
 
-		local absolute_file_path = vim.fs.normalize(cwd .. "/" .. file)
-		local absolute_dir_path
-		if dir then
-			absolute_dir_path = vim.fs.normalize(cwd .. "/" .. dir)
-		end
 		local tbl = { "deleted:", "renamed:", "copied:" }
+		local absolute_path
+		if file then
+			absolute_path = vim.fs.normalize(cwd .. "/" .. file)
+		elseif dir then
+			absolute_path = vim.fs.normalize(cwd .. "/" .. dir)
+		end
 
-		if vim.fn.filereadable(absolute_file_path) == 1 then -- file
+		if vim.fn.filereadable(absolute_path) == 1 then -- file
 			if original then
 				table.insert(entries, file)
 			else
-				table.insert(entries, absolute_file_path)
+				table.insert(entries, absolute_path)
 			end
-		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then -- dir
+		elseif vim.fn.isdirectory(absolute_path) == 1 then -- dir
 			if original then
 				table.insert(entries, dir)
 			else
-				table.insert(entries, absolute_dir_path)
+				table.insert(entries, absolute_path)
 			end
 		else
-            for _, string in pairs(tbl) do
-                if line:find(string) then
-                    table.insert(entries, file)
-                end
-            end
+			for _, string in pairs(tbl) do
+				if line:find(string) then
+					table.insert(entries, file)
+				end
+			end
 		end
 	end
 

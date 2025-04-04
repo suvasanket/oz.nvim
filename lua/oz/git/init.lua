@@ -47,8 +47,10 @@ local function different_cmd_runner(args_table, args_str)
 	elseif util.str_in_tbl(cmd, remote_cmds) then -- remote related
 		if M.user_config and M.user_config.remote_operation_exec_method == "background" then -- user config
 			local command = table.remove(args_table, 1)
+
 			require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
 				oz_git_win.open_oz_git_win(lines, args_str, "stderr")
+				g_util.set_cmdline(wizard.get_git_suggestions(lines, args_table)) -- git suggestion
 			end)
 		elseif M.user_config and M.user_config.remote_operation_exec_method == "term" then
 			vim.cmd("hor term git " .. table.concat(args_table, " "))
@@ -112,7 +114,7 @@ function M.run_git_cmd(args)
 					end
 				end
 			end
-			suggestion = wizard.parse_git_suggestion(data, args_table)
+			suggestion = wizard.get_git_suggestions(data, args_table)
 		end,
 		on_stderr = function(_, data, _)
 			if data then
@@ -122,7 +124,7 @@ function M.run_git_cmd(args)
 					end
 				end
 			end
-			suggestion = wizard.parse_git_suggestion(data, args_table)
+			suggestion = wizard.get_git_suggestions(data, args_table)
 		end,
 		on_exit = function(_, code, _)
 			-- run exec complete callbacks
@@ -157,7 +159,7 @@ function M.run_git_cmd(args)
 
 			if suggestion then
 				vim.schedule(function()
-					g_util.set_cmdline([[Git ]] .. suggestion)
+					g_util.set_cmdline(suggestion)
 				end)
 			end
 		end,

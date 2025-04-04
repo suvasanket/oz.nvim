@@ -499,10 +499,49 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = ":Git fetch or fetch using branch under cursor." })
 
-	-- Branch mappings
-	-- map("n", "bn", function ()
-	--
-	-- end, { buffer = buf, desc = ":Git fetch or fetch using branch under cursor." })
+	-- [B]ranch mappings
+	-- new branch
+	map("n", "bn", function()
+		local b_name = util.inactive_input(":Git branch ")
+		if b_name then
+			run_n_refresh("Git branch " .. b_name)
+		end
+	end, { buffer = buf, desc = "Create a new branch." })
+
+	-- delete branch
+	map("n", "bd", function()
+		local branch = s_util.get_branch_under_cursor()
+		if branch then
+			local ans = util.prompt("Do you really want to delete branch: " .. branch .. "?", "&yes\n&no", 1, "Info")
+			if ans == 1 then
+				run_n_refresh(":Git branch -d " .. branch)
+			end
+		end
+	end, { buffer = buf, desc = "Delete branch under cursor." })
+
+	map("n", "bu", function()
+		local remote_branch = util.ShellOutputList("git branch -r | awk '{print $1}'")
+		local branch = s_util.get_branch_under_cursor()
+		if branch and #remote_branch >= 1 then
+			vim.ui.select(remote_branch, {
+				prompt = "select remote branch:",
+			}, function(choice)
+				if choice then
+					run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
+				end
+			end)
+		end
+	end, { buffer = buf, desc = "Set a availble upstream of current branch under cursor." })
+
+	map("n", "bU", function()
+		local branch = s_util.get_branch_under_cursor()
+		if branch then
+			local ans = util.prompt("Do you really want to unset upstream of " .. branch .. "?", "&yes\n&no", 1, "Info")
+			if ans == 1 then
+				run_n_refresh(":Git branch --unset-upstream " .. branch)
+			end
+		end
+	end, { buffer = buf, desc = "Unset the upstream of current branch under cursor." })
 
 	-- help
 	map("n", "g?", function()
@@ -517,6 +556,7 @@ function M.keymaps_init(buf)
 				["Quick actions"] = { "grn", "<Tab>", "<CR>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 				["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
+				["Branch mappings"] = { "bn", "bd", "bu", "bU" },
 			},
 			no_empty = true,
 		})
@@ -526,6 +566,7 @@ function M.keymaps_init(buf)
 	help_key("c", "Commit mappings")
 	help_key("z", "Stash mappings")
 	help_key("d", "Diff mappings")
+	help_key("b", "Branch mappings")
 end
 
 return M

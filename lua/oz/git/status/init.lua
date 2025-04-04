@@ -24,11 +24,14 @@ local function status_buf_hl()
 	vim.fn.matchadd("OzGitDiffPlus", "^    +.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("OzGitDiffMinus", "^    -.*$", 0, -1, { extend = true })
 
+    -- stash and heading
 	vim.cmd([[
         syntax match ozInactivePrompt /stash@{[0-9]}/ "stash
         syntax match @function /^[A-Z][^ \t].*/ "heading
+        syn region @boolean matchgroup=Delimiter start="\[" end="\]"
     ]])
 
+    -- commit hash
 	vim.cmd("syntax match ozgitstatusCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 	vim.cmd("highlight default link ozgitstatusCommitHash ozInactivePrompt")
 

@@ -51,15 +51,6 @@ function M.parse_args(argstring)
 	return args
 end
 
-function M.check_flags(tbl, flag)
-	for _, str in pairs(tbl) do
-		if str:find(flag) then
-			return true
-		end
-	end
-	return false
-end
-
 function M.save_lines_to_commitfile(lines)
 	local git_dir_command = "git rev-parse --git-dir 2>/dev/null"
 	local git_dir = vim.fn.system(git_dir_command):gsub("%s+$", "")
