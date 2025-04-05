@@ -251,7 +251,9 @@ function M.open_oz_git_win(lines, cmd, type)
 	if not lines then
 		return
 	end
-	set_cmd_history(cmd)
+	if cmd then
+		set_cmd_history(cmd)
+	end
 	local height = math.min(math.max(#lines, 7), 15)
 
 	if M.oz_git_buf == nil or not vim.api.nvim_win_is_valid(M.oz_git_win) then

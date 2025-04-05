@@ -5,7 +5,7 @@ local status = require("oz.git.status")
 --
 M.headings_table = {}
 M.diff_lines = {}
-M.opened_headings = {}
+M.toggeled_headings = {}
 
 function M.get_heading_tbl(lines)
 	if #lines <= 0 then
@@ -13,9 +13,7 @@ function M.get_heading_tbl(lines)
 	end
 	M.headings_table = {}
 	local current_heading = nil
-	local branch_line = util.ShellOutputList(
-        "git branch -vv"
-	)
+	local branch_line = util.ShellOutputList("git branch -vv")
 	local branch_heading = "On branch " .. status.current_branch
 
 	M.headings_table[branch_heading] = {}
@@ -56,9 +54,9 @@ local function find_line_number(line_content)
 	return nil
 end
 
-function M.toggle_section(user_head)
+function M.toggle_section(arg_heading)
 	local buf = require("oz.git.status").status_buf
-	local current_line = user_head or vim.api.nvim_get_current_line()
+	local current_line = arg_heading or vim.api.nvim_get_current_line()
 	local line_num = find_line_number(current_line)
 	if not line_num then
 		return nil
@@ -71,10 +69,12 @@ function M.toggle_section(user_head)
 		local next_lines = vim.api.nvim_buf_get_lines(buf, next_line - 1, next_line, false)
 		local next_line_content = next_lines[1]
 
-		if util.str_in_tbl(current_line, M.opened_headings) then
-			util.remove_from_tbl(M.opened_headings, current_line)
-		else
-			util.tbl_insert(M.opened_headings, current_line)
+		if not arg_heading then -- adding toggled lines to the M.toggeled_headings
+			if vim.list_contains(M.toggeled_headings, current_line) then
+				util.remove_from_tbl(M.toggeled_headings, current_line)
+			else
+				util.tbl_insert(M.toggeled_headings, current_line)
+			end
 		end
 
 		if next_line_content and next_line_content:match("^%s") then

@@ -3,7 +3,6 @@ local util = require("oz.util")
 
 M.log_win = nil
 M.log_buf = nil
-local log_win_height = 14
 local commit_log_lines = nil
 
 M.log_level = 1
@@ -79,7 +78,7 @@ local function open_commit_log_buf(lines)
 	if M.log_buf == nil or not vim.api.nvim_win_is_valid(M.log_win) then
 		M.log_buf = vim.api.nvim_create_buf(false, true)
 
-		vim.cmd("botright " .. log_win_height .. " split")
+		vim.cmd("botright split")
 		M.log_win = vim.api.nvim_get_current_win()
 		vim.api.nvim_win_set_buf(M.log_win, M.log_buf)
 
@@ -100,13 +99,13 @@ local function open_commit_log_buf(lines)
 		})
 	else
 		vim.api.nvim_set_current_win(M.log_win)
-		vim.cmd("resize " .. log_win_height)
 		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", true)
 		vim.api.nvim_buf_set_lines(M.log_buf, 0, -1, false, lines)
 		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", false)
 	end
 end
 
+-- FIXME: issus with saving once we have a log with args next time doing :Gitlog doesn't apply the format
 local function get_commit_log_lines(level, args)
 	local commit_log_tbl = {}
 	local log = nil

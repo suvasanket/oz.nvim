@@ -6,6 +6,7 @@ local log_level = require("oz.git.git_log").log_level
 local comming_from = require("oz.git.git_log").comming_from
 local get_selected_hash = require("oz.git.git_log").get_selected_hash
 local grab_hashs = require("oz.git.git_log").grab_hashs
+local commit_log = require("oz.git.git_log").commit_log
 
 local user_mappings = require("oz.git").user_config.mappings
 local map = g_util.map
@@ -18,7 +19,7 @@ function M.keymaps_init(buf)
 	map("n", ">", function()
 		vim.cmd("close")
 		log_level = (log_level % 3) + 1
-		M.commit_log({ level = log_level, from = comming_from })
+		commit_log({ level = log_level, from = comming_from })
 	end, { buffer = buf, desc = "Increase log level." })
 
 	-- decrease log level
@@ -26,7 +27,7 @@ function M.keymaps_init(buf)
 		vim.cmd("close")
 		local log_levels = { [1] = 3, [2] = 1, [3] = 2 }
 		log_level = log_levels[log_level]
-		M.commit_log({ level = log_level, from = comming_from })
+		commit_log({ level = log_level, from = comming_from })
 	end, { buffer = buf, desc = "Decrease log level." })
 
 	-- back
@@ -43,7 +44,7 @@ function M.keymaps_init(buf)
 		local input = util.UserInput("args:")
 		if input then
 			vim.cmd("close")
-			M.commit_log({ level = 1 }, { input })
+			commit_log({ level = 1 }, { input })
 		end
 	end, { buffer = buf, desc = "Add args to log command." })
 

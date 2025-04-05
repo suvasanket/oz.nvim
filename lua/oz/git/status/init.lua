@@ -3,7 +3,6 @@ local util = require("oz.util")
 
 M.status_win = nil
 M.status_buf = nil
-local status_win_height = 14
 
 M.status_grab_buffer = {}
 M.current_branch = nil
@@ -15,7 +14,7 @@ local function status_buf_hl()
 	vim.cmd("syntax clear")
 
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
-    vim.fn.matchadd("@error", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@error", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("WarningMsg", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("MoreMsg", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
 
@@ -24,14 +23,14 @@ local function status_buf_hl()
 	vim.fn.matchadd("OzGitDiffPlus", "^    +.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("OzGitDiffMinus", "^    -.*$", 0, -1, { extend = true })
 
-    -- stash and heading
+	-- stash and heading
 	vim.cmd([[
         syntax match ozInactivePrompt /stash@{[0-9]}/ "stash
         syntax match @function /^[A-Z][^ \t].*/ "heading
         syn region @boolean matchgroup=Delimiter start="\[" end="\]"
     ]])
 
-    -- commit hash
+	-- commit hash
 	vim.cmd("syntax match ozgitstatusCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 	vim.cmd("highlight default link ozgitstatusCommitHash ozInactivePrompt")
 
@@ -81,7 +80,7 @@ local function open_status_buf(lines)
 	if M.status_buf == nil or not vim.api.nvim_win_is_valid(M.status_win) then
 		M.status_buf = vim.api.nvim_create_buf(false, true)
 
-		vim.cmd("botright " .. status_win_height .. " split")
+		vim.cmd("botright split")
 		M.status_win = vim.api.nvim_get_current_win()
 		vim.api.nvim_win_set_buf(M.status_win, M.status_buf)
 
@@ -100,7 +99,6 @@ local function open_status_buf(lines)
 		})
 	else
 		vim.api.nvim_set_current_win(M.status_win)
-		vim.cmd("resize " .. status_win_height)
 		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", true)
 		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
 		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", false)
@@ -175,7 +173,7 @@ function M.refresh_status_buf(passive)
 		s_util.get_heading_tbl(lines)
 
 		-- retoggle any user toggeled headings
-		local toggled_headings = get_toggled_headings(s_util.opened_headings, s_util.headings_table)
+		local toggled_headings = get_toggled_headings(s_util.toggeled_headings, s_util.headings_table)
 		for _, item in ipairs(toggled_headings) do
 			s_util.toggle_section(item)
 		end
@@ -188,7 +186,7 @@ function M.refresh_status_buf(passive)
 			M.GitStatus()
 
 			-- retoggle any user toggeled headings
-			local toggled_headings = get_toggled_headings(s_util.opened_headings, s_util.headings_table)
+			local toggled_headings = get_toggled_headings(s_util.toggeled_headings, s_util.headings_table)
 			for _, item in ipairs(toggled_headings) do
 				s_util.toggle_section(item)
 			end

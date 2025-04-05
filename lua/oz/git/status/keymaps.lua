@@ -5,6 +5,7 @@ local s_util = require("oz.git.status.util")
 local g_util = require("oz.git.util")
 local git = require("oz.git")
 local wizard = require("oz.git.wizard")
+local caching = require("oz.caching")
 
 local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
@@ -26,6 +27,13 @@ local function run_n_refresh(cmd)
 		if code == 0 then
 			refresh()
 		end
+	end)
+	vim.cmd(cmd)
+end
+
+local function run_n_refresh_err(cmd)
+	git.after_exec_complete(function()
+		refresh()
 	end)
 	vim.cmd(cmd)
 end
@@ -215,7 +223,7 @@ function M.keymaps_init(buf)
 							util.Notify("Checkout to '" .. branch_under_cursor .. "' branch.", nil, "oz_git")
 						end)
 					else
-						util.Notify("Cannot checkout to '" .. branch_under_cursor .. "' branch", "error", "oz_git")
+						require("oz.git.oz_git_win").open_oz_git_win(err, nil, "stderr")
 					end
 				end, true)
 				vim.cmd("Git checkout " .. branch_under_cursor)
@@ -228,6 +236,16 @@ function M.keymaps_init(buf)
 	map("n", "gl", function()
 		vim.cmd("close")
 		require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
+	end, { buffer = buf, desc = "goto commit logs." })
+	map("n", "gL", function()
+		local branch = s_util.get_branch_under_cursor()
+		local file = s_util.get_file_under_cursor(true)
+		vim.cmd("close")
+		if branch then
+			require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { branch })
+		elseif #file > 0 then
+			require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { "--", unpack(file) })
+		end
 	end, { buffer = buf, desc = "goto commit logs." })
 	-- :Git
 	map("n", "g<space>", function()
@@ -464,10 +482,10 @@ function M.keymaps_init(buf)
 			local remote = util.ShellOutputList("git remote")
 			local input = util.inactive_input(":Git push", " " .. remote[1] .. " " .. branch)
 			if input then
-				run_n_refresh("Git push " .. input)
+				run_n_refresh_err("Git push " .. input)
 			end
 		else
-			run_n_refresh("Git push")
+			run_n_refresh_err("Git push")
 		end
 	end, { buffer = buf, desc = ":Git push or push to branch under cursor." })
 
@@ -478,10 +496,10 @@ function M.keymaps_init(buf)
 			local remote = util.ShellOutputList("git remote")
 			local input = util.inactive_input(":Git pull", " " .. remote[1] .. " " .. branch)
 			if input then
-				run_n_refresh("Git pull " .. input)
+				run_n_refresh_err("Git pull " .. input)
 			end
 		else
-			run_n_refresh("Git pull")
+			run_n_refresh_err("Git pull")
 		end
 	end, { buffer = buf, desc = ":Git pull or pull using branch under cursor." })
 
@@ -514,7 +532,7 @@ function M.keymaps_init(buf)
 		if branch then
 			local ans = util.prompt("Do you really want to delete branch: " .. branch .. "?", "&yes\n&no", 1, "Info")
 			if ans == 1 then
-				run_n_refresh(":Git branch -d " .. branch)
+				run_n_refresh("Git branch -d " .. branch)
 			end
 		end
 	end, { buffer = buf, desc = "Delete branch under cursor." })
@@ -538,10 +556,37 @@ function M.keymaps_init(buf)
 		if branch then
 			local ans = util.prompt("Do you really want to unset upstream of " .. branch .. "?", "&yes\n&no", 1, "Info")
 			if ans == 1 then
-				run_n_refresh(":Git branch --unset-upstream " .. branch)
+				run_n_refresh("Git branch --unset-upstream " .. branch)
 			end
 		end
 	end, { buffer = buf, desc = "Unset the upstream of current branch under cursor." })
+
+	map("n", "bm", function()
+		local branch = s_util.get_branch_under_cursor()
+		local key = "git_user_merge_flags"
+		local json = "oz_git"
+		if branch then
+			local cached_data = caching.get_data(key, json) or branch
+			cached_data = cached_data:gsub("<branch_name>", branch)
+
+			local ans = util.prompt(
+				":Git merge " .. cached_data .. " [" .. branch .. " -> " .. status.current_branch .. "]",
+				"&yes\n&edit\n&no",
+				1,
+				"Info"
+			)
+			if ans == 1 then
+				run_n_refresh("Git merge " .. branch)
+			elseif ans == 2 then
+				local input = util.inactive_input(":Git merge ", cached_data)
+				if input then
+					run_n_refresh("Git merge " .. input)
+					local caching_data = input:gsub(branch, "<branch_name>")
+					caching.set_data(key, caching_data, json)
+				end
+			end
+		end
+	end, { buffer = buf, desc = "Merge with branch under cursor." })
 
 	-- help
 	map("n", "g?", function()
@@ -556,7 +601,7 @@ function M.keymaps_init(buf)
 				["Quick actions"] = { "grn", "<Tab>", "<CR>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 				["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
-				["Branch mappings"] = { "bn", "bd", "bu", "bU" },
+				["Branch mappings"] = { "bn", "bd", "bu", "bU", "bm" },
 			},
 			no_empty = true,
 		})
