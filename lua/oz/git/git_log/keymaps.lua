@@ -85,7 +85,7 @@ function M.keymaps_init(buf)
 				end,
 			})
 		end
-	end, { buffer = buf, desc = "Pick or unpick any hash under cursor." })
+	end, { nowait = true, buffer = buf, desc = "Pick or unpick any hash under cursor." })
 
 	-- edit picked
 	map("n", "a", function()
@@ -120,7 +120,7 @@ function M.keymaps_init(buf)
 
 		grab_hashs = #grab_hashs > 0 and {} or grab_hashs
 		vim.api.nvim_echo({ { "" } }, false, {})
-	end, { buffer = buf, desc = "Discard any picked hashes." })
+	end, { nowait = true, buffer = buf, desc = "Discard any picked hashes." })
 
 	-- [d]iff mode
 	-- diff hash

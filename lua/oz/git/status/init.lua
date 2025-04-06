@@ -63,7 +63,7 @@ local function status_buf_ft()
 		callback = function(event)
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
 			-- load async
-			vim.fn.timer_start(0, function()
+			vim.fn.timer_start(10, function()
 				status_buf_hl()
 			end)
 			vim.fn.timer_start(100, function()

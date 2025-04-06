@@ -1,3 +1,4 @@
+-- Refactored oz/git/status/keymaps.lua
 local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
@@ -10,19 +11,14 @@ local caching = require("oz.caching")
 local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
 local state = status.state
-
--- map --
 local buf_id = nil
-local map = g_util.map
-local help_key = function(key, title)
-	map("n", key, function()
-		util.Show_buf_keymaps({
-			key = key,
-			title = title,
-		})
-	end, { buffer = buf_id })
+
+-- map helper
+local map = function(...)
+	g_util.map(...)
 end
 
+-- Helper to run Vim command and refresh status buffer on success
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function(code)
 		if code == 0 then
@@ -32,6 +28,7 @@ local function run_n_refresh(cmd)
 	vim.cmd(cmd)
 end
 
+-- Helper to run Vim command and refresh status buffer regardless of success/error
 local function run_n_refresh_err(cmd)
 	git.after_exec_complete(function()
 		refresh()
@@ -39,582 +36,834 @@ local function run_n_refresh_err(cmd)
 	vim.cmd(cmd)
 end
 
--- here --
-function M.keymaps_init(buf)
-	buf_id = buf
-	-- quit
-	map("n", "q", function()
-		vim.api.nvim_echo({ { "" } }, false, {})
-		vim.cmd("close")
-	end, { buffer = buf, desc = "close git status buffer." })
+-- ==================================
+--  Named Functions for Keymap Actions
+-- ==================================
 
-	-- tab
-	map("n", "<tab>", function()
-		if not s_util.toggle_diff() then
-			s_util.toggle_section()
+local function handle_quit()
+	vim.api.nvim_echo({ { "" } }, false, {})
+	vim.cmd("close")
+end
+
+local function handle_toggle_diff_or_section()
+	if not s_util.toggle_diff() then
+		s_util.toggle_section()
+	end
+end
+
+local function handle_stage()
+	local entries = s_util.get_file_under_cursor()
+	local current_line = vim.api.nvim_get_current_line()
+
+	if #entries > 0 then
+		util.ShellCmd({ "git", "add", unpack(entries) }, function()
+			refresh()
+		end, function()
+			util.Notify("Cannot stage selected.", "error", "oz_git")
+		end)
+	elseif current_line:find("Changes not staged for commit:") then
+		util.ShellCmd({ "git", "add", "-u" }, function()
+			refresh()
+		end, function()
+			util.Notify("Cannot stage selected.", "error", "oz_git")
+		end)
+	elseif current_line:find("Untracked files:") then
+		-- Consider using inactive_input or directly running if preferred
+		vim.api.nvim_feedkeys(":Git add .", "n", false)
+	end
+end
+
+local function handle_unstage()
+	local entries = s_util.get_file_under_cursor()
+	local current_line = vim.api.nvim_get_current_line()
+
+	if #entries > 0 then
+		util.ShellCmd({ "git", "restore", "--staged", unpack(entries) }, function()
+			refresh()
+		end, function()
+			util.Notify("Cannot unstage currently selected.", "error", "oz_git")
+		end)
+	elseif current_line:find("Changes to be committed:") then
+		util.ShellCmd({ "git", "reset" }, function()
+			refresh()
+		end, function()
+			util.Notify("Cannot unstage currently selected.", "error", "oz_git")
+		end)
+	end
+end
+
+local function handle_discard()
+	local entries = s_util.get_file_under_cursor()
+	if #entries > 0 then
+		util.ShellCmd({ "git", "restore", unpack(entries) }, function()
+			refresh()
+		end, function()
+			util.Notify("Cannot discard currently selected.", "error", "oz_git")
+		end)
+	end
+end
+
+local function handle_untrack()
+	local entries = s_util.get_file_under_cursor()
+	if #entries > 0 then
+		util.ShellCmd({ "git", "rm", "--cached", unpack(entries) }, function()
+			refresh()
+		end, function()
+			util.Notify("currently selected can't be removed from tracking.", "error", "oz_git")
+		end)
+	end
+end
+
+local function handle_rename()
+	local branch = s_util.get_branch_under_cursor()
+	local file = s_util.get_file_under_cursor(true)[1]
+
+	if file or branch then
+		git.after_exec_complete(function(code)
+			if code == 0 then
+				refresh()
+			end
+		end, true)
+	end
+
+	if file then
+		local new_name = util.UserInput("New name: ", file)
+		if new_name then
+			vim.cmd("Git mv " .. file .. " " .. new_name)
 		end
-	end, { buffer = buf, desc = "Toggle headings / inline file diff." })
-
-	-- refresh
-	map("n", "<C-r>", function()
-		refresh()
-	end, { buffer = buf, desc = "Refresh status buffer." })
-
-	-- stage
-	map({ "n", "x" }, "s", function()
-		local entries = s_util.get_file_under_cursor()
-		local current_line = vim.api.nvim_get_current_line()
-
-		if #entries > 0 then
-			util.ShellCmd({ "git", "add", unpack(entries) }, function()
-				refresh()
-			end, function()
-				util.Notify("Cannot stage selected.", "error", "oz_git")
-			end)
-		elseif current_line:find("Changes not staged for commit:") then
-			util.ShellCmd({ "git", "add", "-u" }, function()
-				refresh()
-			end, function()
-				util.Notify("Cannot stage selected.", "error", "oz_git")
-			end)
-		elseif current_line:find("Untracked files:") then
-			vim.api.nvim_feedkeys(":Git add .", "n", false)
+	elseif branch then
+		local new_name = util.UserInput("New name: ", branch)
+		if new_name then
+			vim.cmd("Git branch -m " .. branch .. " " .. new_name)
 		end
-	end, { buffer = buf, desc = "stage entry under cursor or selected entries." })
+	end
+end
 
-	-- unstage
-	map({ "n", "x" }, "u", function()
-		local entries = s_util.get_file_under_cursor()
-		local current_line = vim.api.nvim_get_current_line()
+local function handle_stash_apply()
+	local current_line = vim.api.nvim_get_current_line()
+	local stash = current_line:match("^%s*(stash@{%d+})")
+	if stash then
+		run_n_refresh("G stash apply -q " .. stash)
+	end
+end
 
-		if #entries > 0 then
-			util.ShellCmd({ "git", "restore", "--staged", unpack(entries) }, function()
-				refresh()
-			end, function()
-				util.Notify("Cannot unstage currently selected.", "error", "oz_git")
-			end)
-		elseif current_line:find("Changes to be committed:") then
-			util.ShellCmd({ "git", "reset" }, function()
-				refresh()
-			end, function()
-				util.Notify("Cannot unstage currently selected.", "error", "oz_git")
-			end)
+local function handle_stash_pop()
+	local current_line = vim.api.nvim_get_current_line()
+	local stash = current_line:match("^%s*(stash@{%d+})")
+	if stash then
+		run_n_refresh("G stash pop -q " .. stash)
+	end
+end
+
+local function handle_stash_drop()
+	local current_line = vim.api.nvim_get_current_line()
+	local stash = current_line:match("^%s*(stash@{%d+})")
+	if stash then
+		run_n_refresh("G stash drop -q " .. stash)
+	end
+end
+
+local function handle_stash_cmd()
+	local input = util.inactive_input(":Git stash", " ")
+	if input then
+		run_n_refresh("Git stash " .. input)
+	elseif input == "" then
+		run_n_refresh("Git stash")
+	end
+end
+
+local function handle_commit()
+	run_n_refresh("Git commit")
+end
+
+local function handle_commit_amend_no_edit()
+	run_n_refresh("Git commit --amend --no-edit")
+end
+
+local function handle_commit_amend()
+	run_n_refresh("Git commit --amend")
+end
+
+local function handle_open_entry_or_switch_branch()
+	local entry = s_util.get_file_under_cursor()
+	if #entry > 0 then
+		-- Check if file or directory exists before trying to edit
+		if vim.fn.filereadable(entry[1]) == 1 or vim.fn.isdirectory(entry[1]) == 1 then
+			vim.cmd.wincmd("p") -- Go to previous window (presumably the main editing window)
+			vim.cmd("edit " .. entry[1])
+		else
+			util.Notify("Cannot open entry: " .. entry[1], "warn", "oz_git")
 		end
-	end, { buffer = buf, desc = "unstage entry under cursor or selected entries." })
-
-	-- discard
-	map({ "n", "x" }, "X", function()
-		local entries = s_util.get_file_under_cursor()
-		if #entries > 0 then
-			util.ShellCmd({ "git", "restore", unpack(entries) }, function()
-				refresh()
-			end, function()
-				util.Notify("Cannot discard currently selected.", "error", "oz_git")
-			end)
-		end
-	end, { buffer = buf, desc = "discard entry under cursor or selected entries." })
-
-	-- untrack
-	map({ "n", "x" }, "K", function()
-		local entries = s_util.get_file_under_cursor()
-		if #entries > 0 then
-			util.ShellCmd({ "git", "rm", "--cached", unpack(entries) }, function()
-				refresh()
-			end, function()
-				util.Notify("currently selected can't be removed from tracking.", "error", "oz_git")
-			end)
-		end
-	end, { buffer = buf, desc = "Untrack file or selected files." })
-
-	-- rename
-	map("n", "grn", function()
-		local branch = s_util.get_branch_under_cursor()
-		local file = s_util.get_file_under_cursor(true)[1]
-
-		-- after complete
-		if file or branch then
-			git.after_exec_complete(function(code)
+	else
+		-- change branch
+		local branch_under_cursor = s_util.get_branch_under_cursor()
+		if branch_under_cursor then
+			git.after_exec_complete(function(code, out, err)
 				if code == 0 then
 					refresh()
+					vim.schedule(function()
+						util.Notify("Checked out branch '" .. branch_under_cursor .. "'.", nil, "oz_git")
+					end)
+				else
+					-- Assuming oz_git_win exists and is the intended error handler
+					require("oz.git.oz_git_win").open_oz_git_win(err, nil, "stderr")
 				end
 			end, true)
+			vim.cmd("Git checkout " .. branch_under_cursor)
 		end
-		if file then
-			local new_name = util.UserInput("New name: ", file)
-			if new_name then
-				vim.cmd("Git mv " .. file .. " " .. new_name)
-			end
-		elseif branch then
-			local new_name = util.UserInput("New name: ", branch)
-			if new_name then
-				vim.cmd("Git branch -m " .. branch .. " " .. new_name)
-			end
+	end
+end
+
+local function handle_goto_log()
+	vim.cmd("close") -- Close status window before opening log
+	require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
+end
+
+local function handle_goto_log_context()
+	local branch = s_util.get_branch_under_cursor()
+	local file = s_util.get_file_under_cursor(true)
+	vim.cmd("close") -- Close status window
+	if branch then
+		require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { branch })
+	elseif #file > 0 then
+		require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { "--", unpack(file) })
+	else
+		-- Fallback if neither branch nor file found? Or just call the standard log?
+		require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
+	end
+end
+
+local function handle_git_cmd()
+	local input = util.inactive_input(":Git", " ")
+	if input then
+		run_n_refresh("G " .. input) -- Assuming G alias or use Git
+	elseif input == "" then
+		vim.cmd("Git")
+	end
+end
+
+local function handle_goto_unstaged()
+	g_util.goto_str("Changes not staged for commit:")
+end
+
+local function handle_goto_staged()
+	g_util.goto_str("Changes to be committed:")
+end
+
+local function handle_goto_untracked()
+	g_util.goto_str("Untracked files:")
+end
+
+local function handle_diff_file_history()
+	local cur_file = s_util.get_file_under_cursor()
+	if #cur_file > 0 then
+		if util.usercmd_exist("DiffviewFileHistory") then
+			vim.cmd("DiffviewFileHistory " .. cur_file[1])
+		else
+			-- Fallback or alternative diff command if Diffview isn't present
+			vim.cmd("Git diff " .. cur_file[1]) -- This might not show history, consider alternative
+			util.Notify("DiffviewFileHistory command not found. Showing standard diff.", "warn", "oz_git")
 		end
-	end, { buffer = buf, desc = "Rename file or branch under cursor." })
+	end
+end
 
-	-- stash mappings
-	-- stash apply
-	map("n", "za", function()
-		local current_line = vim.api.nvim_get_current_line()
-		local stash = current_line:match("^%s*(stash@{%d+})")
-		if stash then
-			run_n_refresh("G stash apply -q " .. stash)
+local function handle_diff_file_changes()
+	local cur_file = s_util.get_file_under_cursor()
+	if #cur_file > 0 then
+		if util.usercmd_exist("DiffviewOpen") then
+			vim.cmd("DiffviewOpen --selected-file=" .. cur_file[1])
+			vim.schedule(function()
+				vim.cmd("DiffviewToggleFiles") -- Auto-toggle files panel perhaps?
+			end)
+		else
+			vim.cmd("Git diff " .. cur_file[1])
+			util.Notify("DiffviewOpen command not found. Showing standard diff.", "warn", "oz_git")
 		end
-	end, { buffer = buf, desc = "Apply stash under cursor." })
-	-- stash pop
-	map("n", "zp", function()
-		local current_line = vim.api.nvim_get_current_line()
-		local stash = current_line:match("^%s*(stash@{%d+})")
-		if stash then
-			run_n_refresh("G stash pop -q " .. stash)
+	end
+end
+
+local function handle_conflict_start_manual()
+	vim.cmd("close") -- Close status window
+	wizard.start_conflict_resolution()
+	vim.notify_once(
+		"]x / [x => jump between conflict marker.\n:CompleteConflictResolution => complete",
+		vim.log.levels.INFO,
+		{ title = "oz_git", timeout = 4000 }
+	)
+
+	-- Define command for completion within the resolution context
+	vim.api.nvim_create_user_command("CompleteConflictResolution", function()
+		wizard.complete_conflict_resolution()
+		vim.api.nvim_del_user_command("CompleteConflictResolution") -- Clean up command
+	end, {})
+end
+
+local function handle_conflict_complete()
+	if wizard.on_conflict_resolution then
+		wizard.complete_conflict_resolution()
+		-- Maybe refresh status after completion? Or rely on wizard to handle it.
+	else
+		util.Notify("Start the resolution with 'xo' first.", "warn", "oz_git")
+	end
+end
+
+local function handle_conflict_diffview()
+	if util.usercmd_exist("DiffviewOpen") then
+		vim.cmd("DiffviewOpen")
+	else
+		util.Notify("DiffviewOpen command not found.", "error", "oz_git")
+	end
+end
+
+local function handle_toggle_pick()
+	local line_content = vim.api.nvim_get_current_line()
+	local entry = line_content:match("^%s*(stash@{%d+})") -- Check for stash first
+	if not entry then
+		entry = s_util.get_branch_under_cursor() or s_util.get_file_under_cursor(true)[1]
+	end
+
+	if not entry then
+		util.Notify("Can only pick files, branches, or stashes.", "error", "oz_git")
+		return
+	end
+
+	-- Logic for picking/unpicking
+	if util.str_in_tbl(entry, status_grab_buffer) then
+		-- Unpick
+		if #status_grab_buffer > 1 then
+			util.remove_from_tbl(status_grab_buffer, entry)
+			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
+		elseif status_grab_buffer[1] == entry then
+			-- Last item, clear and stop monitoring
+			util.tbl_monitor().stop_monitoring(status_grab_buffer)
+			status_grab_buffer = {} -- Reassign to new empty table
+			status.status_grab_buffer = status_grab_buffer -- Update original reference if needed
+			vim.api.nvim_echo({ { "" } }, false, {})
 		end
-	end, { buffer = buf, desc = "Pop stash under cursor." })
-	-- stash drop
-	map("n", "zd", function()
-		local current_line = vim.api.nvim_get_current_line()
-		local stash = current_line:match("^%s*(stash@{%d+})")
-		if stash then
-			run_n_refresh("G stash drop -q " .. stash)
+	else
+		-- Pick
+		util.tbl_insert(status_grab_buffer, entry) -- Add to existing table
+
+		-- Start monitoring if it's the first item picked
+		if #status_grab_buffer == 1 then
+			util.tbl_monitor().start_monitoring(status_grab_buffer, {
+				interval = 2000,
+				buf = buf_id, -- Use captured buf_id
+				on_active = function(t)
+					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+				end,
+			})
+		else
+			-- Already monitoring, just update echo if needed
+			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
 		end
-	end, { buffer = buf, desc = "Drop stash under cursor." })
-	-- :G stash
-	map("n", "z<space>", function()
-		local input = util.inactive_input(":Git stash", " ")
-		if input then
-			run_n_refresh("Git stash " .. input)
-		elseif input == "" then
-			run_n_refresh("Git stash")
-		end
-	end, { silent = false, buffer = buf, desc = ":Git stash " })
+	end
+end
 
-	-- commit map
-	map("n", "cc", function()
-		run_n_refresh("Git commit")
-	end, { buffer = buf, desc = ":Git commit" })
+local function handle_edit_picked()
+	if #status_grab_buffer > 0 then
+		util.tbl_monitor().stop_monitoring(status_grab_buffer)
+		g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
+		status_grab_buffer = {} -- Clear after editing
+		status.status_grab_buffer = status_grab_buffer -- Update original reference
+	end
+end
 
-	-- commit ammend --no edit
-	map("n", "ce", function()
-		run_n_refresh("Git commit --amend --no-edit")
-	end, { buffer = buf, desc = ":Git commit --amend --no-edit" })
+local function handle_discard_picked()
+	if #status_grab_buffer > 0 then
+		util.tbl_monitor().stop_monitoring(status_grab_buffer)
+		status_grab_buffer = {} -- Clear the buffer
+		status.status_grab_buffer = status_grab_buffer -- Update original reference
+		vim.api.nvim_echo({ { "" } }, false, {}) -- Clear echo area
+	end
+end
 
-	-- commit amend
-	map("n", "ca", function()
-		run_n_refresh("Git commit --amend")
-	end, { buffer = buf, desc = ":Git commit --amend" })
+local function handle_remote_add_update()
+	local initial_input = " "
+	if util.ShellOutput("git remote") == "" then
+		initial_input = " origin " -- Suggest 'origin' if no remotes exist
+	end
+	local input_str = util.inactive_input(":Git remote add", initial_input)
 
-	-- G commit
-	map("n", "c<space>", ":Git commit ", { silent = false, buffer = buf, desc = "Open cmdline with :Git commit" })
+	if input_str then
+		local args = g_util.parse_args(input_str)
+		local remote_name = args[1]
+		local remote_url = args[2]
 
-	-- open current entry
-	map("n", "<cr>", function()
-		local entry = s_util.get_file_under_cursor()
-		if #entry > 0 then
-			if vim.fn.filereadable(entry[1]) == 1 or vim.fn.isdirectory(entry[1]) == 1 then
-				vim.cmd.wincmd("p")
-				vim.cmd("edit " .. entry[1])
+		if remote_name and remote_url then
+			local remotes = util.ShellOutputList("git remote")
+			if util.str_in_tbl(remote_name, remotes) then
+				-- Remote exists, ask to update URL
+				local ans = util.prompt(
+					"Remote '" .. remote_name .. "' already exists. Update URL?",
+					"&Yes\n&No",
+					2 -- Default to No
+				)
+				if ans == 1 then
+					git.after_exec_complete(function(code)
+						if code == 0 then
+							util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
+							refresh() -- Refresh status potentially
+						end
+					end)
+					vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
+				end
+			else
+				-- Add new remote
+				git.after_exec_complete(function(code)
+					if code == 0 then
+						util.Notify("Added new remote '" .. remote_name .. "'.", nil, "oz_git")
+						refresh() -- Refresh status potentially
+					end
+				end)
+				vim.cmd("G remote add " .. remote_name .. " " .. remote_url)
 			end
 		else
-			-- change branch
-			local branch_under_cursor = s_util.get_branch_under_cursor()
-			if branch_under_cursor then
-				git.after_exec_complete(function(code, out, err)
-					if code == 0 then
-						refresh()
-						vim.schedule(function()
-							util.Notify("Checkout to '" .. branch_under_cursor .. "' branch.", nil, "oz_git")
-						end)
-					else
-						require("oz.git.oz_git_win").open_oz_git_win(err, nil, "stderr")
-					end
-				end, true)
-				vim.cmd("Git checkout " .. branch_under_cursor)
+			util.Notify("Requires remote name and URL.", "warn", "oz_git")
+		end
+	end
+end
+
+local function handle_remote_remove()
+	local options = util.ShellOutputList("git remote")
+	if #options == 0 then
+		util.Notify("No remotes configured.", "info", "oz_git")
+		return
+	end
+
+	vim.ui.select(options, { prompt = "Select remote to remove:" }, function(choice)
+		if choice then
+			-- Confirmation prompt
+			local confirm_ans = util.prompt("Really remove remote '" .. choice .. "'?", "&Yes\n&No", 2)
+			if confirm_ans == 1 then
+				util.ShellCmd({ "git", "remote", "remove", choice }, function()
+					util.Notify("Remote '" .. choice .. "' removed.", nil, "oz_git")
+					refresh() -- Refresh status potentially
+				end, function(err)
+					util.Notify("Failed to remove remote '" .. choice .. "'. " .. (err or ""), "error", "oz_git")
+				end)
 			end
 		end
-	end, { buffer = buf, desc = "open entry under cursor / switch branches." })
+	end)
+end
+
+local function handle_remote_rename()
+	local options = util.ShellOutputList("git remote")
+	if #options == 0 then
+		util.Notify("No remotes to rename.", "info", "oz_git")
+		return
+	end
+
+	vim.ui.select(options, { prompt = "Select remote to rename:" }, function(choice)
+		if choice then
+			local new_name = util.UserInput("New name for '" .. choice .. "':", choice)
+			if new_name and new_name ~= choice then
+				util.ShellCmd({ "git", "remote", "rename", choice, new_name }, function()
+					util.Notify("Renamed remote '" .. choice .. "' to '" .. new_name .. "'.", nil, "oz_git")
+					refresh() -- Refresh status potentially
+				end, function(err)
+					util.Notify("Failed to rename remote '" .. choice .. "'. " .. (err or ""), "error", "oz_git")
+				end)
+			elseif new_name == choice then
+				util.Notify("New name is the same as the old name.", "info", "oz_git")
+			end
+		end
+	end)
+end
+
+local function handle_push()
+	local key = "git_user_push_flags"
+	local json = "oz_git"
+	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
+
+	if not current_branch then
+		util.Notify("Could not determine current branch.", "error", "oz_git")
+		return
+	end
+
+	local cur_remote = util.ShellOutput(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
+
+	local cached_flags = caching.get_data(key, json)
+	local suggested_input
+
+	if cur_remote_branch_ref == "" then
+		local remote = util.ShellOutputList("git remote")[1]
+		suggested_input = "-u " .. remote .. " " .. current_branch
+	elseif cached_flags then
+		suggested_input = string.format("%s %s %s:%s", cached_flags, cur_remote, current_branch, cur_remote_branch)
+	else
+		suggested_input = string.format("%s %s:%s", cur_remote, current_branch, cur_remote_branch)
+	end
+
+	local final_input = util.inactive_input(":Git push", " " .. suggested_input)
+
+	if final_input then
+		final_input = vim.trim(final_input)
+		run_n_refresh("Git push " .. final_input)
+
+		-- Update cache, replacing actual names with placeholders
+		local flags_to_cache = util.extract_flags(final_input)
+		caching.set_data(key, table.concat(flags_to_cache, " "), json)
+	end
+end
+
+local function handle_pull()
+	local key = "git_user_pull_flags"
+	local json = "oz_git"
+	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
+
+	if not current_branch then
+		util.Notify("Could not determine current branch.", "error", "oz_git")
+		return
+	end
+
+	local cur_remote = util.ShellOutput(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+
+	if cur_remote == "" or cur_remote_branch_ref == "" then
+		util.Notify(
+			"Upstream not configured for branch '" .. current_branch .. "'. Use 'bu' to set upstream.",
+			"warn",
+			"oz_git"
+		)
+		return
+	end
+
+	-- Extract remote branch name (handle potential errors/empty output)
+	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
+
+	local cached_flags = caching.get_data(key, json)
+	local suggested_input
+
+	if cached_flags then
+		-- Replace placeholders in cached flags
+		suggested_input = string.format("%s %s %s:%s", cached_flags, cur_remote, cur_remote_branch, current_branch)
+	else
+		suggested_input = cur_remote .. " " .. cur_remote_branch .. ":" .. current_branch
+	end
+
+	local final_input = util.inactive_input(":Git pull", " " .. suggested_input)
+
+	if final_input then
+		final_input = vim.trim(final_input)
+		run_n_refresh("Git pull " .. final_input)
+
+		-- Update cache, replacing actual names with placeholders
+		local flags_to_cache = util.extract_flags(final_input)
+		caching.set_data(key, table.concat(flags_to_cache, " "), json)
+	end
+end
+
+local function handle_branch_new()
+	local b_name = util.inactive_input(":Git branch ")
+	if b_name and vim.trim(b_name) ~= "" then
+		run_n_refresh("Git branch " .. b_name)
+	elseif b_name == "" then
+		util.Notify("Branch name cannot be empty.", "warn", "oz_git")
+	end
+end
+
+local function handle_branch_delete()
+	local branch = s_util.get_branch_under_cursor()
+	if branch then
+		if branch == state.current_branch then
+			util.Notify("Cannot delete the current branch.", "error", "oz_git")
+			return
+		end
+		local ans = util.prompt("Delete branch '" .. branch .. "'?", "&Yes\n&No", 2)
+		if ans == 1 then
+			-- Use -d for safe delete, maybe offer -D?
+			run_n_refresh("Git branch -d " .. branch)
+		end
+	else
+		util.Notify("Cursor not on a deletable branch.", "warn", "oz_git")
+	end
+end
+
+local function handle_branch_set_upstream()
+	local branch = s_util.get_branch_under_cursor()
+	if not branch then
+		util.Notify("Cursor not on a local branch.", "warn", "oz_git")
+		return
+	end
+
+	local remote_branches_raw = util.ShellOutputList("git branch -r")
+	local remote_branches = {}
+	for _, rb in ipairs(remote_branches_raw) do
+		local trimmed_rb = vim.trim(rb)
+		-- Filter out 'HEAD ->' entries if they appear
+		if not trimmed_rb:match("^HEAD ") then
+			table.insert(remote_branches, trimmed_rb)
+		end
+	end
+
+	if #remote_branches == 0 then
+		util.Notify("No remote branches found.", "info", "oz_git")
+		return
+	end
+
+	vim.ui.select(remote_branches, { prompt = "Select upstream branch for '" .. branch .. "':" }, function(choice)
+		if choice then
+			run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
+		end
+	end)
+end
+
+local function handle_branch_unset_upstream()
+	local branch = s_util.get_branch_under_cursor()
+	if branch then
+		local upstream = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", branch))
+		if upstream == "" then
+			util.Notify("Branch '" .. branch .. "' has no upstream configured.", "info", "oz_git")
+			return
+		end
+		local ans = util.prompt("Unset upstream ('" .. upstream .. "') for branch '" .. branch .. "'?", "&Yes\n&No", 2)
+		if ans == 1 then
+			run_n_refresh("Git branch --unset-upstream " .. branch)
+		end
+	else
+		util.Notify("Cursor not on a local branch.", "warn", "oz_git")
+	end
+end
+
+local function handle_branch_merge()
+	local branch_to_merge = s_util.get_branch_under_cursor()
+	if not branch_to_merge then
+		util.Notify("Cursor not on a branch to merge.", "warn", "oz_git")
+		return
+	end
+
+	if branch_to_merge == state.current_branch then
+		util.Notify("Cannot merge a branch into itself.", "warn", "oz_git")
+		return
+	end
+
+	local key = "git_user_merge_flags"
+	local json = "oz_git"
+	local cached_flags_template = caching.get_data(key, json) or "<branch_name>" -- Default to just branch name
+
+	-- Replace placeholder with actual branch name
+	local merge_cmd_suggestion = cached_flags_template:gsub("<branch_name>", branch_to_merge)
+	local merge_preview = ":Git merge " .. merge_cmd_suggestion
+
+	local prompt_text = merge_preview .. " [" .. branch_to_merge .. " -> " .. state.current_branch .. "]"
+	local ans = util.prompt(prompt_text, "&Yes\n&Edit\n&No", 1, "Merge Confirmation")
+
+	if ans == 1 then -- Yes
+		run_n_refresh("Git merge " .. merge_cmd_suggestion)
+	elseif ans == 2 then -- Edit
+		local edited_input = util.inactive_input(":Git merge ", merge_cmd_suggestion)
+		if edited_input then
+			run_n_refresh("Git merge " .. edited_input)
+			-- Update cache if user edited flags
+			local flags_to_cache = edited_input:gsub(branch_to_merge, "<branch_name>")
+			caching.set_data(key, flags_to_cache, json)
+		end
+	end -- ans == 3 (No) does nothing
+end
+
+local function handle_show_help()
+	local user_mappings = require("oz.git").user_config.mappings -- Get mappings at time of call
+	util.Show_buf_keymaps({
+		header_name = {
+			["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
+			["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "c" },
+			["Diff mappings"] = { "dd", "dc" }, -- Removed 'de', 'd' as they weren't defined above
+			["Tracking related mappings"] = { "s", "u", "K", "X" },
+			["Goto mappings"] = { "gu", "gs", "gU", "gl", "gL", "g<Space>", "g?" }, -- Added gL
+			["Remote mappings"] = { "ma", "md", "mr", "m" }, -- Added mP
+			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
+			["Conflict resolution mappings"] = { "xo", "xc", "xp" },
+			["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
+			["Branch mappings"] = { "bn", "bd", "bu", "bU", "bm" },
+			["Push/Pull mappings"] = { "p", "P" },
+		},
+		no_empty = true,
+	})
+end
+
+-- Specific help trigger function (itself uses an inline func, but it's simple)
+local function show_specific_help(key, title)
+	util.Show_buf_keymaps({ key = key, title = title })
+end
+
+-- Helper to map specific help keys
+local function map_help_key(key, title)
+	map("n", key, function()
+		show_specific_help(key, title)
+	end, { buffer = buf_id })
+end
+
+-- =======================
+--  Keymap Definitions
+-- =======================
+function M.keymaps_init(buf)
+	buf_id = buf
+
+	-- quit
+	map("n", "q", handle_quit, { buffer = buf_id, desc = "Close git status buffer." })
+
+	-- tab (toggle)
+	map("n", "<tab>", handle_toggle_diff_or_section, { buffer = buf_id, desc = "Toggle headings / inline file diff." })
+
+	-- refresh
+	map("n", "<C-r>", refresh, { buffer = buf_id, desc = "Refresh status buffer." })
+
+	-- stage
+	map({ "n", "x" }, "s", handle_stage, { buffer = buf_id, desc = "Stage entry under cursor or selected entries." })
+
+	-- unstage
+	map(
+		{ "n", "x" },
+		"u",
+		handle_unstage,
+		{ buffer = buf_id, desc = "Unstage entry under cursor or selected entries." }
+	)
+
+	-- discard
+	map(
+		{ "n", "x" },
+		"X",
+		handle_discard,
+		{ buffer = buf_id, desc = "Discard entry under cursor or selected entries." }
+	)
+
+	-- untrack
+	map({ "n", "x" }, "K", handle_untrack, { buffer = buf_id, desc = "Untrack file or selected files." })
+
+	-- rename
+	map("n", "grn", handle_rename, { buffer = buf_id, desc = "Rename file or branch under cursor." })
+
+	-- stash apply
+	map("n", "za", handle_stash_apply, { buffer = buf_id, desc = "Apply stash under cursor." })
+	-- stash pop
+	map("n", "zp", handle_stash_pop, { buffer = buf_id, desc = "Pop stash under cursor." })
+	-- stash drop
+	map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor." })
+	-- :Git stash
+	map("n", "z<space>", handle_stash_cmd, { silent = false, buffer = buf_id, desc = ":Git stash " })
+
+	-- commit map
+	map("n", "cc", handle_commit, { buffer = buf_id, desc = ":Git commit" })
+	-- commit ammend --no edit
+	map("n", "ce", handle_commit_amend_no_edit, { buffer = buf_id, desc = ":Git commit --amend --no-edit" })
+	-- commit amend
+	map("n", "ca", handle_commit_amend, { buffer = buf_id, desc = ":Git commit --amend" })
+	-- G commit cmdline
+	map("n", "c<space>", ":Git commit ", { silent = false, buffer = buf_id, desc = "Open cmdline with :Git commit" }) -- Direct command string mapping
+
+	-- open current entry / switch branch
+	map(
+		"n",
+		"<cr>",
+		handle_open_entry_or_switch_branch,
+		{ buffer = buf_id, desc = "open entry under cursor / switch branches." }
+	)
 
 	-- [g]oto mode
 	-- log
-	map("n", "gl", function()
-		vim.cmd("close")
-		require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
-	end, { buffer = buf, desc = "goto commit logs." })
-	map("n", "gL", function()
-		local branch = s_util.get_branch_under_cursor()
-		local file = s_util.get_file_under_cursor(true)
-		vim.cmd("close")
-		if branch then
-			require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { branch })
-		elseif #file > 0 then
-			require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { "--", unpack(file) })
-		end
-	end, { buffer = buf, desc = "goto commit logs." })
+	map("n", "gl", handle_goto_log, { buffer = buf_id, desc = "goto commit logs." })
+	map("n", "gL", handle_goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch." })
 	-- :Git
-	map("n", "g<space>", function()
-		local input = util.inactive_input(":Git", " ")
-		if input then
-			run_n_refresh("G " .. input)
-		elseif input == "" then
-			vim.cmd("Git")
-		end
-	end, { silent = false, buffer = buf, desc = ":Git <cmd>" })
-
-	map("n", "gu", function()
-		g_util.goto_str("Changes not staged for commit:")
-	end, { buffer = buf, desc = "goto unstaged changes section." })
-	map("n", "gs", function()
-		g_util.goto_str("Changes to be committed:")
-	end, { buffer = buf, desc = "goto staged for commit section." })
-	map("n", "gU", function()
-		g_util.goto_str("Untracked files:")
-	end, { buffer = buf, desc = "goto untracked files section." })
+	map("n", "g<space>", handle_git_cmd, { silent = false, buffer = buf_id, desc = ":Git <cmd>" })
+	-- sections
+	map("n", "gu", handle_goto_unstaged, { buffer = buf_id, desc = "goto unstaged changes section." })
+	map("n", "gs", handle_goto_staged, { buffer = buf_id, desc = "goto staged for commit section." })
+	map("n", "gU", handle_goto_untracked, { buffer = buf_id, desc = "goto untracked files section." })
 
 	-- [d]iff mode
-	-- diff file
-	map("n", "dc", function()
-		local cur_file = s_util.get_file_under_cursor()
-		if #cur_file > 0 then
-			if util.usercmd_exist("DiffviewFileHistory") then
-				vim.cmd("DiffviewFileHistory " .. cur_file[1])
-			else
-				vim.cmd("Git diff " .. cur_file[1])
-			end
-		end
-	end, { buffer = buf, desc = "diff of file under cursor throughout its commits." })
+	-- diff file history
+	map("n", "dc", handle_diff_file_history, { buffer = buf_id, desc = "diff file history (needs Diffview)." })
+	-- diff file changes
+	map("n", "dd", handle_diff_file_changes, { buffer = buf_id, desc = "diff unstaged changes (needs Diffview)." })
 
-	map("n", "dd", function()
-		local cur_file = s_util.get_file_under_cursor()
-		if #cur_file > 0 then
-			if util.usercmd_exist("DiffviewOpen") then
-				vim.cmd("DiffviewOpen --selected-file=" .. cur_file[1])
-				vim.schedule(function()
-					vim.cmd("DiffviewToggleFiles")
-				end)
-			else
-				vim.cmd("Git diff " .. cur_file[1])
-			end
-		end
-	end, { buffer = buf, desc = "diff unstaged changes of file under cursor." })
-
-	-- Merge helper
+	-- Merge/Conflict helper
 	if state.in_conflict then
+		-- Notifications about conflict state
 		if wizard.on_conflict_resolution_complete then
 			vim.notify_once(
-				"Stage the changes then perform the commit.",
+				"Conflict resolution marked as complete. Stage changes and commit.",
 				vim.log.levels.INFO,
 				{ title = "oz_git", timeout = 3000 }
 			)
 		else
 			vim.notify_once(
-				"Press 'xo' or 'xp' to start conflict resolution.",
+				"File has conflicts. Press 'xo' (manual) or 'xp' (Diffview) to resolve.",
 				vim.log.levels.INFO,
 				{ title = "oz_git", timeout = 3000 }
 			)
 		end
 		-- start resolution
-		map("n", "xo", function()
-			vim.cmd("close")
-			wizard.start_conflict_resolution()
-			vim.notify_once(
-				"]x / [x => jump between conflict marker.\n:CompleteConflictResolution => complete",
-				vim.log.levels.INFO,
-				{ title = "oz_git", timeout = 4000 }
-			)
-
-			vim.api.nvim_create_user_command("CompleteConflictResolution", function()
-				wizard.complete_conflict_resolution()
-				vim.api.nvim_del_user_command("CompleteConflictResolution")
-			end, {})
-		end, { buffer = buf, desc = "Start manual conflict resolution." })
-
-		-- complete
-		map("n", "xc", function()
-			if wizard.on_conflict_resolution then
-				wizard.complete_conflict_resolution()
-			else
-				util.Notify("Start the resolution with 'xo' first.", "warn", "oz_git")
-			end
-		end, { buffer = buf, desc = "Complete manual conflict resolution." })
-
-		-- diffview
+		map("n", "xo", handle_conflict_start_manual, { buffer = buf_id, desc = "Start manual conflict resolution." })
+		-- complete (manual)
+		map("n", "xc", handle_conflict_complete, { buffer = buf_id, desc = "Complete manual conflict resolution." })
+		-- diffview resolve
 		if util.usercmd_exist("DiffviewOpen") then
-			map("n", "xp", function()
-				vim.cmd("DiffviewOpen")
-			end, {
-
-				buffer = buf,
-
-				desc = "Open Diffview to perform conflict resolution.",
-			})
+			map(
+				"n",
+				"xp",
+				handle_conflict_diffview,
+				{ buffer = buf_id, desc = "Open Diffview for conflict resolution." }
+			)
 		end
 	end
 
 	-- Pick Mode
-	-- pick files
-	local user_mappings = require("oz.git").user_config.mappings
-	map("n", user_mappings.toggle_pick, function()
-		local entry = vim.api.nvim_get_current_line():match("^%s*(stash@{%d+})")
-		if not entry then
-			entry = s_util.get_branch_under_cursor() or s_util.get_file_under_cursor(true)[1]
-		end
-
-		if not entry then
-			util.Notify("You can only pick a file or branch", "error", "oz_git")
-			return
-		end
-
-		-- unpick
-		if util.str_in_tbl(entry, status_grab_buffer) then
-			if #status_grab_buffer > 1 then
-				util.remove_from_tbl(status_grab_buffer, entry)
-				vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
-			elseif status_grab_buffer[1] == entry then
-				util.tbl_monitor().stop_monitoring(status_grab_buffer)
-				status_grab_buffer = {}
-				vim.api.nvim_echo({ { "" } }, false, {})
-			end
-		else
-			-- pick
-			util.tbl_insert(status_grab_buffer, entry)
-
-			util.tbl_monitor().start_monitoring(status_grab_buffer, {
-				interval = 2000,
-				buf = buf,
-				on_active = function(t)
-					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
-				end,
-			})
-		end
-	end, { nowait = true, buffer = buf, desc = "Pick or unpick any file/dir/branch/stash under cursor." })
-
-	-- edit picked
-	map("n", { "a", "i" }, function()
-		if #status_grab_buffer ~= 0 then
-			util.tbl_monitor().stop_monitoring(status_grab_buffer)
-			g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
-			status_grab_buffer = {}
-		end
-	end, { nowait = true, buffer = buf, desc = "Enter cmdline to edit picked entries." })
-
-	-- discard picked
-	map("n", user_mappings.unpick_all, function()
-		util.tbl_monitor().stop_monitoring(status_grab_buffer)
-
-		status_grab_buffer = #status_grab_buffer > 0 and {} or status_grab_buffer
-		vim.api.nvim_echo({ { "" } }, false, {})
-	end, { nowait = true, buffer = buf, desc = "Discard any picked entries." })
+	local user_mappings = require("oz.git").user_config.mappings -- Ensure this is available
+	map(
+		"n",
+		user_mappings.toggle_pick,
+		handle_toggle_pick,
+		{ nowait = true, buffer = buf_id, desc = "Pick/unpick file/branch/stash." }
+	)
+	map(
+		"n",
+		{ "a", "i" },
+		handle_edit_picked,
+		{ nowait = true, buffer = buf_id, desc = "Enter cmdline to edit picked." }
+	)
+	map(
+		"n",
+		user_mappings.unpick_all,
+		handle_discard_picked,
+		{ nowait = true, buffer = buf_id, desc = "Discard picked entries." }
+	)
 
 	-- Remote mappings
-	-- remote add
-	map("n", "ma", function()
-		local input = nil
-		if util.ShellOutput("git remote") ~= "" then
-			input = util.inactive_input(":Git remote add ")
-		else
-			input = util.inactive_input(":Git remote add ", "origin ")
-		end
+	map("n", "ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
+	map("n", "md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote." })
+	map("n", "mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote." })
 
-		if input then
-			input = g_util.parse_args(input)
-			local remote_name = input[1]
-			local remote_url = input[2]
-
-			if remote_name and remote_url then
-				local remotes = util.ShellOutputList("git remote")
-				if util.str_in_tbl(remote_name, remotes) then
-					local ans =
-						util.prompt("url for " .. remote_name .. " already exists, do you want to update?", "&Yes\n&No")
-					if ans == 1 then
-						git.after_exec_complete(function(code)
-							if code == 0 then
-								util.Notify("Url of '" .. remote_name .. "' has been updated.", nil, "oz_git")
-							end
-						end)
-						vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
-					end
-				else
-					git.after_exec_complete(function(code)
-						if code == 0 then
-							util.Notify("A new remote '" .. remote_name .. "' added.", nil, "oz_git")
-						end
-					end)
-					vim.cmd("G remote add " .. remote_name .. " " .. remote_url)
-				end
-			end
-		end
-	end, { buffer = buf, desc = "Add or update remotes." })
-
-	-- remove remote
-	map("n", "md", function()
-		local options = util.ShellOutputList("git remote")
-
-		vim.ui.select(options, {
-			prompt = "select remote to delete:",
-		}, function(choice)
-			if choice then
-				util.ShellCmd({ "git", "remote", "remove", choice }, function()
-					util.Notify("Remote " .. choice .. " has been removed!", nil, "oz_git")
-				end)
-			end
-		end)
-	end, { buffer = buf, desc = "Remove remote." })
-
-	-- rename remote
-	map("n", "mr", function()
-		local options = util.ShellOutputList("git remote")
-
-		vim.ui.select(options, {
-			prompt = "select remote to rename:",
-		}, function(choice)
-			if choice then
-				local name = util.UserInput("New name: ", choice)
-				if name then
-					util.ShellCmd({ "git", "remote", "rename", choice, name }, function()
-						util.Notify("Remote renamed from " .. choice .. " -> " .. name, nil, "oz_git")
-					end)
-				end
-			end
-		end)
-	end, { buffer = buf, desc = "Rename remote." })
-
-	-- remote push
-	map("n", "P", function()
-		local branch = s_util.get_branch_under_cursor()
-		if branch then
-			local remote = util.ShellOutputList("git remote")
-			local input = util.inactive_input(":Git push", " " .. remote[1] .. " " .. branch)
-			if input then
-				run_n_refresh_err("Git push " .. input)
-			end
-		else
-			run_n_refresh_err("Git push")
-		end
-	end, { buffer = buf, desc = ":Git push or push to branch under cursor." })
-
-	-- pull
-	map("n", "p", function()
-		local key = "git_user_pull_flags"
-		local json = "oz_git"
-		local cached_data = caching.get_data(key, json)
-
-		local cur_remote = util.ShellOutput(string.format("git config --get branch.%s.remote", state.current_branch))
-		if cur_remote == "" then
-			util.Notify("No remote configured.", "error", "oz_git")
-			return
-		end
-		local cur_remote_branch = util.ShellOutput("git rev-parse --abbrev-ref @{u} | awk -F'/' '{print $2}'")
-
-		local input
-		if cached_data then
-			cached_data = cached_data:gsub("<cur_remote>", cur_remote):gsub("<cur_branch>", cur_remote_branch)
-			input = util.inactive_input(":Git pull", " " .. cached_data)
-		else
-			input = util.inactive_input(":Git pull", " " .. cur_remote .. " " .. cur_remote_branch)
-		end
-
-		if input then
-			input = vim.trim(input)
-			run_n_refresh("Git pull " .. input)
-			input = input:gsub(cur_remote, "<cur_remote>"):gsub(cur_remote_branch, "<cur_branch>")
-			caching.set_data(key, input, json)
-		end
-	end, { buffer = buf, desc = "Git pull with specified flags." })
+	-- push / pull
+	map(
+		"n",
+		"p",
+		handle_pull,
+		{ buffer = buf_id, desc = "Git pull or pull from branch under cursor with specified flags" }
+	)
+	map(
+		"n",
+		"P",
+		handle_push,
+		{ buffer = buf_id, desc = "Git push or push to branch under cursor with specified flags" }
+	)
 
 	-- [B]ranch mappings
-	-- new branch
-	map("n", "bn", function()
-		local b_name = util.inactive_input(":Git branch ")
-		if b_name then
-			run_n_refresh("Git branch " .. b_name)
-		end
-	end, { buffer = buf, desc = "Create a new branch." })
-
-	-- delete branch
-	map("n", "bd", function()
-		local branch = s_util.get_branch_under_cursor()
-		if branch then
-			local ans = util.prompt("Do you really want to delete branch: " .. branch .. "?", "&yes\n&no", 1, "Info")
-			if ans == 1 then
-				run_n_refresh("Git branch -d " .. branch)
-			end
-		end
-	end, { buffer = buf, desc = "Delete branch under cursor." })
-
-	map("n", "bu", function()
-		local remote_branch = util.ShellOutputList("git branch -r | awk '{print $1}'")
-		local branch = s_util.get_branch_under_cursor()
-		if branch and #remote_branch >= 1 then
-			vim.ui.select(remote_branch, {
-				prompt = "select remote branch:",
-			}, function(choice)
-				if choice then
-					run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
-				end
-			end)
-		end
-	end, { buffer = buf, desc = "Set a availble upstream of current branch under cursor." })
-
-	map("n", "bU", function()
-		local branch = s_util.get_branch_under_cursor()
-		if branch then
-			local ans = util.prompt("Do you really want to unset upstream of " .. branch .. "?", "&yes\n&no", 1, "Info")
-			if ans == 1 then
-				run_n_refresh("Git branch --unset-upstream " .. branch)
-			end
-		end
-	end, { buffer = buf, desc = "Unset the upstream of current branch under cursor." })
-
-	map("n", "bm", function()
-		local branch = s_util.get_branch_under_cursor()
-		local key = "git_user_merge_flags"
-		local json = "oz_git"
-		if branch then
-			local cached_data = caching.get_data(key, json) or branch
-			cached_data = cached_data:gsub("<branch_name>", branch)
-
-			local ans = util.prompt(
-				":Git merge " .. cached_data .. " [" .. branch .. " -> " .. state.current_branch .. "]",
-				"&yes\n&edit\n&no",
-				1,
-				"Info"
-			)
-			if ans == 1 then
-				run_n_refresh("Git merge " .. branch)
-			elseif ans == 2 then
-				local input = util.inactive_input(":Git merge ", cached_data)
-				if input then
-					run_n_refresh("Git merge " .. input)
-					local caching_data = input:gsub(branch, "<branch_name>")
-					caching.set_data(key, caching_data, json)
-				end
-			end
-		end
-	end, { buffer = buf, desc = "Merge with branch under cursor." })
+	map("n", "bn", handle_branch_new, { buffer = buf_id, desc = "Create a new branch." })
+	map("n", "bd", handle_branch_delete, { buffer = buf_id, desc = "Delete branch under cursor." })
+	map("n", "bu", handle_branch_set_upstream, { buffer = buf_id, desc = "Set upstream for branch under cursor." })
+	map("n", "bU", handle_branch_unset_upstream, { buffer = buf_id, desc = "Unset upstream for branch under cursor." })
+	map("n", "bm", handle_branch_merge, { buffer = buf_id, desc = "Merge with branch under cursor." })
 
 	-- help
-	map("n", "g?", function()
-		util.Show_buf_keymaps({
-			header_name = {
-				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-				["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "c" },
-				["Diff mappings"] = { "dd", "dc", "de", "d" },
-				["Tracking related mappings"] = { "s", "u", "K", "X" },
-				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
-				["Remote mappings"] = { "ma", "md", "mr", "m" },
-				["Quick actions"] = { "grn", "<Tab>", "<CR>" },
-				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
-				["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
-				["Branch mappings"] = { "bn", "bd", "bu", "bU", "bm" },
-				["Push/Pull mappings"] = { "P", "p" },
-			},
-			no_empty = true,
-		})
-	end, { buffer = buf, desc = "Show all availble keymaps." })
-
-	help_key("m", "Remote mappings")
-	help_key("c", "Commit mappings")
-	help_key("z", "Stash mappings")
-	help_key("d", "Diff mappings")
-	help_key("b", "Branch mappings")
-end
+	map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })
+	map_help_key("m", "Remote mappings")
+	map_help_key("c", "Commit mappings")
+	map_help_key("z", "Stash mappings")
+	map_help_key("d", "Diff mappings")
+	map_help_key("b", "Branch mappings")
+end -- End of M.keymaps_init
 
 return M

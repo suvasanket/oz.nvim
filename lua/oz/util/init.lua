@@ -161,5 +161,20 @@ function M.clear_qflist(title)
 		vim.cmd("cclose")
 	end
 end
+function M.extract_flags(cmd_str)
+    local flags = {}
+
+    if not cmd_str or cmd_str == "" then
+        return flags
+    end
+
+    for part in string.gmatch(cmd_str, "[^%s]+") do
+        if string.sub(part, 1, 1) == '-' then
+            table.insert(flags, part)
+        end
+    end
+
+    return flags
+end
 
 return M
