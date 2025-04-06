@@ -187,6 +187,9 @@ function M.run_git_with_progress(command, args, output_callback)
 		end,
 		on_exit = function(_, exit_code)
 			stop_spinner(exit_code)
+			vim.schedule(function()
+				require("oz.git").refresh_buf()
+			end)
 
 			if exit_code == 0 then
 				if fidget then

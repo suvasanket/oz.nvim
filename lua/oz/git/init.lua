@@ -77,16 +77,14 @@ function M.after_exec_complete(callback, ret)
 	exec_complete_callback_return = ret or false
 end
 
-local function refresh_buf()
+function M.refresh_buf()
 	local status_win = require("oz.git.status").status_win
 	local log_win = require("oz.git.git_log").log_win
 
-	if log_win or status_win then
-		if vim.api.nvim_win_is_valid(status_win) then
-			require("oz.git.status").refresh_status_buf(true)
-		elseif vim.api.nvim_win_is_valid(log_win) then
-			require("oz.git.git_log").refresh_commit_log(true)
-		end
+	if status_win and vim.api.nvim_win_is_valid(status_win) then
+		require("oz.git.status").refresh_status_buf(true)
+	elseif log_win and vim.api.nvim_win_is_valid(log_win) then
+		require("oz.git.git_log").refresh_commit_log(true)
 	end
 end
 
@@ -139,7 +137,9 @@ function M.run_git_cmd(args)
 				end
 			else
 				-- refresh
-				refresh_buf()
+				vim.schedule(function()
+					M.refresh_buf()
+				end)
 			end
 
 			if code == 0 then

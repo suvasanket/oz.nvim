@@ -28,14 +28,6 @@ local function run_n_refresh(cmd)
 	vim.cmd(cmd)
 end
 
--- Helper to run Vim command and refresh status buffer regardless of success/error
-local function run_n_refresh_err(cmd)
-	git.after_exec_complete(function()
-		refresh()
-	end)
-	vim.cmd(cmd)
-end
-
 -- ==================================
 --  Named Functions for Keymap Actions
 -- ==================================
@@ -163,15 +155,6 @@ local function handle_stash_drop()
 	end
 end
 
-local function handle_stash_cmd()
-	local input = util.inactive_input(":Git stash", " ")
-	if input then
-		run_n_refresh("Git stash " .. input)
-	elseif input == "" then
-		run_n_refresh("Git stash")
-	end
-end
-
 local function handle_commit()
 	run_n_refresh("Git commit")
 end
@@ -230,15 +213,6 @@ local function handle_goto_log_context()
 	else
 		-- Fallback if neither branch nor file found? Or just call the standard log?
 		require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
-	end
-end
-
-local function handle_git_cmd()
-	local input = util.inactive_input(":Git", " ")
-	if input then
-		run_n_refresh("G " .. input) -- Assuming G alias or use Git
-	elseif input == "" then
-		vim.cmd("Git")
 	end
 end
 
@@ -684,15 +658,10 @@ local function handle_show_help()
 	})
 end
 
--- Specific help trigger function (itself uses an inline func, but it's simple)
-local function show_specific_help(key, title)
-	util.Show_buf_keymaps({ key = key, title = title })
-end
-
 -- Helper to map specific help keys
 local function map_help_key(key, title)
 	map("n", key, function()
-		show_specific_help(key, title)
+        util.Show_buf_keymaps({ key = key, title = title })
 	end, { buffer = buf_id })
 end
 
@@ -743,7 +712,7 @@ function M.keymaps_init(buf)
 	-- stash drop
 	map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor." })
 	-- :Git stash
-	map("n", "z<space>", handle_stash_cmd, { silent = false, buffer = buf_id, desc = ":Git stash " })
+	map("n", "z<space>", "Git stash ", { silent = false, buffer = buf_id, desc = ":Git stash " })
 
 	-- commit map
 	map("n", "cc", handle_commit, { buffer = buf_id, desc = ":Git commit" })
@@ -767,7 +736,7 @@ function M.keymaps_init(buf)
 	map("n", "gl", handle_goto_log, { buffer = buf_id, desc = "goto commit logs." })
 	map("n", "gL", handle_goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch." })
 	-- :Git
-	map("n", "g<space>", handle_git_cmd, { silent = false, buffer = buf_id, desc = ":Git <cmd>" })
+	map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = ":Git <cmd>" })
 	-- sections
 	map("n", "gu", handle_goto_unstaged, { buffer = buf_id, desc = "goto unstaged changes section." })
 	map("n", "gs", handle_goto_staged, { buffer = buf_id, desc = "goto staged for commit section." })
@@ -864,6 +833,7 @@ function M.keymaps_init(buf)
 	map_help_key("z", "Stash mappings")
 	map_help_key("d", "Diff mappings")
 	map_help_key("b", "Branch mappings")
+    map_help_key("g", "[g] mappings")
 end -- End of M.keymaps_init
 
 return M

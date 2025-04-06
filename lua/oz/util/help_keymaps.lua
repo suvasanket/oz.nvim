@@ -23,7 +23,7 @@ local function set_keymaps(keymaps, arg_key)
 		vim.keymap.set("n", key, function()
 			vim.cmd("close")
 			vim.cmd.normal(arg_key .. key)
-		end, { nowait = true, buffer = key_help_buf, remap = false, silent = true })
+		end, { nowait = true, buffer = key_help_buf, remap = false })
 	end
 end
 
