@@ -67,7 +67,7 @@ function M.create_temp_commit_buffer(initial_content, callback)
 				if callback then
 					callback()
 				else
-					require("oz.git.wizard").commit_wizard()
+					require("oz.git.wizard").push_wizard()
 				end
 			end, function()
 				util.Notify("Error occured while commiting.", "error", "oz_git")

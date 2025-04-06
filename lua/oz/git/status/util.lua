@@ -14,7 +14,7 @@ function M.get_heading_tbl(lines)
 	M.headings_table = {}
 	local current_heading = nil
 	local branch_line = util.ShellOutputList("git branch -vv")
-	local branch_heading = "On branch " .. status.current_branch
+	local branch_heading = "On branch " .. require("oz.git.status").state.current_branch
 
 	M.headings_table[branch_heading] = {}
 	for _, line in ipairs(branch_line) do
@@ -96,7 +96,7 @@ end
 function M.get_file_under_cursor(original)
 	local entries = {}
 	local lines = {}
-	local cwd = CWD or vim.fn.getcwd()
+	local cwd = require("oz.git.status").state.cwd or vim.fn.getcwd()
 	if vim.api.nvim_get_mode().mode == "n" then
 		local line = vim.fn.getline(".")
 		table.insert(lines, line)
@@ -144,7 +144,7 @@ function M.get_file_under_cursor(original)
 end
 
 function M.get_branch_under_cursor()
-	local branch_heading = "On branch " .. status.current_branch
+	local branch_heading = "On branch " .. require("oz.git.status").state.current_branch
 	local tbl = M.headings_table[branch_heading]
 	local current_line = vim.api.nvim_get_current_line()
 

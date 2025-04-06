@@ -4,10 +4,8 @@ local util = require("oz.util")
 M.status_win = nil
 M.status_buf = nil
 
+M.state = {}
 M.status_grab_buffer = {}
-M.current_branch = nil
-M.in_conflict = false
-CWD = nil
 
 -- hl
 local function status_buf_hl()
@@ -94,7 +92,6 @@ local function open_status_buf(lines)
 			callback = function()
 				M.status_buf = nil
 				M.status_win = nil
-				CWD = nil
 			end,
 		})
 	else
@@ -180,7 +177,7 @@ function M.refresh_status_buf(passive)
 	else -- active
 		local pos = vim.api.nvim_win_get_cursor(0)
 		vim.fn.timer_start(0, function()
-			vim.cmd("lcd " .. CWD)
+			vim.cmd("lcd " .. M.state.cwd)
 
 			-- recall status
 			M.GitStatus()
@@ -200,12 +197,12 @@ end
 function M.GitStatus()
 	local s_util = require("oz.git.status.util")
 
-	CWD = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
-	M.current_branch = util.ShellOutput("git branch --show-current")
+	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
+	M.state.current_branch = util.ShellOutput("git branch --show-current")
 	local lines = generate_status_content()
 
 	open_status_buf(lines)
-	M.in_conflict = is_conflict(lines)
+	M.state.in_conflict = is_conflict(lines)
 	s_util.get_heading_tbl(lines)
 end
 

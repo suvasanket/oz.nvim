@@ -50,7 +50,11 @@ local function different_cmd_runner(args_table, args_str)
 
 			require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
 				oz_git_win.open_oz_git_win(lines, args_str, "stderr")
-				g_util.set_cmdline(wizard.get_git_suggestions(lines, args_table)) -- git suggestion
+				-- git suggestion
+				local suggestion = wizard.get_git_suggestions(lines, args_table)
+				if suggestion then
+					g_util.set_cmdline(suggestion)
+				end
 			end)
 		elseif M.user_config and M.user_config.remote_operation_exec_method == "term" then
 			vim.cmd("hor term git " .. table.concat(args_table, " "))
@@ -90,7 +94,6 @@ end
 function M.run_git_cmd(args)
 	args = g_util.expand_expressions(args)
 	local args_table = g_util.parse_args(args)
-	local cmd = args_table[1]
 	local suggestion = nil
 	local std_out = {}
 	local std_err = {}
@@ -140,9 +143,7 @@ function M.run_git_cmd(args)
 			end
 
 			if code == 0 then
-				if cmd == "commit" then
-					wizard.commit_wizard()
-				elseif #std_out > 0 then
+				if #std_out > 0 then
 					if #std_out <= 2 then
 						util.Notify(table.concat(std_out, "\n"), "info", "oz_git")
 					else

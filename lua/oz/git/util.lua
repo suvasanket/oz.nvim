@@ -81,8 +81,8 @@ function M.set_cmdline(str)
 end
 
 function M.if_in_git()
-	local res = util.ShellOutput("git rev-parse --is-inside-work-tree 2>/dev/null")
-	res = vim.trim(res)
+	local res = util.ShellOutputList("git rev-parse --is-inside-work-tree 2>/dev/null")
+	res = vim.trim(res[1])
 	if res:find("true") then
 		return true
 	else

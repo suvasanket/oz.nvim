@@ -203,7 +203,7 @@ function M.get_git_suggestions(data, arg_tbl)
 end
 
 -- commit push wizard --
-function M.commit_wizard()
+function M.push_wizard()
 	local remote = util.ShellOutput("git config --get remote.origin.url")
 	local no_unpushed = util.ShellOutput("git rev-list --count @{u}..HEAD")
 	if remote ~= "" then

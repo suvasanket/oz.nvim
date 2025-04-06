@@ -194,6 +194,7 @@ local function ft_mappings(buf)
 end
 
 -- highlights
+--TODO error, fatal to red.
 local function ft_hl()
 	vim.cmd("syntax clear")
 

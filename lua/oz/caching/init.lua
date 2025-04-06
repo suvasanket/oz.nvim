@@ -24,22 +24,22 @@ local function ensure_dir(filepath)
 	local dir = filepath:match("(.+)/[^/]+$")
 	if dir then
 		local cmd = { "mkdir", "-p", dir }
-        util.ShellCmd(cmd, nil, function ()
-            error("oz: something went wrong while creating dir.")
-        end)
+		util.ShellCmd(cmd, nil, function()
+			error("oz: something went wrong while creating dir.")
+		end)
 	end
 end
 
 -- set data
-function M.set_data(key, value, json_name)
+function M.set_data(key, value, json_name, args)
 	-- Ensure parent directory exists.
 	local json_file = data_dir .. "/oz/" .. json_name .. ".json"
 	ensure_dir(json_file)
 
-    -- delete empty value
-    if value == "" then
-        value = nil
-    end
+	-- delete empty value
+	if value == "" then
+		value = nil
+	end
 
 	-- Read the JSON file (if exists) or start with an empty table.
 	local data = {}
@@ -53,11 +53,15 @@ function M.set_data(key, value, json_name)
 				if ok and type(decoded) == "table" then
 					data = decoded
 				else
-                    util.Notify("Failed to decode JSON from " .. json_file, "warn")
+					if args.verbose then
+						util.Notify("Failed to decode JSON from " .. json_file, "warn")
+					end
 				end
 			end
 		else
-			util.Notify("Failed to open file " .. json_file, "error")
+			if args.verbose then
+				util.Notify("Failed to open file " .. json_file, "error")
+			end
 		end
 	end
 
@@ -73,39 +77,47 @@ function M.set_data(key, value, json_name)
 		f:write(new_content)
 		f:close()
 	else
-        util.Notify("oz: Error occurred while writing data to " .. json_name, "error")
+		util.Notify("oz: Error occurred while writing data to " .. json_name, "error")
 	end
 end
 
-function M.get_data(key, json_name)
-    json_name = data_dir .. "/oz/" .. json_name .. ".json"
+function M.get_data(key, json_name, args)
+	json_name = data_dir .. "/oz/" .. json_name .. ".json"
 
-    if not file_exists(json_name) then
-        util.Notify("oz: File does not exist: " .. json_name, "warn")
-        return nil
-    end
+	if not file_exists(json_name) then
+		if args.verbose then
+			util.Notify("oz: File does not exist: " .. json_name, "warn")
+		end
+		return nil
+	end
 
-    local file = io.open(json_name, "r")
-    if not file then
-        util.Notify("oz: Failed to open file: " .. json_name, "error")
-        return nil
-    end
+	local file = io.open(json_name, "r")
+	if not file then
+		if args.verbose then
+			util.Notify("oz: Failed to open file: " .. json_name, "error")
+		end
+		return nil
+	end
 
-    local content = file:read("*a")
-    file:close()
+	local content = file:read("*a")
+	file:close()
 
-    if not content or content == "" then
-        util.Notify("oz: File is empty: " .. json_name, "warn")
-        return nil
-    end
+	if not content or content == "" then
+		if args.verbose then
+			util.Notify("oz: File is empty: " .. json_name, "warn")
+		end
+		return nil
+	end
 
-    local ok, data = pcall(vim.fn.json_decode, content)
-    if not ok then
-        util.Notify("oz: Failed to decode JSON from " .. json_name, "error")
-        return nil
-    end
+	local ok, data = pcall(vim.fn.json_decode, content)
+	if not ok then
+		if args.verbose then
+			util.Notify("oz: Failed to decode JSON from " .. json_name, "error")
+		end
+		return nil
+	end
 
-    return data[key]
+	return data[key]
 end
 
 -- set project cmd

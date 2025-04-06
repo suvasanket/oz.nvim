@@ -9,6 +9,7 @@ local caching = require("oz.caching")
 
 local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
+local state = status.state
 
 -- map --
 local buf_id = nil
@@ -295,7 +296,7 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = "diff unstaged changes of file under cursor." })
 
 	-- Merge helper
-	if status.in_conflict then
+	if state.in_conflict then
 		if wizard.on_conflict_resolution_complete then
 			vim.notify_once(
 				"Stage the changes then perform the commit.",
@@ -476,7 +477,7 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = "Rename remote." })
 
 	-- remote push
-	map("n", "mP", function()
+	map("n", "P", function()
 		local branch = s_util.get_branch_under_cursor()
 		if branch then
 			local remote = util.ShellOutputList("git remote")
@@ -489,33 +490,34 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = ":Git push or push to branch under cursor." })
 
-	-- remote pull
-	map("n", "mp", function()
-		local branch = s_util.get_branch_under_cursor()
-		if branch then
-			local remote = util.ShellOutputList("git remote")
-			local input = util.inactive_input(":Git pull", " " .. remote[1] .. " " .. branch)
-			if input then
-				run_n_refresh_err("Git pull " .. input)
-			end
-		else
-			run_n_refresh_err("Git pull")
-		end
-	end, { buffer = buf, desc = ":Git pull or pull using branch under cursor." })
+	-- pull
+	map("n", "p", function()
+		local key = "git_user_pull_flags"
+		local json = "oz_git"
+		local cached_data = caching.get_data(key, json)
 
-	-- remote fetch
-	map("n", "mf", function()
-		local branch = s_util.get_branch_under_cursor()
-		if branch then
-			local remote = util.ShellOutputList("git remote")
-			local input = util.inactive_input(":Git fetch", " " .. remote[1] .. " " .. branch)
-			if input then
-				run_n_refresh("Git fetch " .. input)
-			end
-		else
-			run_n_refresh("Git fetch")
+		local cur_remote = util.ShellOutput(string.format("git config --get branch.%s.remote", state.current_branch))
+		if cur_remote == "" then
+			util.Notify("No remote configured.", "error", "oz_git")
+			return
 		end
-	end, { buffer = buf, desc = ":Git fetch or fetch using branch under cursor." })
+		local cur_remote_branch = util.ShellOutput("git rev-parse --abbrev-ref @{u} | awk -F'/' '{print $2}'")
+
+		local input
+		if cached_data then
+			cached_data = cached_data:gsub("<cur_remote>", cur_remote):gsub("<cur_branch>", cur_remote_branch)
+			input = util.inactive_input(":Git pull", " " .. cached_data)
+		else
+			input = util.inactive_input(":Git pull", " " .. cur_remote .. " " .. cur_remote_branch)
+		end
+
+		if input then
+			input = vim.trim(input)
+			run_n_refresh("Git pull " .. input)
+			input = input:gsub(cur_remote, "<cur_remote>"):gsub(cur_remote_branch, "<cur_branch>")
+			caching.set_data(key, input, json)
+		end
+	end, { buffer = buf, desc = "Git pull with specified flags." })
 
 	-- [B]ranch mappings
 	-- new branch
@@ -570,7 +572,7 @@ function M.keymaps_init(buf)
 			cached_data = cached_data:gsub("<branch_name>", branch)
 
 			local ans = util.prompt(
-				":Git merge " .. cached_data .. " [" .. branch .. " -> " .. status.current_branch .. "]",
+				":Git merge " .. cached_data .. " [" .. branch .. " -> " .. state.current_branch .. "]",
 				"&yes\n&edit\n&no",
 				1,
 				"Info"
@@ -597,11 +599,12 @@ function M.keymaps_init(buf)
 				["Diff mappings"] = { "dd", "dc", "de", "d" },
 				["Tracking related mappings"] = { "s", "u", "K", "X" },
 				["Goto mappings"] = { "gu", "gs", "gU", "gl", "g<Space>", "g?" },
-				["Remote mappings"] = { "ma", "md", "mr", "mp", "mP", "mf", "m" },
+				["Remote mappings"] = { "ma", "md", "mr", "m" },
 				["Quick actions"] = { "grn", "<Tab>", "<CR>" },
 				["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 				["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
 				["Branch mappings"] = { "bn", "bd", "bu", "bU", "bm" },
+				["Push/Pull mappings"] = { "P", "p" },
 			},
 			no_empty = true,
 		})
