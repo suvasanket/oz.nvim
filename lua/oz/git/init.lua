@@ -18,7 +18,7 @@ local function different_cmd_runner(args_table, args_str)
 			return true
 		end
 		vim.api.nvim_create_autocmd("FileType", {
-			pattern = { "gitrebase", "gitcommit" },
+			pattern = { "gitrebase", "gitcommit", "gitconfig" },
 			callback = function()
 				vim.bo.bufhidden = "delete"
 			end,
@@ -41,10 +41,10 @@ local function different_cmd_runner(args_table, args_str)
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
-	elseif util.str_in_tbl("--help", args_table) then -- man
+	elseif vim.tbl_contains(args_table, "--help") then -- man
 		vim.cmd("Man git-" .. cmd)
 		return true
-	elseif util.str_in_tbl(cmd, remote_cmds) then -- remote related
+	elseif vim.tbl_contains(remote_cmds, cmd) then -- remote related
 		if M.user_config and M.user_config.remote_operation_exec_method == "background" then -- user config
 			local command = table.remove(args_table, 1)
 

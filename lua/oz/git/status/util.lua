@@ -1,6 +1,6 @@
 local M = {}
 local util = require("oz.util")
-local status = require("oz.git.status")
+-- local status = require("oz.git.status")
 
 --
 M.headings_table = {}
@@ -148,7 +148,7 @@ function M.get_branch_under_cursor()
 	local tbl = M.headings_table[branch_heading]
 	local current_line = vim.api.nvim_get_current_line()
 
-	if util.str_in_tbl(current_line, tbl) then
+	if vim.tbl_contains(tbl, current_line) then
 		current_line = vim.trim(current_line:gsub("%*", ""))
 		return vim.trim(current_line:match("^%s*(%S+)"))
 	else
@@ -203,6 +203,28 @@ function M.toggle_diff()
 		vim.api.nvim_buf_set_lines(0, line_num, line_num, false, diff) -- Insert diff lines
 		vim.bo.modifiable = false
 		M.diff_lines[file] = diff
+	end
+end
+
+function M.get_stash_under_cursor()
+	local line_content = vim.api.nvim_get_current_line()
+	local pattern = "^%s*stash@{(%d+)}:%s*On%s+(.-):%s*(.+)$"
+
+	local index_str, branch_name, stash_name = line_content:match(pattern)
+
+	if index_str and branch_name and stash_name then
+		local index_num = tonumber(index_str)
+
+		branch_name = branch_name:match("^%s*(.-)%s*$") or branch_name
+		stash_name = stash_name:match("^%s*(.-)%s*$") or stash_name
+
+		return {
+			index = index_num,
+			branch = branch_name,
+			name = stash_name,
+		}
+	else
+		return {}
 	end
 end
 

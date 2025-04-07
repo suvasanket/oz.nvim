@@ -1,4 +1,3 @@
--- Refactored oz/git/status/keymaps.lua
 local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
@@ -121,12 +120,12 @@ local function handle_rename()
 	if file then
 		local new_name = util.UserInput("New name: ", file)
 		if new_name then
-			vim.cmd("Git mv " .. file .. " " .. new_name)
+			run_n_refresh("Git mv " .. file .. " " .. new_name)
 		end
 	elseif branch then
 		local new_name = util.UserInput("New name: ", branch)
 		if new_name then
-			vim.cmd("Git branch -m " .. branch .. " " .. new_name)
+			run_n_refresh("Git branch -m " .. branch .. " " .. new_name)
 		end
 	end
 end
@@ -156,15 +155,15 @@ local function handle_stash_drop()
 end
 
 local function handle_commit()
-	run_n_refresh("Git commit")
+	run_n_refresh("Git commit -q")
 end
 
 local function handle_commit_amend_no_edit()
-	run_n_refresh("Git commit --amend --no-edit")
+	run_n_refresh("Git commit --amend --no-edit -q")
 end
 
 local function handle_commit_amend()
-	run_n_refresh("Git commit --amend")
+	run_n_refresh("Git commit --amend -q")
 end
 
 local function handle_open_entry_or_switch_branch()
@@ -302,7 +301,7 @@ local function handle_toggle_pick()
 	end
 
 	-- Logic for picking/unpicking
-	if util.str_in_tbl(entry, status_grab_buffer) then
+	if vim.tbl_contains(status_grab_buffer, entry) then
 		-- Unpick
 		if #status_grab_buffer > 1 then
 			util.remove_from_tbl(status_grab_buffer, entry)
@@ -366,7 +365,7 @@ local function handle_remote_add_update()
 
 		if remote_name and remote_url then
 			local remotes = util.ShellOutputList("git remote")
-			if util.str_in_tbl(remote_name, remotes) then
+			if vim.tbl_contains(remotes, remote_name) then
 				-- Remote exists, ask to update URL
 				local ans = util.prompt(
 					"Remote '" .. remote_name .. "' already exists. Update URL?",
@@ -460,15 +459,21 @@ local function handle_push()
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
 
 	local cached_flags = caching.get_data(key, json)
-	local suggested_input
+	local suggested_input, suggested_branch
+
+	if cur_remote_branch == state.current_branch then
+		suggested_branch = cur_remote_branch
+	else
+		suggested_branch = current_branch .. ":" .. cur_remote_branch
+	end
 
 	if cur_remote_branch_ref == "" then
 		local remote = util.ShellOutputList("git remote")[1]
 		suggested_input = "-u " .. remote .. " " .. current_branch
 	elseif cached_flags then
-		suggested_input = string.format("%s %s %s:%s", cached_flags, cur_remote, current_branch, cur_remote_branch)
+		suggested_input = string.format("%s %s %s", cached_flags, cur_remote, suggested_branch)
 	else
-		suggested_input = string.format("%s %s:%s", cur_remote, current_branch, cur_remote_branch)
+		suggested_input = string.format("%s %s", cur_remote, suggested_branch)
 	end
 
 	local final_input = util.inactive_input(":Git push", " " .. suggested_input)
@@ -478,6 +483,7 @@ local function handle_push()
 		run_n_refresh("Git push " .. final_input)
 
 		-- Update cache, replacing actual names with placeholders
+		final_input = final_input:gsub("-u", ""):gsub("--set-upstream", "")
 		local flags_to_cache = util.extract_flags(final_input)
 		caching.set_data(key, table.concat(flags_to_cache, " "), json)
 	end
@@ -509,13 +515,19 @@ local function handle_pull()
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
 
 	local cached_flags = caching.get_data(key, json)
-	local suggested_input
+	local suggested_input, suggested_branch
+
+	if cur_remote_branch == state.current_branch then
+		suggested_branch = cur_remote_branch
+	else
+		suggested_branch = cur_remote_branch .. ":" .. current_branch
+	end
 
 	if cached_flags then
 		-- Replace placeholders in cached flags
-		suggested_input = string.format("%s %s %s:%s", cached_flags, cur_remote, cur_remote_branch, current_branch)
+		suggested_input = string.format("%s %s %s", cached_flags, cur_remote, suggested_branch)
 	else
-		suggested_input = cur_remote .. " " .. cur_remote_branch .. ":" .. current_branch
+		suggested_input = cur_remote .. " " .. suggested_branch
 	end
 
 	local final_input = util.inactive_input(":Git pull", " " .. suggested_input)
@@ -661,7 +673,7 @@ end
 -- Helper to map specific help keys
 local function map_help_key(key, title)
 	map("n", key, function()
-        util.Show_buf_keymaps({ key = key, title = title })
+		util.Show_buf_keymaps({ key = key, title = title })
 	end, { buffer = buf_id })
 end
 
@@ -712,7 +724,7 @@ function M.keymaps_init(buf)
 	-- stash drop
 	map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor." })
 	-- :Git stash
-	map("n", "z<space>", "Git stash ", { silent = false, buffer = buf_id, desc = ":Git stash " })
+	map("n", "z<space>", ":Git stash ", { silent = false, buffer = buf_id, desc = ":Git stash " })
 
 	-- commit map
 	map("n", "cc", handle_commit, { buffer = buf_id, desc = ":Git commit" })
@@ -833,7 +845,6 @@ function M.keymaps_init(buf)
 	map_help_key("z", "Stash mappings")
 	map_help_key("d", "Diff mappings")
 	map_help_key("b", "Branch mappings")
-    map_help_key("g", "[g] mappings")
 end -- End of M.keymaps_init
 
 return M

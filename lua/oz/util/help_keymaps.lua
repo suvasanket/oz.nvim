@@ -22,6 +22,7 @@ local function set_keymaps(keymaps, arg_key)
 		key = key == "<Space>" and " " or key
 		vim.keymap.set("n", key, function()
 			vim.cmd("close")
+            print(arg_key .. key)
 			vim.cmd.normal(arg_key .. key)
 		end, { nowait = true, buffer = key_help_buf, remap = false })
 	end

@@ -127,16 +127,18 @@ end
 
 function M.str_in_tbl(str, string_table)
 	str = vim.trim(str)
-	for _, substring in ipairs(string_table) do
-		substring = vim.trim(substring)
 
-		local normalized_str = str:gsub("%s+", "")
-		local normalized_substring = substring:gsub("%s+", "")
+	if str == "" then
+		return false
+	end
 
-		if normalized_str == normalized_substring then
+	for _, element in ipairs(string_table) do
+		element = vim.trim(element)
+		if string.find(str, element, 1, true) then
 			return true
 		end
 	end
+
 	return false
 end
 
@@ -162,19 +164,19 @@ function M.clear_qflist(title)
 	end
 end
 function M.extract_flags(cmd_str)
-    local flags = {}
+	local flags = {}
 
-    if not cmd_str or cmd_str == "" then
-        return flags
-    end
+	if not cmd_str or cmd_str == "" then
+		return flags
+	end
 
-    for part in string.gmatch(cmd_str, "[^%s]+") do
-        if string.sub(part, 1, 1) == '-' then
-            table.insert(flags, part)
-        end
-    end
+	for part in string.gmatch(cmd_str, "[^%s]+") do
+		if string.sub(part, 1, 1) == "-" then
+			table.insert(flags, part)
+		end
+	end
 
-    return flags
+	return flags
 end
 
 return M

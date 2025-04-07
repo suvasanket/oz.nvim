@@ -64,7 +64,7 @@ function M.keymaps_init(buf)
 		end
 
 		-- unpick
-		if util.str_in_tbl(entry, grab_hashs) then
+		if vim.tbl_contains(grab_hashs, entry) then
 			if #grab_hashs > 1 then
 				util.remove_from_tbl(grab_hashs, entry)
 				vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
@@ -191,10 +191,10 @@ function M.keymaps_init(buf)
 	-- rebase open in cmdline
 	map("n", "r<space>", ":Git rebase ", { silent = false, buffer = buf, desc = ":Git rebase" })
 
-	map("n", "rc", ":Git rebase --continue", { buffer = buf, desc = ":Git rebase --continue" })
-	map("n", "ra", ":Git rebase --abort", { buffer = buf, desc = ":Git rebase --abort" })
-	map("n", "rq", ":Git rebase --quit", { buffer = buf, desc = ":Git rebase --quit" })
-	map("n", "rs", ":Git rebase --skip", { buffer = buf, desc = ":Git rebase --skip" })
+	map("n", "rc", "<cmd>Git rebase --continue<cr>", { buffer = buf, desc = ":Git rebase --continue" })
+	map("n", "ra", "<cmd>Git rebase --abort<cr>", { buffer = buf, desc = ":Git rebase --abort" })
+	map("n", "rq", "<cmd>Git rebase --quit<cr>", { buffer = buf, desc = ":Git rebase --quit" })
+	map("n", "rs", "<cmd>Git rebase --skip<cr>", { buffer = buf, desc = ":Git rebase --skip" })
 
 	-- refresh
 	map("n", "<C-r>", function()
