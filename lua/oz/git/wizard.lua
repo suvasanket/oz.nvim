@@ -299,4 +299,108 @@ function M.complete_conflict_resolution()
 	M.on_conflict_resolution_complete = true
 end
 
+function M.rebase_buf_mappigs(buf)
+	local map = g_util.map
+
+	-- Helper fucntion --
+	local function set_prefix(str)
+		if vim.api.nvim_get_mode().mode == "n" then
+			local line = vim.api.nvim_get_current_line()
+			line = line:gsub("^%w.*-[c|C]", "pick"):gsub("^%w+", str)
+			vim.api.nvim_set_current_line(line)
+		else
+			local start_line = vim.fn.line("v")
+			local end_line = vim.fn.line(".")
+			local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+			vim.api.nvim_input("<Esc>")
+			for i, line in ipairs(lines) do
+				lines[i] = line:gsub("^%w+", str)
+			end
+			vim.api.nvim_buf_set_lines(0, start_line - 1, end_line, false, lines)
+		end
+		vim.notify_once("After done press 'c' or '<cr>' to continue.")
+	end
+
+	local function insert_with(str)
+		local current_line = vim.api.nvim_get_current_line()
+		if vim.deep_equal(current_line:match("^%w+"), str) then
+			return "A"
+		else
+			return "o" .. str .. " "
+		end
+	end
+
+	-- Mappings --
+	map({ "n", "x" }, "r", function()
+		set_prefix("reword")
+	end, { buffer = buf, desc = "reword" })
+
+	map({ "n", "x" }, "d", function()
+		local current_line = vim.api.nvim_get_current_line()
+		if g_util.str_contains_hash(current_line) then
+			set_prefix("drop")
+		else
+			local word = current_line:match("^%w+") or ""
+			local ans = util.prompt("delete " .. word .. "?", "&delete\n&no", 1)
+			if ans == 1 then
+				vim.api.nvim_del_current_line()
+			end
+		end
+	end, { nowait = true, buffer = buf, desc = "drop" })
+
+	map({ "n", "x" }, "s", function()
+		set_prefix("squash")
+	end, { nowait = true, buffer = buf, desc = "squash" })
+
+	map({ "n", "x" }, "f", function()
+		local cur_line = vim.api.nvim_get_current_line()
+		if vim.startswith(cur_line, "fixup -C") then
+			set_prefix("fixup")
+		elseif vim.startswith(cur_line, "fixup -c") then
+			set_prefix("fixup -C")
+		elseif vim.startswith(cur_line, "fixup") then
+			set_prefix("fixup -c")
+		else
+			set_prefix("fixup")
+		end
+	end, { nowait = true, buffer = buf, desc = "fixup" })
+
+	map({ "n", "x" }, "p", function()
+		set_prefix("pick")
+	end, { buffer = buf, desc = "pick" })
+
+	map({ "n", "x" }, "e", function()
+		set_prefix("edit")
+	end, { buffer = buf, desc = "edit" })
+
+	map("n", "l", function()
+		return insert_with("label")
+	end, { expr = true, buffer = buf, desc = "label" })
+
+	map("n", "x", function()
+		return insert_with("exec")
+	end, { expr = true, buffer = buf, desc = "exec" })
+
+	map("n", "t", function()
+		return insert_with("reset")
+	end, { expr = true, buffer = buf, desc = "reset" })
+
+	map("n", "m", function()
+		return insert_with("merge")
+	end, { expr = true, buffer = buf, desc = "merge" })
+
+	map("n", "u", function()
+		return insert_with("update-ref")
+	end, { expr = true, buffer = buf, desc = "update-ref" })
+
+	map("n", { "<cr>", "c" }, function()
+		local ans = util.prompt("continue with saving the buffer?", "&confirm\n&no", 1)
+		if ans == 1 then
+			vim.cmd("silent wq")
+		end
+	end, { buffer = buf, desc = "continue rebase buffer" })
+
+	map("n", "q", "<cmd>q<cr>", { buffer = buf, desc = "quit rebase buffer" })
+end
+
 return M

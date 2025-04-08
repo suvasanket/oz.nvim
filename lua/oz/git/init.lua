@@ -19,8 +19,11 @@ local function different_cmd_runner(args_table, args_str)
 		end
 		vim.api.nvim_create_autocmd("FileType", {
 			pattern = { "gitrebase", "gitcommit", "gitconfig" },
-			callback = function()
+			callback = function(event)
 				vim.bo.bufhidden = "delete"
+				if vim.bo.ft == "gitrebase" then -- set some cool keymaps for rebase buffer
+					wizard.rebase_buf_mappigs(event.buf)
+				end
 			end,
 		})
 	end

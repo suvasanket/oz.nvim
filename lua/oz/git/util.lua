@@ -139,4 +139,18 @@ function M.map(mode, lhs, rhs, opts)
 	end
 end
 
+function M.str_contains_hash(text)
+	if type(text) ~= "string" then
+		return false
+	end
+
+	for hex_sequence in text:gmatch("(%x+)") do
+		local len = #hex_sequence -- Get the length of the found sequence
+		if (len >= 7 and len <= 12) or len == 40 or len == 64 then
+			return true
+		end
+	end
+	return false
+end
+
 return M
