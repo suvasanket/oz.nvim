@@ -614,40 +614,39 @@ local function handle_branch_unset_upstream()
 	end
 end
 
-local function handle_branch_merge()
-	local branch_to_merge = s_util.get_branch_under_cursor()
-	if not branch_to_merge then
-		util.Notify("Cursor not on a branch to merge.", "warn", "oz_git")
-		return
-	end
-
-	if branch_to_merge == state.current_branch then
-		util.Notify("Cannot merge a branch into itself.", "warn", "oz_git")
-		return
-	end
-
+local function handle_merge_branch(flag)
+	local branch_under_cursor = s_util.get_branch_under_cursor()
 	local key = "git_user_merge_flags"
 	local json = "oz_git"
-	local cached_flags_template = caching.get_data(key, json) or "<branch_name>" -- Default to just branch name
-
-	-- Replace placeholder with actual branch name
-	local merge_cmd_suggestion = cached_flags_template:gsub("<branch_name>", branch_to_merge)
-	local merge_preview = ":Git merge " .. merge_cmd_suggestion
-
-	local prompt_text = merge_preview .. " [" .. branch_to_merge .. " -> " .. state.current_branch .. "]"
-	local ans = util.prompt(prompt_text, "&Yes\n&Edit\n&No", 1, "Merge Confirmation")
-
-	if ans == 1 then -- Yes
-		run_n_refresh("Git merge " .. merge_cmd_suggestion)
-	elseif ans == 2 then -- Edit
-		local edited_input = util.inactive_input(":Git merge ", merge_cmd_suggestion)
-		if edited_input then
-			run_n_refresh("Git merge " .. edited_input)
-			-- Update cache if user edited flags
-			local flags_to_cache = edited_input:gsub(branch_to_merge, "<branch_name>")
-			caching.set_data(key, flags_to_cache, json)
+	if branch_under_cursor then
+		local input
+		if flag then
+			input = util.inactive_input(":Git merge", " " .. flag .. " " .. branch_under_cursor)
+		else
+			input = util.inactive_input(":Git merge", " " .. branch_under_cursor)
 		end
-	end -- ans == 3 (No) does nothing
+		if input then
+			run_n_refresh("Git merge" .. input)
+
+			input = input:gsub(flag, "")
+			local flags_to_cache = util.extract_flags(input)
+			caching.set_data(key, table.concat(flags_to_cache, " "), json)
+		end
+	end
+end
+local function handle_rebase_branch()
+	local branch_under_cursor = s_util.get_branch_under_cursor()
+	local key = "git_user_rebase_flags"
+	local json = "oz_git"
+	if branch_under_cursor then
+		local input = util.inactive_input(":Git rebase", " " .. branch_under_cursor)
+		if input then
+			run_n_refresh("Git merge" .. input)
+
+			local flags_to_cache = util.extract_flags(input)
+			caching.set_data(key, table.concat(flags_to_cache, " "), json)
+		end
+	end
 end
 
 local function handle_show_help()
@@ -659,12 +658,14 @@ local function handle_show_help()
 			["Diff mappings"] = { "dd", "dc" }, -- Removed 'de', 'd' as they weren't defined above
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
 			["Goto mappings"] = { "gu", "gs", "gU", "gl", "gL", "g<Space>", "g?" }, -- Added gL
-			["Remote mappings"] = { "ma", "md", "mr", "m" }, -- Added mP
+			["Remote mappings"] = { "Ma", "Md", "Mr", "M" }, -- Added mP
 			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
 			["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 			["Stash mappings"] = { "za", "zp", "zd", "z<Space>", "z" },
-			["Branch mappings"] = { "bn", "bd", "bu", "bU", "bm" },
+			["Branch mappings"] = { "bn", "bd", "bu", "bU" },
 			["Push/Pull mappings"] = { "p", "P" },
+			["Merge mappings"] = { "mm", "mc", "ma", "ms", "me", "m<Space>" },
+			["Rebase mappings"] = { "rr", "ri", "rc", "ra", "rq", "rs", "r<Space>" },
 		},
 		no_empty = true,
 	})
@@ -812,10 +813,10 @@ function M.keymaps_init(buf)
 		{ nowait = true, buffer = buf_id, desc = "Discard picked entries." }
 	)
 
-	-- Remote mappings
-	map("n", "ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
-	map("n", "md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote." })
-	map("n", "mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote." })
+	-- Remote mappings --FIXME
+	map("n", "Ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
+	map("n", "Md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote." })
+	map("n", "Mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote." })
 
 	-- push / pull
 	map(
@@ -836,15 +837,54 @@ function M.keymaps_init(buf)
 	map("n", "bd", handle_branch_delete, { buffer = buf_id, desc = "Delete branch under cursor." })
 	map("n", "bu", handle_branch_set_upstream, { buffer = buf_id, desc = "Set upstream for branch under cursor." })
 	map("n", "bU", handle_branch_unset_upstream, { buffer = buf_id, desc = "Unset upstream for branch under cursor." })
-	map("n", "bm", handle_branch_merge, { buffer = buf_id, desc = "Merge with branch under cursor." })
+
+	-- [M]erge mappings
+	map("n", "mm", handle_merge_branch, { buffer = buf_id, desc = "Merge with branch under cursor." })
+	map("n", "mc", function()
+		run_n_refresh("Git merge --continue")
+	end, { buffer = buf_id, desc = "Merge continue." })
+	map("n", "ma", function()
+		run_n_refresh("Git merge --abort")
+	end, { buffer = buf_id, desc = "Merge abort." })
+	map("n", "ms", function()
+		handle_merge_branch("--squash")
+	end, { buffer = buf_id, desc = "Merge squash." })
+	map("n", "me", function()
+		handle_merge_branch("--no-commit")
+	end, { buffer = buf_id, desc = "Merge no-commit." })
+	map("n", "m<space>", ":Git merge ", { silent = false, buffer = buf_id, desc = ":Git merge " })
+
+	-- [R]ebase mappings
+    map("n", "rr", handle_rebase_branch, {buffer = buf, desc = "Rebase branch under cursor with provided args."})
+	map("n", "ri", function()
+		local branch_under_cursor = s_util.get_branch_under_cursor()
+		if branch_under_cursor then
+			vim.cmd("close")
+			run_n_refresh("Git rebase -i " .. branch_under_cursor)
+		end
+	end, { buffer = buf, desc = "Start interactive rebase with branch under cursor." })
+	map("n", "rc", function()
+		run_n_refresh("Git rebase --continue")
+	end, { buffer = buf, desc = "Rebase continue." })
+	map("n", "ra", function()
+		run_n_refresh("Git rebase --abort")
+	end, { buffer = buf, desc = "Rebase abort." })
+	map("n", "rq", function()
+		run_n_refresh("Git rebase --quit")
+	end, { buffer = buf, desc = "Rebase quit." })
+	map("n", "rs", function()
+		run_n_refresh("Git rebase --skip")
+	end, { buffer = buf, desc = "Rebase skip." })
+	map("n", "r<space>", ":Git rebase ", { silent = false, buffer = buf_id, desc = ":Git rebase" })
 
 	-- help
 	map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })
-	map_help_key("m", "Remote mappings")
+	map_help_key("M", "Remote mappings")
 	map_help_key("c", "Commit mappings")
 	map_help_key("z", "Stash mappings")
 	map_help_key("d", "Diff mappings")
 	map_help_key("b", "Branch mappings")
+	map_help_key("m", "Merge mappings")
 end -- End of M.keymaps_init
 
 return M
