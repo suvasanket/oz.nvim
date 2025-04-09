@@ -153,4 +153,49 @@ function M.str_contains_hash(text)
 	return false
 end
 
+local function term_highlight()
+	vim.cmd("syntax clear")
+	vim.api.nvim_set_hl(0, "OzGitTermPlus", { fg = "#000000", bg = "#A0C878" })
+	vim.api.nvim_set_hl(0, "OzGitTermMinus", { fg = "#000000", bg = "#E17564" })
+	vim.fn.matchadd("OzGitTermPlus", "^+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("OzGitTermMinus", "^-.*$", 0, -1, { extend = true })
+end
+
+function M.run_term_cmd(args)
+	local editor_env = vim.fn.getenv("VISUAL")
+	if not args.cmd then
+		return
+	end
+
+	vim.fn.setenv("VISUAL", "nvr -O") -- FIXME check if nvr installed or not then set.
+	vim.cmd(args.open_in or "tabnew")
+	vim.cmd("term " .. args.cmd)
+
+	local term_buf_id = vim.api.nvim_get_current_buf()
+	vim.api.nvim_buf_set_name(term_buf_id, string.format("oz_git://%s", args.cmd or "no_cmd"))
+
+	vim.api.nvim_buf_call(term_buf_id, function()
+		vim.cmd("startinsert")
+		term_highlight()
+	end)
+
+	vim.api.nvim_create_autocmd("BufEnter", {
+        buffer = term_buf_id,
+        callback = function ()
+            vim.cmd("startinsert")
+        end
+    })
+
+	vim.api.nvim_create_autocmd("TermClose", {
+		buffer = term_buf_id,
+		callback = function(event)
+			vim.api.nvim_buf_delete(term_buf_id, { force = true })
+			if args.on_exit_callback then
+				args.on_exit_callback(event)
+			end
+			vim.fn.setenv("VISUAL", editor_env)
+		end,
+	})
+end
+
 return M

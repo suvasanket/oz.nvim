@@ -132,10 +132,10 @@ function M.str_in_tbl(str, string_table)
 		return false
 	end
 
-	for _, element in ipairs(string_table) do
-		element = vim.trim(element)
-		if string.find(str, element, 1, true) then
-			return true
+	for _, item in ipairs(string_table) do
+		item = vim.trim(item)
+		if string.find(str, item, 1, true) then
+			return item
 		end
 	end
 

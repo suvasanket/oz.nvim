@@ -883,8 +883,8 @@ function M.keymaps_init(buf)
 	map(
 		"n",
 		"r<space>",
-		"Populate cmdline with :Git rebase.",
-		{ silent = false, buffer = buf_id, desc = ":Git rebase" }
+		":Git rebase ",
+		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git rebase." }
 	)
 
 	-- help

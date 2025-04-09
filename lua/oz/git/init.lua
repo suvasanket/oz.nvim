@@ -29,6 +29,7 @@ local function different_cmd_runner(args_table, args_str)
 	end
 
 	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
+	local interactive_cmd = { "add -p", "reset -p", "commit -p", "git checkout -p" }
 
 	-- all the conditional commands here.
 	if cmd == "status" then
@@ -44,6 +45,13 @@ local function different_cmd_runner(args_table, args_str)
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
+	elseif util.str_in_tbl(args_str, interactive_cmd) then
+		g_util.run_term_cmd({
+			cmd = "git " .. util.str_in_tbl(args_str, interactive_cmd),
+			on_exit_callback = function()
+				util.Notify("Interactive hunk selection ended.", nil, "oz_git")
+			end,
+		})
 	elseif vim.tbl_contains(args_table, "--help") then -- man
 		vim.cmd("Man git-" .. cmd)
 		return true
