@@ -725,7 +725,7 @@ function M.keymaps_init(buf)
 	-- stash drop
 	map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor." })
 	-- :Git stash
-	map("n", "z<space>", ":Git stash ", { silent = false, buffer = buf_id, desc = ":Git stash " })
+	map("n", "z<space>", ":Git stash ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git stash." })
 
 	-- commit map
 	map("n", "cc", handle_commit, { buffer = buf_id, desc = ":Git commit" })
@@ -734,7 +734,12 @@ function M.keymaps_init(buf)
 	-- commit amend
 	map("n", "ca", handle_commit_amend, { buffer = buf_id, desc = ":Git commit --amend" })
 	-- G commit cmdline
-	map("n", "c<space>", ":Git commit ", { silent = false, buffer = buf_id, desc = "Open cmdline with :Git commit" }) -- Direct command string mapping
+	map(
+		"n",
+		"c<space>",
+		":Git commit ",
+		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git commit." }
+	) -- Direct command string mapping
 
 	-- open current entry / switch branch
 	map(
@@ -749,7 +754,7 @@ function M.keymaps_init(buf)
 	map("n", "gl", handle_goto_log, { buffer = buf_id, desc = "goto commit logs." })
 	map("n", "gL", handle_goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch." })
 	-- :Git
-	map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = ":Git <cmd>" })
+	map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
 	-- sections
 	map("n", "gu", handle_goto_unstaged, { buffer = buf_id, desc = "goto unstaged changes section." })
 	map("n", "gs", handle_goto_staged, { buffer = buf_id, desc = "goto staged for commit section." })
@@ -813,7 +818,7 @@ function M.keymaps_init(buf)
 		{ nowait = true, buffer = buf_id, desc = "Discard picked entries." }
 	)
 
-	-- Remote mappings --FIXME
+	-- Remote mappings
 	map("n", "Ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
 	map("n", "Md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote." })
 	map("n", "Mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote." })
@@ -839,7 +844,7 @@ function M.keymaps_init(buf)
 	map("n", "bU", handle_branch_unset_upstream, { buffer = buf_id, desc = "Unset upstream for branch under cursor." })
 
 	-- [M]erge mappings
-	map("n", "mm", handle_merge_branch, { buffer = buf_id, desc = "Merge with branch under cursor." })
+	map("n", "mm", handle_merge_branch, { buffer = buf_id, desc = "Start merge with branch under cursor." })
 	map("n", "mc", function()
 		run_n_refresh("Git merge --continue")
 	end, { buffer = buf_id, desc = "Merge continue." })
@@ -848,14 +853,14 @@ function M.keymaps_init(buf)
 	end, { buffer = buf_id, desc = "Merge abort." })
 	map("n", "ms", function()
 		handle_merge_branch("--squash")
-	end, { buffer = buf_id, desc = "Merge squash." })
+	end, { buffer = buf_id, desc = "Merge with squash." })
 	map("n", "me", function()
 		handle_merge_branch("--no-commit")
-	end, { buffer = buf_id, desc = "Merge no-commit." })
-	map("n", "m<space>", ":Git merge ", { silent = false, buffer = buf_id, desc = ":Git merge " })
+	end, { buffer = buf_id, desc = "Merge with no-commit." })
+	map("n", "m<space>", "Populate cmdline with :Git merge.", { silent = false, buffer = buf_id, desc = ":Git merge " })
 
 	-- [R]ebase mappings
-    map("n", "rr", handle_rebase_branch, {buffer = buf, desc = "Rebase branch under cursor with provided args."})
+	map("n", "rr", handle_rebase_branch, { buffer = buf, desc = "Rebase branch under cursor with provided args." })
 	map("n", "ri", function()
 		local branch_under_cursor = s_util.get_branch_under_cursor()
 		if branch_under_cursor then
@@ -875,7 +880,12 @@ function M.keymaps_init(buf)
 	map("n", "rs", function()
 		run_n_refresh("Git rebase --skip")
 	end, { buffer = buf, desc = "Rebase skip." })
-	map("n", "r<space>", ":Git rebase ", { silent = false, buffer = buf_id, desc = ":Git rebase" })
+	map(
+		"n",
+		"r<space>",
+		"Populate cmdline with :Git rebase.",
+		{ silent = false, buffer = buf_id, desc = ":Git rebase" }
+	)
 
 	-- help
 	map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })
@@ -885,6 +895,8 @@ function M.keymaps_init(buf)
 	map_help_key("d", "Diff mappings")
 	map_help_key("b", "Branch mappings")
 	map_help_key("m", "Merge mappings")
+	map_help_key("r", "Rebase mappings")
+	-- map_help_key("g", "[g] mappings")
 end -- End of M.keymaps_init
 
 return M

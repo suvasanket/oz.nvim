@@ -10,22 +10,12 @@ local function filter_table(tbl, str)
 			local new_key = key:sub(#str + 1)
 			if new_key ~= "" then
 				result[new_key] = value
+				new_key = new_key:gsub("<Space>", " ")
 				table.insert(new_keys, new_key)
 			end
 		end
 	end
 	return result, new_keys
-end
-
-local function set_keymaps(keymaps, arg_key)
-	for _, key in pairs(keymaps) do
-		key = key == "<Space>" and " " or key
-		vim.keymap.set("n", key, function()
-			vim.cmd("close")
-            print(arg_key .. key)
-			vim.cmd.normal(arg_key .. key)
-		end, { nowait = true, buffer = key_help_buf, remap = false })
-	end
 end
 
 function M.init(args)
@@ -207,8 +197,22 @@ function M.init(args)
 	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
 
 	if #sub_keys > 0 then
-		vim.fn.timer_start(100, function()
-			set_keymaps(sub_keys, args.key)
+		pcall(vim.cmd.wincmd, "p")
+		vim.fn.timer_start(10, function()
+			local ok, char = pcall(vim.fn.getchar)
+			if ok then
+				char = vim.fn.nr2char(char)
+				local full_sequence = args.key .. char
+
+				if char then
+					if vim.tbl_contains(sub_keys, char) then
+						vim.api.nvim_feedkeys(full_sequence, "mt", false)
+					end
+				end
+			end
+			if key_help_win and vim.api.nvim_win_is_valid(key_help_win) then -- close win
+				vim.api.nvim_win_close(key_help_win, true)
+			end
 		end)
 	end
 	return key_help_win, key_help_buf
