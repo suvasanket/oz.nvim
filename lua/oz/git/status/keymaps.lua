@@ -194,9 +194,10 @@ local function handle_enter_key()
 		vim.cmd("Git checkout " .. branch_under_cursor)
 	else
 		local line = vim.api.nvim_get_current_line()
-		if line:match("^%s*git%s+") then -- populate the cmdine with suggested cmd
-			line = line:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^git%s+", "") -- FIXME not work
-			vim.api.nvim_feedkeys(":Git " .. line, "n", false)
+		local quoted_str = line:match('"([^"]+)"')
+		if quoted_str then
+			quoted_str = quoted_str:gsub("git", "Git"):gsub("<[^>]*>", "")
+			g_util.set_cmdline(quoted_str)
 		end
 	end
 end

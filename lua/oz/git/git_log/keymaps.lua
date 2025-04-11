@@ -16,17 +16,15 @@ local buf_id = nil
 
 -- Helper to map specific help keys
 local function map_help_key(key, title)
-	map("n", key, function()
+	map({ "n", "v", "i", "c" }, key, function()
 		util.Show_buf_keymaps({ key = key, title = title })
 	end, { buffer = buf_id })
 end
 
 -- Helper to run Vim command and refresh status buffer on success
 local function run_n_refresh(cmd)
-	git.after_exec_complete(function(code)
-		if code == 0 then
-			refresh()
-		end
+	git.after_exec_complete(function()
+		refresh()
 	end)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
@@ -242,28 +240,42 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "Show current commit under cursor." })
 
-	-- cherry-pick TODO add more option
-	map({ "n", "x" }, "p", function()
+	-- Cherry-pick mappings
+	map({ "n", "x" }, "pp", function()
 		local input
 		if #grab_hashs > 0 then
 			input = " " .. table.concat(grab_hashs, " ")
 		else
 			local hash = get_selected_hash()
 			if #hash == 1 then
-				input = util.inactive_input(":Git cherry-pick", " " .. hash[1])
+				input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1])
 			elseif #hash == 2 then
-				input = util.inactive_input(":Git cherry-pick", " " .. table.concat(hash, " "))
+				input = util.inactive_input(":Git cherry-pick", " -x " .. table.concat(hash, " "))
 			elseif #hash > 2 then
-				input = util.inactive_input(":Git cherry-pick", " " .. hash[1] .. ".." .. hash[#hash])
+				input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1] .. ".." .. hash[#hash])
 			end
 		end
 		if input then
 			run_n_refresh("Git cherry-pick" .. input)
+			-- print("Git cherry-pick" .. input)
 		end
 		if #grab_hashs > 0 then
 			clear_all_picked()
 		end
 	end, { buffer = buf, desc = "Cherry-pick commit under cursor." })
+
+	map("n", "pa", function()
+		run_n_refresh("Git cherry-pick --abort")
+	end, { buffer = buf, desc = "Cherry-pick abort." })
+	map("n", "pq", function()
+		run_n_refresh("Git cherry-pick --quit")
+	end, { buffer = buf, desc = "Cherry-pick quit." })
+	map("n", "pc", function()
+		run_n_refresh("Git cherry-pick --continue")
+	end, { buffer = buf, desc = "Cherry-pick continue." })
+	map("n", "ps", function()
+		run_n_refresh("Git cherry-pick --skip")
+	end, { buffer = buf, desc = "Cherry-pick skip." })
 
 	-- [C]ommit mappings
 	map("n", "cs", function()
@@ -304,14 +316,16 @@ function M.keymaps_init(buf)
 				["Goto mappings"] = { "g:", "g<Space>", "g?", "gs" },
 				["Diff mappings"] = { "dd", "dc", "dp" },
 				["Rebase mappings"] = { "rr", "ri", "r<Space>", "rc", "ra", "rq", "rs", "ro" },
-				["Commit/Cherry-pick mappings"] = { "cs", "cf", "cc", "ce", "ca" },
+				["Commit mappings"] = { "cs", "cf", "cc", "ce", "ca" },
+				["Cherry-pick mappings"] = { "pp", "pa", "ps", "pc", "pq" },
 			},
 			no_empty = true,
 		})
 	end, { buffer = buf, desc = "Show all availble keymaps." })
 	map_help_key("d", "Diff mappings")
 	map_help_key("r", "Rebase mappings")
-	map_help_key("c", "Commit/Cherry-pick mappings")
+	map_help_key("c", "Commit mappings")
+	map_help_key("p", "Cherry-pick mappings")
 end
 
 return M

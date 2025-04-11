@@ -110,6 +110,23 @@ local function open_commit_log_buf(lines)
 	end
 end
 
+local function add_cherrypick_icon(log)
+	local picked_hashes = util.ShellOutputList("git rev-parse --verify --quiet --short CHERRY_PICK_HEAD")
+	if #picked_hashes == 0 then
+		return log
+	else
+		local logg = {}
+		for _, line in ipairs(log) do
+			local picked_hash = util.str_in_tbl(line, picked_hashes)
+			if picked_hash then
+				line = line:gsub(picked_hash, picked_hash .. " 🍒")
+			end
+			table.insert(logg, line)
+		end
+		return logg
+	end
+end
+
 local function get_commit_log_lines(level, args)
 	local log = {}
 	local fmt_flags
@@ -129,6 +146,8 @@ local function get_commit_log_lines(level, args)
 	else
 		log = util.ShellOutputList("git log " .. fmt_flags)
 	end
+
+	log = add_cherrypick_icon(log)
 
 	return log
 end
@@ -152,7 +171,7 @@ function M.commit_log(opts, args)
 		M.comming_from = opts.from
 		level = opts.level
 	end
-    vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd())) -- change cwd to project
+	vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd())) -- change cwd to project
 	commit_log_lines = get_commit_log_lines(level, args)
 	open_commit_log_buf(commit_log_lines)
 end
