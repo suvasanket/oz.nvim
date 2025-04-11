@@ -20,6 +20,7 @@ function M.get_selected_hash()
 		local start_line = vim.fn.line("v")
 		local end_line = vim.fn.line(".")
 		lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+		-- vim.api.nvim_input("<Esc>") -- FIXME
 	end
 
 	for _, line in ipairs(lines) do
@@ -67,8 +68,12 @@ local function log_buf_ft()
 		once = true,
 		callback = function(event)
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-			require("oz.git.git_log.keymaps").keymaps_init(event.buf)
-			log_buf_hl()
+			vim.fn.timer_start(10, function()
+				log_buf_hl()
+			end)
+			vim.fn.timer_start(100, function()
+				require("oz.git.git_log.keymaps").keymaps_init(event.buf)
+			end)
 		end,
 	})
 	return true
@@ -105,10 +110,8 @@ local function open_commit_log_buf(lines)
 	end
 end
 
--- FIXME: issus with saving once we have a log with args next time doing :Gitlog doesn't apply the format
 local function get_commit_log_lines(level, args)
-	local commit_log_tbl = {}
-	local log = nil
+	local log = {}
 	local fmt_flags
 	if level == 2 then
 		fmt_flags = "--graph --abbrev-commit --decorate --format=format:'%h - %aD [%ar]%d%n''          %s - %an'"
@@ -127,22 +130,7 @@ local function get_commit_log_lines(level, args)
 		log = util.ShellOutputList("git log " .. fmt_flags)
 	end
 
-	local function process_line(line)
-		if line ~= "" then
-			if line:find("%*") then
-				if line:find("HEAD -") then
-					line = line:gsub("%*", "@")
-				end
-			end
-			table.insert(commit_log_tbl, line)
-		end
-	end
-
-	-- Process each line in the log
-	for _, line in ipairs(log) do
-		process_line(line)
-	end
-	return commit_log_tbl
+	return log
 end
 
 function M.refresh_commit_log(passive)
@@ -153,7 +141,6 @@ function M.refresh_commit_log(passive)
 		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", false)
 	else
 		local pos = vim.api.nvim_win_get_cursor(0)
-		vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()))
 		M.commit_log({ from = M.comming_from })
 		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
@@ -165,6 +152,7 @@ function M.commit_log(opts, args)
 		M.comming_from = opts.from
 		level = opts.level
 	end
+    vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd())) -- change cwd to project
 	commit_log_lines = get_commit_log_lines(level, args)
 	open_commit_log_buf(commit_log_lines)
 end

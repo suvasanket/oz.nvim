@@ -126,6 +126,9 @@ end
 
 function M.map(mode, lhs, rhs, opts)
 	local options = { silent = true, remap = false }
+	if #lhs ~= 1 then
+		options.nowait = true
+	end
 	if opts then
 		options = vim.tbl_extend("force", options, opts)
 	end
@@ -180,11 +183,11 @@ function M.run_term_cmd(args)
 	end)
 
 	vim.api.nvim_create_autocmd("BufEnter", {
-        buffer = term_buf_id,
-        callback = function ()
-            vim.cmd("startinsert")
-        end
-    })
+		buffer = term_buf_id,
+		callback = function()
+			vim.cmd("startinsert")
+		end,
+	})
 
 	vim.api.nvim_create_autocmd("TermClose", {
 		buffer = term_buf_id,
@@ -196,6 +199,18 @@ function M.run_term_cmd(args)
 			vim.fn.setenv("VISUAL", editor_env)
 		end,
 	})
+end
+
+function M.User_cmd(commands, func, opts)
+	if type(commands) == "string" then
+		vim.api.nvim_create_user_command(commands, func, opts)
+	elseif type(commands) == "table" then
+		for _, command in pairs(commands) do
+			vim.api.nvim_create_user_command(command, func, opts)
+		end
+	else
+		error("commands must be a string or a table")
+	end
 end
 
 return M

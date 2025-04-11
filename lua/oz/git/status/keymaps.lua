@@ -24,6 +24,8 @@ local function run_n_refresh(cmd)
 			refresh()
 		end
 	end)
+	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
 	vim.cmd(cmd)
 end
 
@@ -166,8 +168,9 @@ local function handle_commit_amend()
 	run_n_refresh("Git commit --amend -q")
 end
 
-local function handle_open_entry_or_switch_branch()
+local function handle_enter_key()
 	local entry = s_util.get_file_under_cursor()
+	local branch_under_cursor = s_util.get_branch_under_cursor()
 	if #entry > 0 then
 		-- Check if file or directory exists before trying to edit
 		if vim.fn.filereadable(entry[1]) == 1 or vim.fn.isdirectory(entry[1]) == 1 then
@@ -176,22 +179,24 @@ local function handle_open_entry_or_switch_branch()
 		else
 			util.Notify("Cannot open entry: " .. entry[1], "warn", "oz_git")
 		end
+	elseif branch_under_cursor then
+		git.after_exec_complete(function(code, _, err)
+			if code == 0 then
+				refresh()
+				vim.schedule(function()
+					util.Notify("Checked out branch '" .. branch_under_cursor .. "'.", nil, "oz_git")
+				end)
+			else
+				-- Assuming oz_git_win exists and is the intended error handler
+				require("oz.git.oz_git_win").open_oz_git_win(err, nil, "stderr")
+			end
+		end, true)
+		vim.cmd("Git checkout " .. branch_under_cursor)
 	else
-		-- change branch
-		local branch_under_cursor = s_util.get_branch_under_cursor()
-		if branch_under_cursor then
-			git.after_exec_complete(function(code, out, err)
-				if code == 0 then
-					refresh()
-					vim.schedule(function()
-						util.Notify("Checked out branch '" .. branch_under_cursor .. "'.", nil, "oz_git")
-					end)
-				else
-					-- Assuming oz_git_win exists and is the intended error handler
-					require("oz.git.oz_git_win").open_oz_git_win(err, nil, "stderr")
-				end
-			end, true)
-			vim.cmd("Git checkout " .. branch_under_cursor)
+		local line = vim.api.nvim_get_current_line()
+		if line:match("^%s*git%s+") then -- populate the cmdine with suggested cmd
+			line = line:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^git%s+", "") -- FIXME not work
+			vim.api.nvim_feedkeys(":Git " .. line, "n", false)
 		end
 	end
 end
@@ -718,6 +723,7 @@ function M.keymaps_init(buf)
 	-- rename
 	map("n", "grn", handle_rename, { buffer = buf_id, desc = "Rename file or branch under cursor." })
 
+	-- [z]Stash mappings --TODO add stash branch
 	-- stash apply
 	map("n", "za", handle_stash_apply, { buffer = buf_id, desc = "Apply stash under cursor." })
 	-- stash pop
@@ -726,6 +732,13 @@ function M.keymaps_init(buf)
 	map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor." })
 	-- :Git stash
 	map("n", "z<space>", ":Git stash ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git stash." })
+	-- stash save
+	map("n", "zz", function()
+		local input = util.inactive_input(":Git stash", " save ")
+		if input then
+			run_n_refresh("Git stash" .. input)
+		end
+	end, { buffer = buf_id, desc = "Stash save optionally add a message." })
 
 	-- commit map
 	map("n", "cc", handle_commit, { buffer = buf_id, desc = ":Git commit" })
@@ -742,12 +755,7 @@ function M.keymaps_init(buf)
 	) -- Direct command string mapping
 
 	-- open current entry / switch branch
-	map(
-		"n",
-		"<cr>",
-		handle_open_entry_or_switch_branch,
-		{ buffer = buf_id, desc = "open entry under cursor / switch branches." }
-	)
+	map("n", "<cr>", handle_enter_key, { buffer = buf_id, desc = "open entry under cursor / switch branches." })
 
 	-- [g]oto mode
 	-- log

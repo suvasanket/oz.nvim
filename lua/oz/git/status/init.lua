@@ -16,10 +16,8 @@ local function status_buf_hl()
 	vim.fn.matchadd("WarningMsg", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("MoreMsg", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
 
-	vim.api.nvim_set_hl(0, "OzGitDiffPlus", { fg = "#000000", bg = "#A0C878" })
-	vim.api.nvim_set_hl(0, "OzGitDiffMinus", { fg = "#000000", bg = "#E17564" })
-	vim.fn.matchadd("OzGitDiffPlus", "^    +.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("OzGitDiffMinus", "^    -.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@diff.plus", "^    +.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@diff.minus", "^    -.*$", 0, -1, { extend = true })
 
 	-- stash and heading
 	vim.cmd([[

@@ -6,6 +6,19 @@ local oz_git_win = require("oz.git.oz_git_win")
 
 M.user_config = nil
 
+-- helper: notify or open in window
+local function notify_or_open(output, args, type)
+	if #output == 0 then
+		return
+	end
+	local notfy_level = type == "std_out" and "info" or "error"
+	if #output <= 2 then
+		util.Notify(table.concat(output, "\n"), notfy_level, "oz_git")
+	else
+		oz_git_win.open_oz_git_win(output, args, type)
+	end
+end
+
 -- CMD parser
 local function different_cmd_runner(args_table, args_str)
 	local cmd = args_table[1]
@@ -153,22 +166,15 @@ function M.run_git_cmd(args)
 				end)
 			end
 
-			if code == 0 then
-				if #std_out > 0 then
-					if #std_out <= 2 then
-						util.Notify(table.concat(std_out, "\n"), "info", "oz_git")
-					else
-						oz_git_win.open_oz_git_win(std_out, args, "stdout")
-					end
-				end
+			-- Show outputs.
+			local type = code == 0 and "std_out" or "std_err"
+			if #std_out > 0 then
+				notify_or_open(std_out, args, type)
 			else
-				if #std_err > 0 and #std_err <= 2 then
-					util.Notify(table.concat(std_err, "\n"), "error", "oz_git")
-				elseif #std_err ~= 0 then
-					oz_git_win.open_oz_git_win(std_err, args, "stderr")
-				end
+				notify_or_open(std_err, args, type)
 			end
 
+			-- Suggestion.
 			if suggestion then
 				vim.schedule(function()
 					g_util.set_cmdline(suggestion)
@@ -186,7 +192,7 @@ end
 function M.oz_git_usercmd_init(config)
 	M.user_config = config
 	-- :Git
-	vim.api.nvim_create_user_command("Git", function(opts)
+	g_util.User_cmd({ "Git", "G" }, function(opts)
 		if g_util.if_in_git() then
 			if opts.args and #opts.args > 0 then
 				M.run_git_cmd(opts.args)
@@ -199,27 +205,6 @@ function M.oz_git_usercmd_init(config)
 			M.run_git_cmd(opts.args)
 		else
 			util.Notify("You are not in a git repo. Try :Git init", "warn", "oz_git")
-		end
-	end, {
-		nargs = "*",
-		desc = "oz_git",
-		complete = function(arglead, cmdline, cursorpos)
-			return require("oz.git.complete").complete(arglead, cmdline, cursorpos)
-		end,
-	})
-	vim.api.nvim_create_user_command("G", function(opts)
-		if g_util.if_in_git() then
-			if opts.args and #opts.args > 0 then
-				M.run_git_cmd(opts.args)
-			else
-				require("oz.git.status").GitStatus()
-				vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
-				vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
-			end
-		elseif opts.args and opts.args:find("init") then
-			M.run_git_cmd(opts.args)
-		else
-			util.Notify("You are not in a git repo. Try doing :Git init", "warn", "oz_git")
 		end
 	end, {
 		nargs = "*",
@@ -247,7 +232,7 @@ function M.oz_git_usercmd_init(config)
 	vim.api.nvim_create_user_command("Gr", function()
 		if g_util.if_in_git() then
 			M.after_exec_complete(function()
-				vim.cmd("edit")
+				pcall(vim.cmd, "edit")
 			end)
 			vim.cmd("Git checkout -- %")
 			vim.api.nvim_echo({ { ":Git " }, { "checkout -- %", "ModeMsg" } }, false, {})

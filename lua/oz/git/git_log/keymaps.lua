@@ -1,6 +1,7 @@
 local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
+local git = require("oz.git")
 
 local log_level = require("oz.git.git_log").log_level
 local comming_from = require("oz.git.git_log").comming_from
@@ -9,9 +10,51 @@ local grab_hashs = require("oz.git.git_log").grab_hashs
 local commit_log = require("oz.git.git_log").commit_log
 
 local user_mappings = require("oz.git").user_config.mappings
+local refresh = require("oz.git.git_log").refresh_commit_log
 local map = g_util.map
+local buf_id = nil
+
+-- Helper to map specific help keys
+local function map_help_key(key, title)
+	map("n", key, function()
+		util.Show_buf_keymaps({ key = key, title = title })
+	end, { buffer = buf_id })
+end
+
+-- Helper to run Vim command and refresh status buffer on success
+local function run_n_refresh(cmd)
+	git.after_exec_complete(function(code)
+		if code == 0 then
+			refresh()
+		end
+	end)
+	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
+	vim.cmd(cmd)
+end
+
+-- helper to clear picked
+local function clear_all_picked()
+	util.tbl_monitor().stop_monitoring(grab_hashs)
+
+	grab_hashs = #grab_hashs > 0 and {} or grab_hashs
+	vim.api.nvim_echo({ { "" } }, false, {})
+end
+
+-- helper: run upon current commit under cursor
+local function cmd_upon_current_commit(callback)
+	local hash = get_selected_hash()
+	if #hash > 0 then
+		callback(hash[1])
+	end
+end
+
+-----------------
+-- All keymaps --
+-----------------
 
 function M.keymaps_init(buf)
+	buf_id = buf
 	-- close
 	map("n", "q", "<cmd>close<cr>", { buffer = buf, desc = "Close git log buffer." })
 
@@ -85,29 +128,11 @@ function M.keymaps_init(buf)
 				end,
 			})
 		end
-	end, { nowait = true, buffer = buf, desc = "Pick or unpick any hash under cursor." })
+	end, { buffer = buf, desc = "Pick or unpick any hash under cursor." })
 
 	-- edit picked
-	map("n", "a", function()
+	map("n", { "a", "i" }, function()
 		if #grab_hashs ~= 0 then
-			require("oz.git").after_exec_complete(function(code, stdout)
-				if code == 0 and #stdout == 0 then
-					M.refresh_commit_log()
-				end
-			end)
-			util.tbl_monitor().stop_monitoring(grab_hashs)
-			g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
-			grab_hashs = {}
-		end
-	end, { buffer = buf, desc = "Enter cmdline to edit picked hashes." })
-
-	map("n", "i", function()
-		if #grab_hashs ~= 0 then
-			require("oz.git").after_exec_complete(function(code, stdout)
-				if code == 0 and #stdout == 0 then
-					M.refresh_commit_log()
-				end
-			end)
 			util.tbl_monitor().stop_monitoring(grab_hashs)
 			g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 			grab_hashs = {}
@@ -115,12 +140,7 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = "Enter cmdline to edit picked hashes." })
 
 	-- discard picked
-	map("n", user_mappings.unpick_all, function()
-		util.tbl_monitor().stop_monitoring(grab_hashs)
-
-		grab_hashs = #grab_hashs > 0 and {} or grab_hashs
-		vim.api.nvim_echo({ { "" } }, false, {})
-	end, { nowait = true, buffer = buf, desc = "Discard any picked hashes." })
+	map("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard any picked hashes." })
 
 	-- [d]iff mode
 	-- diff hash
@@ -148,7 +168,7 @@ function M.keymaps_init(buf)
 
 	-- diff range
 	local diff_range_hash = {}
-	map({ "n", "x" }, "dp", function()
+	map({ "n", "x" }, "dp", function() -- TODO add support for picked hash local hash -> picked
 		local hashes = get_selected_hash()
 		if #hashes > 1 then
 			if util.usercmd_exist("DiffviewOpen") then
@@ -174,40 +194,107 @@ function M.keymaps_init(buf)
 	-- inter rebase
 	map("n", "ri", function()
 		local current_hash = get_selected_hash()
-		if #current_hash == 1 then
-			vim.cmd("close")
-			vim.cmd("Git rebase -i " .. current_hash[1] .. "^")
+		if #current_hash > 0 then
+			run_n_refresh("Git rebase -i " .. current_hash[1] .. "^")
 		end
-	end, { buffer = buf, desc = "Start an interactive rebase inluding the commit under cursor." })
+	end, { buffer = buf, desc = "Start interactive rebase including commit under cursor." })
 
 	-- rebase with pick
-	map("n", "rp", function()
+	map("n", "rr", function()
 		local current_hash = get_selected_hash()
 		if #current_hash == 1 then
-			g_util.set_cmdline("Git rebase | " .. current_hash[1])
+			g_util.set_cmdline("Git rebase| " .. current_hash[1])
 		end
-	end, { buffer = buf, desc = "Open cmdline with rebase command with the commit hash under cursor." })
+	end, { buffer = buf, desc = "Rebase with commit under cursor." })
 
 	-- rebase open in cmdline
-	map("n", "r<space>", ":Git rebase ", { silent = false, buffer = buf, desc = ":Git rebase" })
+	map("n", "r<space>", ":Git rebase ", { silent = false, buffer = buf, desc = "Populate cmdline with Git rebase." })
 
-	map("n", "rc", "<cmd>Git rebase --continue<cr>", { buffer = buf, desc = ":Git rebase --continue" })
-	map("n", "ra", "<cmd>Git rebase --abort<cr>", { buffer = buf, desc = ":Git rebase --abort" })
-	map("n", "rq", "<cmd>Git rebase --quit<cr>", { buffer = buf, desc = ":Git rebase --quit" })
-	map("n", "rs", "<cmd>Git rebase --skip<cr>", { buffer = buf, desc = ":Git rebase --skip" })
+	map("n", "rc", function()
+		run_n_refresh("Git rebase --continue")
+	end, { buffer = buf, desc = "Rebase continue." })
+	map("n", "ra", function()
+		run_n_refresh("Git rebase --abort")
+	end, { buffer = buf, desc = "Rebase abort." })
+	map("n", "rq", function()
+		run_n_refresh("Git rebase --quit")
+	end, { buffer = buf, desc = "Rebase quit." })
+	map("n", "rs", function()
+		run_n_refresh("Git rebase --skip")
+	end, { buffer = buf, desc = "Rebase skip." })
+	map("n", "ro", function()
+		local hash = get_selected_hash()
+		if #hash > 0 then
+			run_n_refresh("Git rebase -i --autosquash " .. hash[1] .. "^")
+		end
+	end, { buffer = buf, desc = "Start interactive rebase with commit under cursor(--autosquash)." })
 
 	-- refresh
 	map("n", "<C-r>", function()
-		M.refresh_commit_log()
+		refresh()
 	end, { buffer = buf, desc = "Refresh commit log buffer." })
 
 	-- show current hash
-	map("n", "<cr>", function()
+	map({ "n", "x" }, "<cr>", function()
 		local hash = get_selected_hash()
 		if #hash > 0 then
-			vim.cmd("Git show " .. hash[1])
+			vim.cmd("Git show " .. table.concat(hash, " "))
 		end
 	end, { buffer = buf, desc = "Show current commit under cursor." })
+
+	-- cherry-pick TODO add more option
+	map({ "n", "x" }, "p", function()
+		local input
+		if #grab_hashs > 0 then
+			input = " " .. table.concat(grab_hashs, " ")
+		else
+			local hash = get_selected_hash()
+			if #hash == 1 then
+				input = util.inactive_input(":Git cherry-pick", " " .. hash[1])
+			elseif #hash == 2 then
+				input = util.inactive_input(":Git cherry-pick", " " .. table.concat(hash, " "))
+			elseif #hash > 2 then
+				input = util.inactive_input(":Git cherry-pick", " " .. hash[1] .. ".." .. hash[#hash])
+			end
+		end
+		if input then
+			run_n_refresh("Git cherry-pick" .. input)
+		end
+		if #grab_hashs > 0 then
+			clear_all_picked()
+		end
+	end, { buffer = buf, desc = "Cherry-pick commit under cursor." })
+
+	-- [C]ommit mappings
+	map("n", "cs", function()
+		cmd_upon_current_commit(function(hash)
+			run_n_refresh("Git commit --squash " .. hash)
+		end)
+	end, { buffer = buf, desc = "Create commit with commit under cursor(--squash)." })
+
+	map("n", "cf", function()
+		cmd_upon_current_commit(function(hash)
+			run_n_refresh("Git commit --fixup " .. hash)
+		end)
+	end, { buffer = buf, desc = "Create commit with commit under cursor(--fixup)." })
+
+	map("n", "cc", function()
+		cmd_upon_current_commit(function(hash)
+			g_util.set_cmdline("Git commit| " .. hash)
+		end)
+	end, { buffer = buf, desc = "Populate cmdline with Git commit followed by current hash." })
+
+	map("n", "ce", function()
+		cmd_upon_current_commit(function(hash)
+			run_n_refresh(("Git commit -C %s -q"):format(hash))
+		end)
+	end, { buffer = buf, desc = "Create commit & reuse message from commit under cursor." })
+
+	map("n", "ca", function()
+		cmd_upon_current_commit(function(hash)
+			run_n_refresh(("Git commit -c %s -q"):format(hash))
+		end)
+	end, { buffer = buf, desc = "Create commit & edit message from commit under cursor." })
 
 	-- help
 	map("n", "g?", function()
@@ -216,10 +303,15 @@ function M.keymaps_init(buf)
 				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
 				["Goto mappings"] = { "g:", "g<Space>", "g?", "gs" },
 				["Diff mappings"] = { "dd", "dc", "dp" },
-				["Rebase mappings"] = { "ri", "rp", "r<Space>", "rc", "ra", "rq", "rs" },
+				["Rebase mappings"] = { "rr", "ri", "r<Space>", "rc", "ra", "rq", "rs", "ro" },
+				["Commit/Cherry-pick mappings"] = { "cs", "cf", "cc", "ce", "ca" },
 			},
+			no_empty = true,
 		})
 	end, { buffer = buf, desc = "Show all availble keymaps." })
+	map_help_key("d", "Diff mappings")
+	map_help_key("r", "Rebase mappings")
+	map_help_key("c", "Commit/Cherry-pick mappings")
 end
 
 return M
