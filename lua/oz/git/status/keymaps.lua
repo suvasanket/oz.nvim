@@ -179,7 +179,7 @@ local function handle_enter_key()
 	if #entry > 0 then
 		-- Check if file or directory exists before trying to edit
 		if vim.fn.filereadable(entry[1]) == 1 or vim.fn.isdirectory(entry[1]) == 1 then
-			vim.cmd.wincmd("p") -- Go to previous window (presumably the main editing window)
+			vim.cmd.wincmd("k") -- Go to previous window (presumably the main editing window)
 			vim.cmd("edit " .. entry[1])
 		else
 			util.Notify("Cannot open entry: " .. entry[1], "warn", "oz_git")
@@ -659,25 +659,17 @@ local function handle_merge_branch(flag)
 		end
 		if input then
 			run_n_refresh("Git merge" .. input)
-
 			input = input:gsub(flag, "")
 			local flags_to_cache = util.extract_flags(input)
 			caching.set_data(key, table.concat(flags_to_cache, " "), json)
 		end
 	end
 end
+
 local function handle_rebase_branch()
 	local branch_under_cursor = s_util.get_branch_under_cursor()
-	local key = "git_user_rebase_flags"
-	local json = "oz_git"
 	if branch_under_cursor then
-		local input = util.inactive_input(":Git rebase", " " .. branch_under_cursor)
-		if input then
-			run_n_refresh("Git merge" .. input)
-
-			local flags_to_cache = util.extract_flags(input)
-			caching.set_data(key, table.concat(flags_to_cache, " "), json)
-		end
+		g_util.set_cmdline("Git rebase| " .. branch_under_cursor)
 	end
 end
 
@@ -696,10 +688,11 @@ local function handle_show_help()
 			["Stash mappings"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
 			["Branch mappings"] = { "bn", "bd", "bu", "bU" },
 			["Push/Pull mappings"] = { "p", "P" },
-			["Merge mappings"] = { "mm", "mc", "ma", "ms", "me", "m<Space>" },
-			["Rebase mappings"] = { "rr", "ri", "rc", "ra", "rq", "rs", "r<Space>" },
+			["Merge mappings"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
+			["Rebase mappings"] = { "rr", "ri", "rl", "ra", "rq", "rk", "r<Space>" },
 		},
 		no_empty = true,
+		subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
 	})
 end
 
@@ -897,7 +890,7 @@ function M.keymaps_init(buf)
 
 	-- [M]erge mappings
 	map("n", "mm", handle_merge_branch, { buffer = buf_id, desc = "Start merge with branch under cursor.󰳽 " })
-	map("n", "mc", function()
+	map("n", "ml", function()
 		run_n_refresh("Git merge --continue")
 	end, { buffer = buf_id, desc = "Merge continue." })
 	map("n", "ma", function()
@@ -909,18 +902,20 @@ function M.keymaps_init(buf)
 	map("n", "me", function()
 		handle_merge_branch("--no-commit")
 	end, { buffer = buf_id, desc = "Merge with no-commit." })
-	map("n", "m<space>", "Populate cmdline with :Git merge.", { silent = false, buffer = buf_id, desc = ":Git merge " })
+	map("n", "mq", function()
+		handle_merge_branch("--quit")
+	end, { buffer = buf_id, desc = "Merge quit." })
+	map("n", "m<space>", ":Git merge ", { silent = false, buffer = buf_id, desc = "Populate cmdline with Git merge." })
 
 	-- [R]ebase mappings
 	map("n", "rr", handle_rebase_branch, { buffer = buf, desc = "Rebase branch under cursor with provided args.󰳽 " })
 	map("n", "ri", function()
 		local branch_under_cursor = s_util.get_branch_under_cursor()
 		if branch_under_cursor then
-			vim.cmd("close")
 			run_n_refresh("Git rebase -i " .. branch_under_cursor)
 		end
 	end, { buffer = buf, desc = "Start interactive rebase with branch under cursor.󰳽 " })
-	map("n", "rc", function()
+	map("n", "rl", function()
 		run_n_refresh("Git rebase --continue")
 	end, { buffer = buf, desc = "Rebase continue." })
 	map("n", "ra", function()
@@ -929,9 +924,12 @@ function M.keymaps_init(buf)
 	map("n", "rq", function()
 		run_n_refresh("Git rebase --quit")
 	end, { buffer = buf, desc = "Rebase quit." })
-	map("n", "rs", function()
+	map("n", "rk", function()
 		run_n_refresh("Git rebase --skip")
 	end, { buffer = buf, desc = "Rebase skip." })
+	map("n", "re", function()
+		run_n_refresh("Git rebase --edit-todo")
+	end, { buffer = buf, desc = "Rebase edit todo." })
 	map(
 		"n",
 		"r<space>",

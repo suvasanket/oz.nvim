@@ -96,7 +96,7 @@ function M.async_grep(cmd, pattern, dir, opts)
 
 	---@diagnostic disable-next-line: deprecated
 	local grep_shellcmd = { cmd, unpack(args) }
-	-- print(vim.inspect(grep_shellcmd))
+	print(vim.inspect(grep_shellcmd))
 	vim.fn.jobstart(grep_shellcmd, {
 		stdout_buffered = true,
 		on_stdout = function(_, data, _)
@@ -214,7 +214,7 @@ function M.asyncgrep_init(config)
 
 		if args.bang then
 			target_dir = vim.fn.getcwd()
-		else
+		elseif not target_dir then
 			target_dir = (vim.bo.ft == "oil" and require("oil").get_current_dir()) or (project_root or vim.fn.getcwd())
 		end
 

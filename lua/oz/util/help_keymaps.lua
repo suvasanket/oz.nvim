@@ -178,7 +178,7 @@ function M.init(args)
 	local row = vim.o.lines - height - 4
 	local col = vim.o.columns
 
-	local title = args.title or "Show Keymaps"
+	local title = args.title or "Show keymaps"
 	local win_opts = {
 		relative = "editor",
 		width = width,
