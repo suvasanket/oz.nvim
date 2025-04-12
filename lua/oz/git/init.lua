@@ -5,6 +5,7 @@ local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
 
 M.user_config = nil
+M.running_git_jobs = {}
 
 -- helper: notify or open in window
 local function notify_or_open(output, args, type)
@@ -101,6 +102,36 @@ function M.after_exec_complete(callback, ret)
 	exec_complete_callback_return = ret or false
 end
 
+-- ENV --
+local plugin_diff_tool_name = "nvr_plugin_diff"
+local plugin_merge_tool_name = "nvr_plugin_merge"
+
+local nvr_diff_cmd = [[nvr -s -d "$LOCAL" "$REMOTE"]]
+local nvr_merge_cmd = [[nvr -s -d $LOCAL $BASE $REMOTE $MERGED -c 'wincmd J | wincmd =']]
+
+local job_env = {
+	GIT_EDITOR = "nvr -cc split --remote-wait",
+	GIT_SEQUENCE_EDITOR = "nvr -cc split --remote-wait",
+
+	GIT_CONFIG_COUNT = "4",
+
+	GIT_CONFIG_KEY_0 = "diff.tool",
+	GIT_CONFIG_VALUE_0 = plugin_diff_tool_name,
+
+	GIT_CONFIG_KEY_1 = "difftool." .. plugin_diff_tool_name .. ".cmd",
+	GIT_CONFIG_VALUE_1 = nvr_diff_cmd,
+
+	GIT_CONFIG_KEY_2 = "merge.tool",
+	GIT_CONFIG_VALUE_2 = plugin_merge_tool_name,
+
+	GIT_CONFIG_KEY_3 = "mergetool." .. plugin_merge_tool_name .. ".cmd",
+	GIT_CONFIG_VALUE_3 = nvr_merge_cmd,
+
+	GIT_CONFIG_KEY_4 = "mergetool." .. plugin_merge_tool_name .. ".trustExitCode",
+	GIT_CONFIG_VALUE_4 = "false",
+}
+
+-- refresh any required buffers.
 function M.refresh_buf()
 	local status_win = require("oz.git.status").status_win
 	local log_win = require("oz.git.git_log").log_win
@@ -112,8 +143,40 @@ function M.refresh_buf()
 	end
 end
 
--- Run Git cmd
-function M.run_git_cmd(args)
+-- remove any running jobs.
+function M.cleanup_git_jobs(args)
+	if args then
+		if args.job_id then
+			vim.fn.jobstop(args.job_id)
+		end
+		if args.cmd then
+			for key, job_id in pairs(M.running_git_jobs) do
+				if key:match("^" .. args.cmd .. "%d*$") then
+					vim.fn.jobstop(job_id)
+                    -- vim.fn.jobsend(job_id, ":wq\n")  -- sends a :wq command
+					M.running_git_jobs[key] = nil
+				end
+			end
+		end
+	else
+		local killed_any = false
+		for name, job_id in pairs(M.running_git_jobs) do
+			if vim.fn.jobstop(job_id) == 1 then
+				M.running_git_jobs[name] = nil
+				killed_any = true
+			else
+				util.Notify("Failed to stop job: " .. name, "error", "oz_git")
+			end
+		end
+
+		if not killed_any then
+			util.Notify("No tracked Git jobs found to stop.", "error", "oz_git")
+		end
+	end
+end
+
+-- Run Git cmd.
+function M.run_git_job(args)
 	args = g_util.expand_expressions(args)
 	local args_table = g_util.parse_args(args)
 	local suggestion = nil
@@ -127,10 +190,7 @@ function M.run_git_cmd(args)
 	local job_id = vim.fn.jobstart({ "git", unpack(args_table) }, {
 		stdout_buffered = true,
 		stderr_buffered = true,
-		env = {
-			GIT_EDITOR = "nvr -cc split --remote-wait",
-			GIT_SEQUENCE_EDITOR = "nvr -cc split --remote-wait",
-		},
+		env = job_env,
 		on_stdout = function(_, data, _)
 			if data then
 				for _, line in ipairs(data) do
@@ -152,6 +212,7 @@ function M.run_git_cmd(args)
 			suggestion = wizard.get_git_suggestions(data, args_table)
 		end,
 		on_exit = function(_, code, _)
+			M.running_git_jobs[args_table[1]] = nil
 			-- run exec complete callbacks
 			if exec_complete_callback then
 				exec_complete_callback(code, std_out, std_err, suggestion)
@@ -183,8 +244,11 @@ function M.run_git_cmd(args)
 		end,
 	})
 
-	if job_id <= 0 then
-		print("Failed to start job")
+	if job_id and job_id > 0 then
+		local key = util.get_unique_key(M.running_git_jobs, args_table[1])
+		M.running_git_jobs[key] = job_id
+	else
+		util.Notify("Something went wrong.", "error", "oz_git")
 	end
 end
 
@@ -195,14 +259,14 @@ function M.oz_git_usercmd_init(config)
 	g_util.User_cmd({ "Git", "G" }, function(opts)
 		if g_util.if_in_git() then
 			if opts.args and #opts.args > 0 then
-				M.run_git_cmd(opts.args)
+				M.run_git_job(opts.args)
 			else
 				require("oz.git.status").GitStatus()
 				vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
 				vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 			end
 		elseif opts.args and opts.args:find("init") then
-			M.run_git_cmd(opts.args)
+			M.run_git_job(opts.args)
 		else
 			util.Notify("You are not in a git repo. Try :Git init", "warn", "oz_git")
 		end

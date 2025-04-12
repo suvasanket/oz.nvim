@@ -163,6 +163,7 @@ function M.clear_qflist(title)
 		vim.cmd("cclose")
 	end
 end
+
 function M.extract_flags(cmd_str)
 	local flags = {}
 
@@ -177,6 +178,16 @@ function M.extract_flags(cmd_str)
 	end
 
 	return flags
+end
+
+function M.get_unique_key(tbl, key)
+    local base_key = key
+    local counter = 1
+    while tbl[key] do
+        key = base_key .. tostring(counter)
+        counter = counter + 1
+    end
+    return key
 end
 
 return M

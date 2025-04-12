@@ -161,7 +161,7 @@ local function ft_mappings(buf)
 
 	-- refresh
 	vim.keymap.set("n", "<C-r>", function()
-		require("oz.git").run_git_cmd(git_cmd.cur_cmd)
+		require("oz.git").run_git_job(git_cmd.cur_cmd)
 	end, { buffer = buf, silent = true, desc = "refresh current cmd buffer(by rerunning prev cmd)." })
 
 	-- discard grab
