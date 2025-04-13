@@ -29,19 +29,45 @@ local function capture_git_output(cmd)
 end
 
 local function get_command_flags(command)
-	local handle = io.popen("git " .. command .. ' -h 2>&1 | grep -Eo " -[a-zA-Z0-9-]+| --[a-zA-Z0-9-]+"')
+	local handle = io.popen("git " .. command .. " -h 2>&1")
 	if not handle then
 		return {}
 	end
 
+	local output = handle:read("*a")
+	handle:close()
+
+	if not output then
+		return {}
+	end
+
+	local stripped_str = output:gsub("%b()", ""):gsub("%b[]", ""):gsub("%b<>", "")
+	local lines = vim.split(stripped_str, "\n")
 	local flags = {}
-	for line in handle:lines() do
-		local flag = line:match("%S+")
-		if flag and not vim.tbl_contains(flags, flag) then
-			table.insert(flags, flag)
+
+	for _, line in ipairs(lines) do
+		local comma_index = line:find(",")
+		if comma_index then
+			local potential_long_flag = line:sub(comma_index + 1):match("%s*(--%S+)")
+			if potential_long_flag and not vim.tbl_contains(flags, potential_long_flag) then
+				table.insert(flags, potential_long_flag)
+			else
+				local first_flag = line:match("%s*(-%S+)")
+				if first_flag and not vim.tbl_contains(flags, first_flag) then
+					table.insert(flags, first_flag)
+				end
+			end
+		else
+			local first_flag = line:match("%s*(-%S+)")
+			if first_flag and not vim.tbl_contains(flags, first_flag) then
+				table.insert(flags, first_flag)
+			end
+			local long_flag = line:match("%s*(--%S+)")
+			if long_flag and not vim.tbl_contains(flags, long_flag) then
+				table.insert(flags, long_flag)
+			end
 		end
 	end
-	handle:close()
 
 	return flags
 end
