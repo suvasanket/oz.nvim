@@ -477,8 +477,6 @@ local function handle_remote_rename()
 end
 
 local function handle_push()
-	local key = "git_user_push_flags"
-	local json = "oz_git"
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
 
 	if not current_branch then
@@ -490,40 +488,25 @@ local function handle_push()
 	local cur_remote_branch_ref = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
 
-	local cached_flags = caching.get_data(key, json)
-	local suggested_input, suggested_branch
+	local refined_args, branch
 
 	if cur_remote_branch == state.current_branch then
-		suggested_branch = cur_remote_branch
+		branch = cur_remote_branch
 	else
-		suggested_branch = current_branch .. ":" .. cur_remote_branch
+		branch = current_branch .. ":" .. cur_remote_branch
 	end
 
 	if cur_remote_branch_ref == "" then
 		local remote = util.ShellOutputList("git remote")[1]
-		suggested_input = "-u " .. remote .. " " .. current_branch
-	elseif cached_flags then
-		suggested_input = string.format("%s %s %s", cached_flags, cur_remote, suggested_branch)
+		refined_args = "-u " .. remote .. " " .. current_branch
 	else
-		suggested_input = string.format("%s %s", cur_remote, suggested_branch)
+		refined_args = string.format("%s %s", cur_remote, branch)
 	end
 
-	local final_input = util.inactive_input(":Git push", " " .. suggested_input)
-
-	if final_input then
-		final_input = vim.trim(final_input)
-		run_n_refresh("Git push " .. final_input)
-
-		-- Update cache, replacing actual names with placeholders
-		final_input = final_input:gsub("-u", ""):gsub("--set-upstream", "")
-		local flags_to_cache = util.extract_flags(final_input)
-		caching.set_data(key, table.concat(flags_to_cache, " "), json)
-	end
+	g_util.set_cmdline("Git " .. refined_args)
 end
 
 local function handle_pull()
-	local key = "git_user_pull_flags"
-	local json = "oz_git"
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
 
 	if not current_branch then
@@ -546,32 +529,15 @@ local function handle_pull()
 	-- Extract remote branch name (handle potential errors/empty output)
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
 
-	local cached_flags = caching.get_data(key, json)
-	local suggested_input, suggested_branch
+	local branch
 
 	if cur_remote_branch == state.current_branch then
-		suggested_branch = cur_remote_branch
+		branch = cur_remote_branch
 	else
-		suggested_branch = cur_remote_branch .. ":" .. current_branch
+		branch = cur_remote_branch .. ":" .. current_branch
 	end
 
-	if cached_flags then
-		-- Replace placeholders in cached flags
-		suggested_input = string.format("%s %s %s", cached_flags, cur_remote, suggested_branch)
-	else
-		suggested_input = cur_remote .. " " .. suggested_branch
-	end
-
-	local final_input = util.inactive_input(":Git pull", " " .. suggested_input)
-
-	if final_input then
-		final_input = vim.trim(final_input)
-		run_n_refresh("Git pull " .. final_input)
-
-		-- Update cache, replacing actual names with placeholders
-		local flags_to_cache = util.extract_flags(final_input)
-		caching.set_data(key, table.concat(flags_to_cache, " "), json)
-	end
+	g_util.set_cmdline(("Git pull %s %s"):format(cur_remote, branch))
 end
 
 local function handle_branch_new()
