@@ -29,11 +29,6 @@ local function run_n_refresh(cmd)
 	vim.cmd(cmd)
 end
 
-local function get_desc_cursor(str)
-	local icon = "󰳽 "
-	return str .. icon
-end
-
 -- ==================================
 --  Named Functions for Keymap Actions
 -- ==================================
@@ -639,6 +634,18 @@ local function handle_rebase_branch()
 	end
 end
 
+local function handle_reset()
+	local files = s_util.get_file_under_cursor(true)
+	local branch = s_util.get_branch_under_cursor()
+	if #files > 0 then
+		g_util.set_cmdline(("Git reset %s|"):format(table.concat(files, " ")))
+	elseif branch then
+		g_util.set_cmdline(("Git reset %s|"):format(branch))
+	else
+		g_util.set_cmdline("Git reset")
+	end
+end
+
 local function handle_show_help()
 	local user_mappings = require("oz.git").user_config.mappings -- Get mappings at time of call
 	util.Show_buf_keymaps({
@@ -656,6 +663,7 @@ local function handle_show_help()
 			["Push/Pull mappings"] = { "p", "P" },
 			["Merge mappings"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
 			["Rebase mappings"] = { "rr", "ri", "rl", "ra", "rq", "rk", "r<Space>" },
+			["Reset mappings"] = { "UU", "Uu", "Us", "Ux" },
 		},
 		no_empty = true,
 		subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
@@ -664,7 +672,7 @@ end
 
 -- Helper to map specific help keys
 local function map_help_key(key, title)
-	map("n", key, function()
+	map({ "n", "x" }, key, function()
 		util.Show_buf_keymaps({ key = key, title = title })
 	end, { buffer = buf_id })
 end
@@ -903,6 +911,21 @@ function M.keymaps_init(buf)
 		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git rebase." }
 	)
 
+	-- [R]eset mappings
+	map({ "n", "x" }, "UU", handle_reset, { buffer = buf, desc = "Reset file/branch.󰳽 " })
+	map("n", "Us", function()
+		run_n_refresh("Git reset --soft")
+	end, { buffer = buf, desc = "Soft reset." })
+	map("n", "Um", function()
+		run_n_refresh("Git reset --mixed")
+	end, { buffer = buf, desc = "Mixed reset." })
+	map("n", "Uh", function()
+		local confirm_ans = util.prompt("Do really really want to Git reset --hard ?", "&Yes\n&No", 2)
+		if confirm_ans == 1 then
+			run_n_refresh("Git reset --hard")
+		end
+	end, { buffer = buf, desc = "Hard reset(danger)." })
+
 	-- help
 	map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })
 	map_help_key("M", "Remote mappings")
@@ -912,6 +935,7 @@ function M.keymaps_init(buf)
 	map_help_key("b", "Branch mappings")
 	map_help_key("m", "Merge mappings")
 	map_help_key("r", "Rebase mappings")
+	map_help_key("U", "Reset mappings")
 	-- map_help_key("g", "[g] mappings")
 end -- End of M.keymaps_init
 

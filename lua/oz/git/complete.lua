@@ -1,4 +1,5 @@
 local M = {}
+local util = require("oz.util")
 
 -- Cache for git commands to avoid repeated system calls
 local git_commands_cache = nil
@@ -29,42 +30,42 @@ local function capture_git_output(cmd)
 end
 
 local function get_command_flags(command)
-	local handle = io.popen("git " .. command .. " -h 2>&1")
+	local handle, output = io.popen("git " .. command .. " -h 2>&1"), {}
 	if not handle then
-		return {}
+		return output
 	end
 
-	local output = handle:read("*a")
+	output = handle:read("*a")
 	handle:close()
 
 	if not output then
 		return {}
 	end
 
-	local stripped_str = output:gsub("%b()", ""):gsub("%b[]", ""):gsub("%b<>", "")
-	local lines = vim.split(stripped_str, "\n")
-	local flags = {}
-
-	for _, line in ipairs(lines) do
+	local flags, stripped_str = {}, output:gsub("%b()", ""):gsub("%b[]", ""):gsub("%b<>", "")
+	for _, line in ipairs(vim.split(stripped_str, "\n")) do
 		local comma_index = line:find(",")
 		if comma_index then
 			local potential_long_flag = line:sub(comma_index + 1):match("%s*(--%S+)")
-			if potential_long_flag and not vim.tbl_contains(flags, potential_long_flag) then
-				table.insert(flags, potential_long_flag)
+			if
+				potential_long_flag
+				and vim.startswith(potential_long_flag, "-")
+				and not potential_long_flag:find(",")
+			then
+				util.tbl_insert(flags, potential_long_flag)
 			else
 				local first_flag = line:match("%s*(-%S+)")
-				if first_flag and not vim.tbl_contains(flags, first_flag) then
-					table.insert(flags, first_flag)
+				if first_flag and vim.startswith(first_flag, "-") and not first_flag:find(",") then
+					util.tbl_insert(flags, first_flag)
 				end
 			end
 		else
-			local first_flag = line:match("%s*(-%S+)")
-			if first_flag and not vim.tbl_contains(flags, first_flag) then
-				table.insert(flags, first_flag)
+			local first_flag, long_flag = line:match("%s*(-%S+)"), line:match("%s*(--%S+)")
+			if first_flag and vim.startswith(first_flag, "-") and not first_flag:find(",") then
+				util.tbl_insert(flags, first_flag)
 			end
-			local long_flag = line:match("%s*(--%S+)")
-			if long_flag and not vim.tbl_contains(flags, long_flag) then
-				table.insert(flags, long_flag)
+			if long_flag and vim.startswith(long_flag, "-") and not long_flag:find(",") then
+				util.tbl_insert(flags, long_flag)
 			end
 		end
 	end
@@ -228,6 +229,8 @@ local function get_command_specific_completions(cmd, arg, args)
 		end
 	elseif cmd == "merge" or cmd == "rebase" then
 		return get_command_specific_completions("checkout", arg)
+	elseif cmd == "reset" then
+		return get_tbl(arg, get_command_flags(cmd))
 	elseif cmd == "pull" or cmd == "push" or cmd == "fetch" then
 		local remotes = get_git_remotes()
 		local branches = get_git_branches(true)

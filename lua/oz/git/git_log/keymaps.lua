@@ -16,7 +16,7 @@ local buf_id = nil
 
 -- Helper to map specific help keys
 local function map_help_key(key, title)
-	map({ "n", "v", "i", "c" }, key, function()
+	map({ "n", "x" }, key, function()
 		util.Show_buf_keymaps({ key = key, title = title })
 	end, { buffer = buf_id })
 end
@@ -126,7 +126,7 @@ function M.keymaps_init(buf)
 				end,
 			})
 		end
-    end, { buffer = buf, desc = "Pick or unpick any hash under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Pick or unpick any hash under cursor.󰳽 " })
 
 	-- edit picked
 	map("n", { "a", "i" }, function()
@@ -151,7 +151,7 @@ function M.keymaps_init(buf)
 				vim.cmd("Git diff " .. cur_hash)
 			end
 		end
-    end, { buffer = buf, desc = "diff the working tree against the commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "diff the working tree against the commit under cursor.󰳽 " })
 
 	map("n", "dc", function()
 		local cur_hash = get_selected_hash()
@@ -162,7 +162,7 @@ function M.keymaps_init(buf)
 				vim.cmd("Git show " .. cur_hash[1])
 			end
 		end
-    end, { buffer = buf, desc = "Diff the changes introduced by commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Diff the changes introduced by commit under cursor.󰳽 " })
 
 	-- diff range
 	local diff_range_hash = {}
@@ -186,7 +186,7 @@ function M.keymaps_init(buf)
 				diff_range_hash = {}
 			end
 		end
-    end, { buffer = buf, desc = "Diff commits between a range of commits.󰳽 " })
+	end, { buffer = buf, desc = "Diff commits between a range of commits.󰳽 " })
 
 	-- Rebase mappings
 	-- inter rebase
@@ -195,7 +195,7 @@ function M.keymaps_init(buf)
 		if #current_hash > 0 then
 			run_n_refresh("Git rebase -i " .. current_hash[1] .. "^")
 		end
-    end, { buffer = buf, desc = "Start interactive rebase including commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Start interactive rebase including commit under cursor.󰳽 " })
 
 	-- rebase with pick
 	map("n", "rr", function()
@@ -221,7 +221,7 @@ function M.keymaps_init(buf)
 		if #hash > 0 then
 			run_n_refresh("Git rebase -i --autosquash " .. hash[1] .. "^")
 		end
-    end, { buffer = buf, desc = "Start interactive rebase with commit under cursor(--autosquash).󰳽 " })
+	end, { buffer = buf, desc = "Start interactive rebase with commit under cursor(--autosquash).󰳽 " })
 	map("n", "re", function()
 		run_n_refresh("Git rebase --edit-todo")
 	end, { buffer = buf, desc = "Rebase edit todo." })
@@ -238,7 +238,7 @@ function M.keymaps_init(buf)
 		if #hash > 0 then
 			vim.cmd("Git show " .. table.concat(hash, " "))
 		end
-    end, { buffer = buf, desc = "Show current commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Show current commit under cursor.󰳽 " })
 
 	-- Cherry-pick mappings
 	map({ "n", "x" }, "pp", function()
@@ -262,7 +262,7 @@ function M.keymaps_init(buf)
 		if #grab_hashs > 0 then
 			clear_all_picked()
 		end
-    end, { buffer = buf, desc = "Cherry-pick commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Cherry-pick commit under cursor.󰳽 " })
 
 	map("n", "pa", function()
 		run_n_refresh("Git cherry-pick --abort")
@@ -282,31 +282,31 @@ function M.keymaps_init(buf)
 		cmd_upon_current_commit(function(hash)
 			run_n_refresh("Git commit --squash " .. hash)
 		end)
-    end, { buffer = buf, desc = "Create commit with commit under cursor(--squash).󰳽 " })
+	end, { buffer = buf, desc = "Create commit with commit under cursor(--squash).󰳽 " })
 
 	map("n", "cf", function()
 		cmd_upon_current_commit(function(hash)
 			run_n_refresh("Git commit --fixup " .. hash)
 		end)
-    end, { buffer = buf, desc = "Create commit with commit under cursor(--fixup).󰳽 " })
+	end, { buffer = buf, desc = "Create commit with commit under cursor(--fixup).󰳽 " })
 
 	map("n", "cc", function()
 		cmd_upon_current_commit(function(hash)
 			g_util.set_cmdline("Git commit| " .. hash)
 		end)
-    end, { buffer = buf, desc = "Populate cmdline with Git commit followed by current hash.󰳽 " })
+	end, { buffer = buf, desc = "Populate cmdline with Git commit followed by current hash.󰳽 " })
 
 	map("n", "ce", function()
 		cmd_upon_current_commit(function(hash)
 			run_n_refresh(("Git commit -C %s -q"):format(hash))
 		end)
-    end, { buffer = buf, desc = "Create commit & reuse message from commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Create commit & reuse message from commit under cursor.󰳽 " })
 
 	map("n", "ca", function()
 		cmd_upon_current_commit(function(hash)
 			run_n_refresh(("Git commit -c %s -q"):format(hash))
 		end)
-    end, { buffer = buf, desc = "Create commit & edit message from commit under cursor.󰳽 " })
+	end, { buffer = buf, desc = "Create commit & edit message from commit under cursor.󰳽 " })
 
 	-- help
 	map("n", "g?", function()
@@ -319,7 +319,7 @@ function M.keymaps_init(buf)
 				["Commit mappings"] = { "cs", "cf", "cc", "ce", "ca" },
 				["Cherry-pick mappings"] = { "pp", "pa", "ps", "pc", "pq" },
 			},
-            subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
+			subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
 			no_empty = true,
 		})
 	end, { buffer = buf, desc = "Show all availble keymaps." })
