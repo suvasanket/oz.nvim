@@ -498,7 +498,7 @@ local function handle_push()
 		refined_args = string.format("%s %s", cur_remote, branch)
 	end
 
-	g_util.set_cmdline("Git " .. refined_args)
+	g_util.set_cmdline("Git push " .. refined_args)
 end
 
 local function handle_pull()
@@ -634,16 +634,24 @@ local function handle_rebase_branch()
 	end
 end
 
-local function handle_reset()
+local function handle_reset(arg)
 	local files = s_util.get_file_under_cursor(true)
 	local branch = s_util.get_branch_under_cursor()
+	local args = nil
 	if #files > 0 then
-		g_util.set_cmdline(("Git reset %s|"):format(table.concat(files, " ")))
+		if arg then
+			args = ("%s %s"):format(arg, table.concat(files, " "))
+		else
+			args = table.concat(files, " ")
+		end
 	elseif branch then
-		g_util.set_cmdline(("Git reset %s|"):format(branch))
-	else
-		g_util.set_cmdline("Git reset")
+		if arg then
+			args = ("%s %s"):format(arg, branch)
+		else
+			args = branch
+		end
 	end
+	g_util.set_cmdline(("Git reset %s"):format(args))
 end
 
 local function handle_show_help()
@@ -914,17 +922,17 @@ function M.keymaps_init(buf)
 	-- [R]eset mappings
 	map({ "n", "x" }, "UU", handle_reset, { buffer = buf, desc = "Reset file/branch.󰳽 " })
 	map("n", "Us", function()
-		run_n_refresh("Git reset --soft")
-	end, { buffer = buf, desc = "Soft reset." })
+		handle_reset("--soft")
+	end, { buffer = buf, desc = "Reset soft." })
 	map("n", "Um", function()
-		run_n_refresh("Git reset --mixed")
-	end, { buffer = buf, desc = "Mixed reset." })
+		handle_reset("--mixed")
+	end, { buffer = buf, desc = "Reset mixed." })
 	map("n", "Uh", function()
 		local confirm_ans = util.prompt("Do really really want to Git reset --hard ?", "&Yes\n&No", 2)
 		if confirm_ans == 1 then
-			run_n_refresh("Git reset --hard")
+			handle_reset("--hard")
 		end
-	end, { buffer = buf, desc = "Hard reset(danger)." })
+	end, { buffer = buf, desc = "Reset hard(danger)." })
 
 	-- help
 	map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })

@@ -47,6 +47,18 @@ local function cmd_upon_current_commit(callback)
 	end
 end
 
+-- Handle functions --
+local function handle_reset(arg)
+	local current_hash = get_selected_hash()
+	if #current_hash > 0 then
+		if not arg then
+			g_util.set_cmdline("Git reset " .. current_hash[1])
+		else
+			g_util.set_cmdline(("Git reset %s %s"):format(arg, current_hash[1]))
+		end
+	end
+end
+
 -----------------
 -- All keymaps --
 -----------------
@@ -308,6 +320,21 @@ function M.keymaps_init(buf)
 		end)
 	end, { buffer = buf, desc = "Create commit & edit message from commit under cursor.󰳽 " })
 
+	-- [R]eset mappings
+	map("n", "UU", handle_reset, { buffer = buf, desc = "Reset commit.󰳽 " })
+	map("n", "Us", function()
+		handle_reset("--soft")
+	end, { buffer = buf, desc = "Reset commit(--soft).󰳽 " })
+	map("n", "Um", function()
+		handle_reset("--mixed")
+	end, { buffer = buf, desc = "Reset commit(--mixed).󰳽 " })
+	map("n", "Uh", function()
+		local confirm_ans = util.prompt("Do really really want to Git reset --hard ?", "&Yes\n&No", 2)
+		if confirm_ans == 1 then
+			handle_reset("--hard")
+		end
+	end, { buffer = buf, desc = "Reset commit(--hard).󰳽" })
+
 	-- help
 	map("n", "g?", function()
 		util.Show_buf_keymaps({
@@ -318,6 +345,7 @@ function M.keymaps_init(buf)
 				["Rebase mappings"] = { "rr", "ri", "r<Space>", "rl", "ra", "rq", "rk", "ro", "re" },
 				["Commit mappings"] = { "cs", "cf", "cc", "ce", "ca" },
 				["Cherry-pick mappings"] = { "pp", "pa", "ps", "pc", "pq" },
+				["Reset mappings"] = { "UU", "Us", "Uh", "Um" },
 			},
 			subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
 			no_empty = true,
@@ -327,6 +355,7 @@ function M.keymaps_init(buf)
 	map_help_key("r", "Rebase mappings")
 	map_help_key("c", "Commit mappings")
 	map_help_key("p", "Cherry-pick mappings")
+	map_help_key("U", "Reset mappings")
 end
 
 return M
