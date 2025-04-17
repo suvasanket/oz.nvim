@@ -229,7 +229,7 @@ local function get_command_specific_completions(cmd, arg, args)
 		end
 	elseif cmd == "merge" or cmd == "rebase" then
 		return get_command_specific_completions("checkout", arg)
-	elseif cmd == "reset" then
+	elseif cmd == "reset" or cmd == "revert" then
 		return get_tbl(arg, get_command_flags(cmd))
 	elseif cmd == "pull" or cmd == "push" or cmd == "fetch" then
 		local remotes = get_git_remotes()

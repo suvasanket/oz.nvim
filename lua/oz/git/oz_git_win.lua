@@ -47,7 +47,7 @@ local function extract_git_command_and_flag(if_grab)
 				if if_grab then
 					util.tbl_insert(grab_flags, flag)
 					vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
-                    util.tbl_monitor().start_monitoring(grab_flags, { -- keeps echoing ..
+					util.tbl_monitor().start_monitoring(grab_flags, { -- keeps echoing ..
 						interval = 2000,
 						buf = M.oz_git_buf,
 						on_active = function(t)
@@ -59,7 +59,7 @@ local function extract_git_command_and_flag(if_grab)
 						end,
 					})
 				elseif #grab_flags ~= 0 then
-                    util.tbl_monitor().stop_monitoring(grab_flags)
+					util.tbl_monitor().stop_monitoring(grab_flags)
 					vim.api.nvim_feedkeys(":Git " .. command .. " " .. table.concat(grab_flags, " "), "n", false)
 					grab_flags = {}
 				else
@@ -75,11 +75,11 @@ end
 -- helper: if grabbed
 local function if_grabed_enter()
 	if #grab_hashs ~= 0 then
-        util.tbl_monitor().stop_monitoring(grab_hashs)
+		util.tbl_monitor().stop_monitoring(grab_hashs)
 		g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 		grab_hashs = {}
 	elseif #grab_files ~= 0 then
-        util.tbl_monitor().stop_monitoring(grab_files)
+		util.tbl_monitor().stop_monitoring(grab_files)
 		g_util.set_cmdline("Git | " .. table.concat(grab_files, " "))
 		grab_files = {}
 	else
@@ -90,19 +90,21 @@ end
 
 -- mappings
 local function ft_mappings(buf)
-	vim.keymap.set("n", "q", function()
-		vim.cmd("close")
-	end, { buffer = buf, silent = true, desc = "close cmd buffer." })
+	local user_mappings = require("oz.git").user_config.mappings
+	local map = g_util.map
 
-	-- FIXME: potential ref C-g and CR
-	-- GRAB key
-	vim.keymap.set("n", "<C-g>", function()
+	map("n", "q", function()
+		vim.cmd("close")
+	end, { buffer = buf, desc = "close cmd buffer." })
+
+	-- Pick mapping
+	map("n", user_mappings.toggle_pick, function()
 		local cfile = vim.fn.expand("<cfile>")
 
 		if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- grab hashes
 			util.tbl_insert(grab_hashs, cfile)
 			vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
-            util.tbl_monitor().start_monitoring(grab_hashs, { -- keeps echoing ..
+			util.tbl_monitor().start_monitoring(grab_hashs, { -- keeps echoing ..
 				interval = 2000,
 				buf = buf,
 				on_active = function(t)
@@ -114,8 +116,8 @@ local function ft_mappings(buf)
 
 			if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then -- grab files
 				util.tbl_insert(grab_files, cfile)
-				vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
-                util.tbl_monitor().start_monitoring(grab_files, { -- keeps echoing ..
+				vim.notify_once("press 'a/i' to enter cmdline.")
+				util.tbl_monitor().start_monitoring(grab_files, { -- keeps echoing ..
 					interval = 2000,
 					buf = buf,
 					on_active = function(t)
@@ -128,10 +130,10 @@ local function ft_mappings(buf)
 				end
 			end
 		end
-	end, { buffer = buf, silent = true, desc = "pick any valid entry under cursor." })
+	end, { buffer = buf, desc = "pick any valid entry under cursor." })
 
-	-- ENTER key
-	vim.keymap.set("n", "<cr>", function()
+	-- enter cmdline
+	map("n", { "i", "a" }, function()
 		if not if_grabed_enter() then -- if any grabbed thing present then open that else do below
 			local cfile = vim.fn.expand("<cfile>")
 
@@ -157,15 +159,15 @@ local function ft_mappings(buf)
 				end
 			end
 		end
-	end, { buffer = buf, silent = true, desc = "open any valid entry under cursor." })
+	end, { buffer = buf, desc = "open any valid entry under cursor." })
 
 	-- refresh
-	vim.keymap.set("n", "<C-r>", function()
+	map("n", "<C-r>", function()
 		require("oz.git").run_git_job(git_cmd.cur_cmd)
-	end, { buffer = buf, silent = true, desc = "refresh current cmd buffer(by rerunning prev cmd)." })
+	end, { buffer = buf, desc = "refresh current cmd buffer(by rerunning prev cmd)." })
 
 	-- discard grab
-	vim.keymap.set("n", "<C-c>", function()
+	map("n", user_mappings.unpick_all, function()
 		grab_hashs, grab_files, grab_flags =
 			#grab_hashs > 0 and {} or grab_hashs,
 			#grab_files > 0 and {} or grab_files,
@@ -173,24 +175,24 @@ local function ft_mappings(buf)
 		vim.api.nvim_echo({ { "" } }, false, {})
 		util.Notify("All picked items have been removed.", nil, "oz_git")
 		util.tbl_monitor().stop_all_monitoring()
-	end, { buffer = buf, silent = true, desc = "discard any picked entry." })
+	end, { buffer = buf, desc = "discard any picked entry." })
 
 	-- show help
-	vim.keymap.set("n", "g?", function()
+	map("n", "g?", function()
 		util.Show_buf_keymaps()
-	end, { buffer = buf, silent = true, desc = "show all keymaps." })
+	end, { buffer = buf, desc = "show all keymaps." })
 
-	vim.keymap.set("n", "<C-o>", function()
+	map("n", "<C-o>", function()
 		if git_cmd.prev_cmd then
 			vim.cmd("Git " .. git_cmd.prev_cmd)
 		end
-	end, { remap = false, buffer = buf, silent = true, desc = "go back to previous cmd buffer." })
+	end, { remap = false, buffer = buf, desc = "go back to previous cmd buffer." })
 
-	vim.keymap.set("n", "<C-i>", function()
+	map("n", "<C-i>", function()
 		if git_cmd.next_cmd then
 			vim.cmd("Git " .. git_cmd.next_cmd)
 		end
-	end, { remap = false, buffer = buf, silent = true, desc = "go to next cmd buffer." })
+	end, { remap = false, buffer = buf, desc = "go to next cmd buffer." })
 end
 
 -- highlights

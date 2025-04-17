@@ -674,7 +674,7 @@ local function handle_show_help()
 			["Reset mappings"] = { "UU", "Uu", "Us", "Ux" },
 		},
 		no_empty = true,
-		subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
+        subtext = { "[󰳽 represents the key is actionable for the entry under cursor.]" },
 	})
 end
 

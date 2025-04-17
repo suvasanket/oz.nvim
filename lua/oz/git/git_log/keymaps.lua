@@ -13,6 +13,7 @@ local user_mappings = require("oz.git").user_config.mappings
 local refresh = require("oz.git.git_log").refresh_commit_log
 local map = g_util.map
 local buf_id = nil
+-- TODO remove any inactive input
 
 -- Helper to map specific help keys
 local function map_help_key(key, title)
@@ -57,6 +58,24 @@ local function handle_reset(arg)
 			g_util.set_cmdline(("Git reset %s %s"):format(arg, current_hash[1]))
 		end
 	end
+end
+
+local function handle_revert()
+	local str
+	if #grab_hashs > 0 then
+		str = table.concat(grab_hashs, " ")
+		clear_all_picked()
+	else
+		local commits = get_selected_hash()
+		if #commits == 1 then
+			str = commits[1]
+		elseif #commits == 2 then
+			str = ("%s %s"):format(commits[1], commits[2])
+		elseif #commits > 2 then
+			str = ("%s..%s"):format(commits[1], commits[#commits])
+		end
+	end
+	g_util.set_cmdline("Git revert| " .. str)
 end
 
 -----------------
@@ -237,7 +256,6 @@ function M.keymaps_init(buf)
 	map("n", "re", function()
 		run_n_refresh("Git rebase --edit-todo")
 	end, { buffer = buf, desc = "Rebase edit todo." })
-	map("n", "r<space>", ":Git rebase ", { silent = false, buffer = buf, desc = "Populate cmdline with Git rebase." })
 
 	-- refresh
 	map("n", "<C-r>", function()
@@ -257,6 +275,7 @@ function M.keymaps_init(buf)
 		local input
 		if #grab_hashs > 0 then
 			input = " " .. table.concat(grab_hashs, " ")
+			clear_all_picked()
 		else
 			local hash = get_selected_hash()
 			if #hash == 1 then
@@ -270,9 +289,6 @@ function M.keymaps_init(buf)
 		if input then
 			run_n_refresh("Git cherry-pick" .. input)
 			-- print("Git cherry-pick" .. input)
-		end
-		if #grab_hashs > 0 then
-			clear_all_picked()
 		end
 	end, { buffer = buf, desc = "Cherry-pick commit under cursor.󰳽 " })
 
@@ -335,6 +351,33 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "Reset commit(--hard).󰳽" })
 
+	-- [R]evert mappings
+	map({ "n", "x" }, "uu", handle_revert, { buffer = buf, desc = "Revert selection or current commit." })
+	map("n", "ui", function()
+		local hash = get_selected_hash()
+		if #hash == 1 then
+			run_n_refresh("Git revert --edit " .. hash[1])
+		end
+	end, { buffer = buf, desc = "Revert commit with edit." })
+	map("n", "ue", function()
+		local hash = get_selected_hash()
+		if #hash == 1 then
+			run_n_refresh("Git revert --no-edit " .. hash[1])
+		end
+	end, { buffer = buf, desc = "Revert commit with no-edit." })
+	map("n", "ul", function()
+		run_n_refresh("Git revert --continue")
+	end, { buffer = buf, desc = "Revert continue." })
+	map("n", "uk", function()
+		run_n_refresh("Git revert --skip")
+	end, { buffer = buf, desc = "Revert skip." })
+	map("n", "uq", function()
+		run_n_refresh("Git revert --quit")
+	end, { buffer = buf, desc = "Revert quit." })
+	map("n", "ua", function()
+		run_n_refresh("Git revert --abort")
+	end, { buffer = buf, desc = "Revert abort." })
+
 	-- help
 	map("n", "g?", function()
 		util.Show_buf_keymaps({
@@ -342,12 +385,13 @@ function M.keymaps_init(buf)
 				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
 				["Goto mappings"] = { "g:", "g<Space>", "g?", "gs" },
 				["Diff mappings"] = { "dd", "dc", "dp" },
-				["Rebase mappings"] = { "rr", "ri", "r<Space>", "rl", "ra", "rq", "rk", "ro", "re" },
+				["Rebase mappings"] = { "rr", "ri", "rl", "ra", "rq", "rk", "ro", "re" },
 				["Commit mappings"] = { "cs", "cf", "cc", "ce", "ca" },
 				["Cherry-pick mappings"] = { "pp", "pa", "ps", "pc", "pq" },
 				["Reset mappings"] = { "UU", "Us", "Uh", "Um" },
+				["Revert mappings"] = { "uu", "ul", "uk", "ua", "uq", "ui", "ue" },
 			},
-			subtext = { "[󰳽 represents the key is actionable for entry under cursor.]" },
+			subtext = { "[󰳽 represents the key is actionable for the entry under cursor.]" },
 			no_empty = true,
 		})
 	end, { buffer = buf, desc = "Show all availble keymaps." })
@@ -356,6 +400,7 @@ function M.keymaps_init(buf)
 	map_help_key("c", "Commit mappings")
 	map_help_key("p", "Cherry-pick mappings")
 	map_help_key("U", "Reset mappings")
+	map_help_key("u", "Revert mappings")
 end
 
 return M

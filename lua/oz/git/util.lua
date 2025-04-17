@@ -125,7 +125,7 @@ end
 
 function M.set_cmdline(str)
 	local cmdline = str:gsub("%|", "")
-	vim.api.nvim_feedkeys(":" .. cmdline, "n", false)
+	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(":<C-U>" .. cmdline, true, false, true), "n", false)
 	local cursor_pos = str:find("%|")
 	if cursor_pos then
 		vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
