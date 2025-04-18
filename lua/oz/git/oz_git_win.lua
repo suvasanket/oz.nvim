@@ -46,7 +46,6 @@ local function extract_git_command_and_flag(if_grab)
 				local final_command = command .. " " .. flag
 				if if_grab then
 					util.tbl_insert(grab_flags, flag)
-					vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
 					util.tbl_monitor().start_monitoring(grab_flags, { -- keeps echoing ..
 						interval = 2000,
 						buf = M.oz_git_buf,
@@ -103,7 +102,7 @@ local function ft_mappings(buf)
 
 		if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- grab hashes
 			util.tbl_insert(grab_hashs, cfile)
-			vim.notify_once("press 'Enter' to enter cmdline, <C-c> to reset.")
+			vim.notify_once("press 'a/i' to enter cmdline.")
 			util.tbl_monitor().start_monitoring(grab_hashs, { -- keeps echoing ..
 				interval = 2000,
 				buf = buf,
@@ -126,7 +125,7 @@ local function ft_mappings(buf)
 				})
 			else
 				if not extract_git_command_and_flag(true) then -- grab flags
-					util.Notify("Nothing to grab.", "warn", "oz_git")
+					util.Notify("Nothing to pick.", "warn", "oz_git")
 				end
 			end
 		end
@@ -153,13 +152,17 @@ local function ft_mappings(buf)
 					if line:match("^%s*git%s+") then
 						line = line:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^git%s+", "")
 						vim.api.nvim_feedkeys(":Git " .. line, "n", false)
-					elseif not extract_git_command_and_flag() then -- edit flags
-						vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
 					end
 				end
 			end
 		end
 	end, { buffer = buf, desc = "open any valid entry under cursor." })
+
+	map("n", "<cr>", function()
+		if not extract_git_command_and_flag() then
+			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
+		end
+	end, { buffer = buf, desc = ":)" })
 
 	-- refresh
 	map("n", "<C-r>", function()
@@ -179,7 +182,11 @@ local function ft_mappings(buf)
 
 	-- show help
 	map("n", "g?", function()
-		util.Show_buf_keymaps()
+		util.Show_buf_keymaps({
+			header_name = {
+				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
+			},
+		})
 	end, { buffer = buf, desc = "show all keymaps." })
 
 	map("n", "<C-o>", function()

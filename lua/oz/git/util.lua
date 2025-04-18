@@ -134,11 +134,13 @@ end
 
 function M.if_in_git()
 	local res = util.ShellOutputList("git rev-parse --is-inside-work-tree 2>/dev/null")
-	res = vim.trim(res[1])
-	if res:find("true") then
-		return true
-	else
-		return false
+	if #res > 0 then
+		res = vim.trim(res[1])
+		if res:find("true") then
+			return true
+		else
+			return false
+		end
 	end
 end
 

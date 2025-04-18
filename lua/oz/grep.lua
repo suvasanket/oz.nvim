@@ -96,7 +96,7 @@ function M.async_grep(cmd, pattern, dir, opts)
 
 	---@diagnostic disable-next-line: deprecated
 	local grep_shellcmd = { cmd, unpack(args) }
-	print(vim.inspect(grep_shellcmd))
+	-- print(vim.inspect(grep_shellcmd))
 	vim.fn.jobstart(grep_shellcmd, {
 		stdout_buffered = true,
 		on_stdout = function(_, data, _)
