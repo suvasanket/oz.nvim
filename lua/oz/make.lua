@@ -50,24 +50,28 @@ function M.Make_func(args, dir)
 			qf.capture_lines_to_qf(output, vim.bo.ft, true)
 
 			if #vim.fn.getqflist() == 1 then
-                vim.cmd("cfirst")
-            elseif #vim.fn.getqflist() > 0 then
+				vim.cmd("cfirst")
+			elseif #vim.fn.getqflist() > 0 then
 				vim.cmd("cw | cfirst")
 			else
-                vim.cmd("cw")
-				util.echoprint("oz: Nothing in quickfixlist! (exit_code:" .. exit_code .. ")")
+				vim.cmd("cw")
+				if exit_code == 0 then
+                    util.echoprint("Make complete.", "healthSuccess")
+				else
+					util.echoprint(("Nothing in quicfixlist exit_code:%s (:h efm)"):format(exit_code), "healthError")
+				end
 			end
 		end,
 	})
 
 	if not ok then
-		util.Notify("oz: Cannot execute make", "error", "Make")
+		util.Notify("Cannot execute make", "error", "oz_make")
 		return
 	end
 	if job_id <= 0 then
-		util.echoprint("oz: Failed to start Make", "ErrorMsg")
+		util.echoprint("Failed to start Make", "healthError")
 	else
-		print("Make started..")
+		util.echoprint("Make started..", "Comment")
 	end
 end
 

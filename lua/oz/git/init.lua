@@ -153,7 +153,7 @@ function M.cleanup_git_jobs(args)
 			for key, job_id in pairs(M.running_git_jobs) do
 				if key:match("^" .. args.cmd .. "%d*$") then
 					vim.fn.jobstop(job_id)
-                    -- vim.fn.jobsend(job_id, ":wq\n")  -- sends a :wq command
+					-- vim.fn.jobsend(job_id, ":wq\n")  -- sends a :wq command
 					M.running_git_jobs[key] = nil
 				end
 			end
@@ -293,20 +293,25 @@ function M.oz_git_usercmd_init(config)
 	end, { nargs = "*", desc = "oz_git log" })
 
 	-- Gr
-	vim.api.nvim_create_user_command("Gr", function()
+	g_util.User_cmd({ "Gr", "Gread" }, function(opts)
 		if g_util.if_in_git() then
-			M.after_exec_complete(function()
-				pcall(vim.cmd, "edit")
-			end)
-			vim.cmd("Git checkout -- %")
-			vim.api.nvim_echo({ { ":Git " }, { "checkout -- %", "ModeMsg" } }, false, {})
+			local file = opts.args
+			if file == "" then
+				file = vim.fn.expand("%")
+			else
+				vim.cmd("edit " .. file)
+			end
+			local read_content = vim.fn.systemlist({ "git", "show", "HEAD:" .. file })
+			if #read_content > 0 then
+				vim.api.nvim_buf_set_lines(0, 0, -1, false, read_content)
+			end
 		else
 			util.Notify("You are not in a git repo.", "warn", "oz_git")
 		end
-	end, { nargs = "*", desc = "Git read" })
+	end, { nargs = "?", complete = "file", desc = "oz_git: undo unstaged changes." })
 
 	-- Gw
-	vim.api.nvim_create_user_command("Gw", function(opts)
+	g_util.User_cmd({ "Gw", "Gwrite" }, function(opts)
 		local file_name = vim.trim(opts.args)
 		if g_util.if_in_git() then
 			if file_name == "" then
@@ -329,7 +334,7 @@ function M.oz_git_usercmd_init(config)
 		else
 			util.Notify("You are not in a git repo.", "warn", "oz_git")
 		end
-	end, { nargs = "*", desc = "Git write" })
+	end, { nargs = "*", complete = "file", desc = "oz_git: add/stage/rename current file." })
 end
 
 return M
