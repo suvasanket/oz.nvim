@@ -12,6 +12,8 @@ local refresh = status.refresh_status_buf
 local state = status.state
 local buf_id = nil
 
+local open_in_ozgitwin = require("oz.git.oz_git_win").open_oz_git_win
+
 -- map helper
 local map = function(...)
 	g_util.map(...)
@@ -168,37 +170,47 @@ local function handle_commit_amend()
 	run_n_refresh("Git commit --amend -q")
 end
 
+-- helper: handle enter
+local function handle_enter_key_helper(line)
+	if line:match('"([^"]+)"') then -- populate cmdline with help.
+		local quoted_str = line:match('"([^"]+)"'):gsub("git", "Git"):gsub("<[^>]*>", "")
+		g_util.set_cmdline(quoted_str)
+	elseif line:match("Stash list:") then -- stash detail
+		git.after_exec_complete(function(code, out, err)
+			open_in_ozgitwin(out, nil, "stdout")
+		end, true)
+		vim.cmd("Git stash list --stat")
+	elseif line:match("^On branch") then -- remote branch detail
+		local remote = util.ShellOutput("git remote")
+		vim.cmd("Git remote show " .. remote)
+	end
+end
+
 local function handle_enter_key()
-	local entry = s_util.get_file_under_cursor()
-	local branch_under_cursor = s_util.get_branch_under_cursor()
-	if #entry > 0 then
-		-- Check if file or directory exists before trying to edit
-		if vim.fn.filereadable(entry[1]) == 1 or vim.fn.isdirectory(entry[1]) == 1 then
-			vim.cmd.wincmd("k") -- Go to previous window (presumably the main editing window)
-			vim.cmd("edit " .. entry[1])
-		else
-			util.Notify("Cannot open entry: " .. entry[1], "warn", "oz_git")
-		end
-	elseif branch_under_cursor then
+	local file = s_util.get_file_under_cursor()
+	local branch = s_util.get_branch_under_cursor()
+	local stash = s_util.get_stash_under_cursor()
+
+	if #file > 0 and (vim.fn.filereadable(file[1]) == 1 or vim.fn.isdirectory(file[1]) == 1) then -- if file.
+		vim.cmd("wincmd k | edit " .. file[1])
+	elseif branch then -- if branch
 		git.after_exec_complete(function(code, _, err)
 			if code == 0 then
 				refresh()
-				vim.schedule(function()
-					util.Notify("Checked out branch '" .. branch_under_cursor .. "'.", nil, "oz_git")
-				end)
+				util.Notify("Checked out branch '" .. branch .. "'.", nil, "oz_git")
 			else
-				-- Assuming oz_git_win exists and is the intended error handler
-				require("oz.git.oz_git_win").open_oz_git_win(err, nil, "stderr")
+				open_in_ozgitwin(err, nil, "stderr")
 			end
 		end, true)
-		vim.cmd("Git checkout " .. branch_under_cursor)
+		vim.cmd("Git checkout " .. branch)
+	elseif #stash ~= 0 then -- if stash
+		print(vim.inspect(stash))
+		git.after_exec_complete(function(code, out, err)
+			open_in_ozgitwin(out, nil, "stdout")
+		end, true)
+		vim.cmd(("Git stash show stash@{%s}"):format(stash.index))
 	else
-		local line = vim.api.nvim_get_current_line()
-		local quoted_str = line:match('"([^"]+)"')
-		if quoted_str then
-			quoted_str = quoted_str:gsub("git", "Git"):gsub("<[^>]*>", "")
-			g_util.set_cmdline(quoted_str)
-		end
+		handle_enter_key_helper(vim.api.nvim_get_current_line())
 	end
 end
 
@@ -663,18 +675,18 @@ local function handle_show_help()
 			["Diff mappings"] = { "dd", "dc", "dm", "db" },
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
 			["Goto mappings"] = { "gu", "gs", "gU", "gl", "gL", "g<Space>", "g?" }, -- Added gL
-			["Remote mappings"] = { "Ma", "Md", "Mr", "M" }, -- Added mP
+			["Remote mappings"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
 			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
 			["Conflict resolution mappings"] = { "xo", "xc", "xp" },
 			["Stash mappings"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
 			["Branch mappings"] = { "bn", "bd", "bu", "bU" },
 			["Push/Pull mappings"] = { "p", "P" },
 			["Merge mappings"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
-			["Rebase mappings"] = { "rr", "ri", "rl", "ra", "rq", "rk", "r<Space>" },
-			["Reset mappings"] = { "UU", "Uu", "Us", "Ux" },
+			["Rebase mappings"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" },
+			["Reset mappings"] = { "UU", "Uu", "Us", "Ux", "Uh", "Um" },
 		},
 		no_empty = true,
-        subtext = { "[󰳽 represents the key is actionable for the entry under cursor.]" },
+		subtext = { "[󰳽 represents the key is actionable for the entry under cursor.]" },
 	})
 end
 
@@ -841,23 +853,16 @@ function M.keymaps_init(buf)
 	)
 
 	-- Remote mappings
+	map("n", "MM", function()
+		run_n_refresh("Git remote -v")
+	end, { buffer = buf_id, desc = "Remote list." })
 	map("n", "Ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
 	map("n", "Md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote.󰳽 " })
 	map("n", "Mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote.󰳽 " })
 
 	-- push / pull
-	map(
-		"n",
-		"p",
-		handle_pull,
-		{ buffer = buf_id, desc = "Git pull or pull from branch under cursor with specified flags.󰳽 " }
-	)
-	map(
-		"n",
-		"P",
-		handle_push,
-		{ buffer = buf_id, desc = "Git push or push to branch under cursor with specified flags.󰳽 " }
-	)
+	map("n", "p", handle_pull, { buffer = buf_id, desc = "Git pull or pull from branch under cursor.󰳽 " })
+	map("n", "P", handle_push, { buffer = buf_id, desc = "Git push or push to branch under cursor.󰳽 " })
 
 	-- [B]ranch mappings
 	map("n", "bn", handle_branch_new, { buffer = buf_id, desc = "Create a new branch.󰳽 " })

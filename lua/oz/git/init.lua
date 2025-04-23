@@ -42,8 +42,8 @@ local function different_cmd_runner(args_table, args_str)
 		})
 	end
 
-	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "svn" }
-	local interactive_cmd = { "add -p", "reset -p", "commit -p", "git checkout -p" }
+	local remote_cmds = { "push", "pull", "fetch", "clone", "remote", "request-pull", "ls-remote", "submodule", "svn" }
+	local interactive_cmd = { "add -p", "reset -p", "commit -p", "checkout -p" }
 
 	-- all the conditional commands here.
 	if cmd == "status" then

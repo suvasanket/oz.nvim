@@ -136,6 +136,14 @@ local function stop_spinner(code)
 	vim.api.nvim_echo({ { "" } }, false, {})
 end
 
+-- open output for specific cmds
+local function cmd_output(cmd, output)
+	local cmds = { "remote", "request-pull", "ls-remote" }
+	if vim.tbl_contains(cmds, cmd) then
+		require("oz.git.oz_git_win").open_oz_git_win(output, cmd, "stdout")
+	end
+end
+
 -- Main git async function
 function M.run_git_with_progress(command, args, output_callback)
 	local cmd = table.concat({ "git", command, unpack(args or {}) }, " ")
@@ -174,7 +182,7 @@ function M.run_git_with_progress(command, args, output_callback)
 			for _, line in ipairs(data) do
 				if line and line ~= "" then
 					local clean_output = clean_line(line)
-					all_output[#all_output + 1] = clean_output
+                    table.insert(all_output, 1, clean_output)
 
 					-- Update fidget message with latest error
 					if fidget and M.progress_handle then
@@ -187,6 +195,7 @@ function M.run_git_with_progress(command, args, output_callback)
 		end,
 		on_exit = function(_, exit_code)
 			stop_spinner(exit_code)
+			cmd_output(command, all_output) -- open output for specific cmds
 			vim.schedule(function()
 				require("oz.git").refresh_buf()
 			end)

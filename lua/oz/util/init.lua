@@ -151,6 +151,13 @@ function M.remove_from_tbl(tbl, item)
 	end
 end
 
+function M.join_tables(tbl1, tbl2)
+	for _, str in ipairs(tbl2) do
+		table.insert(tbl1, str)
+	end
+	return tbl1
+end
+
 function M.usercmd_exist(name)
 	local commands = vim.api.nvim_get_commands({})
 	return commands[name] ~= nil
@@ -181,13 +188,13 @@ function M.extract_flags(cmd_str)
 end
 
 function M.get_unique_key(tbl, key)
-    local base_key = key
-    local counter = 1
-    while tbl[key] do
-        key = base_key .. tostring(counter)
-        counter = counter + 1
-    end
-    return key
+	local base_key = key
+	local counter = 1
+	while tbl[key] do
+		key = base_key .. tostring(counter)
+		counter = counter + 1
+	end
+	return key
 end
 
 return M

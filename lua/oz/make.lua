@@ -53,12 +53,14 @@ function M.Make_func(args, dir)
 				vim.cmd("cfirst")
 			elseif #vim.fn.getqflist() > 0 then
 				vim.cmd("cw | cfirst")
+				util.echoprint("Error occurred while running make", "healthError")
 			else
 				vim.cmd("cw")
 				if exit_code == 0 then
-                    util.echoprint("Make complete.", "healthSuccess")
+					util.echoprint("Make completed successfully", "healthSuccess")
 				else
-					util.echoprint(("Nothing in quicfixlist exit_code:%s (:h efm)"):format(exit_code), "healthError")
+					util.echoprint(("Nothing in quicfixlist exit_code:%s"):format(exit_code), "healthError")
+					util.Notify("Consult :help efm", "warn", "oz_make")
 				end
 			end
 		end,

@@ -19,37 +19,36 @@ local function status_buf_hl()
 	vim.fn.matchadd("@diff.plus", "^    +.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^    -.*$", 0, -1, { extend = true })
 
-	-- stash and heading
+	-- heading
 	vim.cmd([[
-        syntax match ozInactivePrompt /stash@{[0-9]}/ "stash
-        syntax match @function /^[A-Z][^ \t].*/ "heading
-        syn region @boolean matchgroup=Delimiter start="\[" end="\]"
+        syntax match ozInactivePrompt /^[A-Z][^ \t].*/
+        highlight ozGitStatusHeading guifg=#ffffff ctermfg=46 gui=bold
+
+        syntax match ozGitStatusHeading "^On branch " nextgroup=ozGitStatusBranchName
+        syntax match ozGitStatusHeading "^Stash list:"
+        syntax match ozGitStatusHeading "^Changes not staged for commit:"
+        syntax match ozGitStatusHeading "^Untracked files:"
+        syntax match ozGitStatusHeading "^Changes to be committed:"
     ]])
 
-	-- commit hash
-	vim.cmd("syntax match ozgitstatusCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
-	vim.cmd("highlight default link ozgitstatusCommitHash ozInactivePrompt")
+	-- inactive
+	vim.cmd("syntax match ozInactivePrompt /stash@{[0-9]}/")
+	vim.cmd("syntax match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 
 	-- branch
 	vim.cmd([[
-        syntax match ozGitStatusHeader "^On branch " nextgroup=ozGitStatusBranchName
         syntax match ozGitStatusBranchName "\S\+" contained
         syntax match ozGitStatusCurBranch /\*\s\w\+/
 
-        highlight default link ozGitStatusBranchName Title
-        highlight default link ozGitStatusCurBranch Title
-        highlight default link ozGitStatusHeader @function
+        highlight default link ozGitStatusBranchName @attribute
+        highlight default link ozGitStatusCurBranch @attribute
     ]])
 
-	-- remote branch
+	-- misc
 	vim.cmd([[
-        highlight GitStatusLine guifg=#808080 ctermfg=244
-        highlight GitStatusQuoted guifg=#99BC85 ctermfg=46 gui=bold
-        highlight default link GitStatusNumber @warning
-
-        syntax match GitStatusLine /^Your branch is .*$/
-        syntax match GitStatusQuoted /'[^']*'/ contained containedin=GitStatusLine
-        syntax match GitStatusNumber /\d\+/ contained containedin=GitStatusLine
+        syn region @boolean matchgroup=Delimiter start="\[" end="\]"
+        syntax match String /'[^']*'/
+        syntax match Number /\d\+/
     ]])
 end
 
@@ -121,27 +120,28 @@ end
 -- get neccessry lines for status buffer
 local function generate_status_content()
 	local status_tbl = {}
-	local status_str = util.ShellOutputList("git status")
-	local stash_str = util.ShellOutputList("git stash list")
+	local stash_tbl = {}
+	local git_status_output = util.ShellOutputList("git status")
+	local git_stash_output = util.ShellOutputList("git stash list")
 
-	if #status_str ~= 0 then
-		for _, substr in ipairs(status_str) do
-			if substr ~= "" and not substr:match('%(use "git .-.%)') then
-				-- substr = substr:gsub("^[%s\t]+", " ")
+	if #git_status_output ~= 0 then
+		for _, substr in ipairs(git_status_output) do
+			if not substr:match('%(use "git .-.%)') then
+				-- substr = substr:gsub("^[%s\t]+", "  ")
 				table.insert(status_tbl, substr)
 			end
 		end
 	end
 
-	if #stash_str ~= 0 then
-		table.insert(status_tbl, "Stash list:")
-		for _, substr in ipairs(stash_str) do
+	if #git_stash_output ~= 0 then
+		table.insert(stash_tbl, "Stash list:")
+		for _, substr in ipairs(git_stash_output) do
 			if substr ~= "" and not substr:match('%(use "git .-.%)') then
-				table.insert(status_tbl, "\t" .. substr)
+				table.insert(stash_tbl, "\t" .. substr)
 			end
 		end
 	end
-	return status_tbl
+	return util.join_tables(status_tbl, stash_tbl)
 end
 
 local function get_toggled_headings(tbl1, tbl2)
@@ -196,7 +196,7 @@ function M.GitStatus()
 	local s_util = require("oz.git.status.util")
 
 	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
-	M.state.current_branch = util.ShellOutput("git branch --show-current")
+	M.state.current_branch = vim.fn.systemlist("git rev-parse --abbrev-ref HEAD")[1]
 	local lines = generate_status_content()
 
 	open_status_buf(lines)
