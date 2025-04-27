@@ -63,20 +63,20 @@ function M.grep_to_qf(cmd, dir)
 	local grep_flags = { "-nrH", "--color=never" }
 
 	if exe == "rg" then
-		M.async_grep(exe, parsed.pattern, target, {
+		M.oz_grep(exe, parsed.pattern, target, {
 			flags = vim.tbl_deep_extend("keep", rg_flags, flags),
 			formatter = "%f:%l:%c:%m",
 		})
 	elseif exe == "grep" then
-		M.async_grep(exe, parsed.pattern, target, {
+		M.oz_grep(exe, parsed.pattern, target, {
 			flags = vim.tbl_deep_extend("keep", grep_flags, flags),
 			formatter = "%f:%l:%m",
 		})
 	end
 end
 
--- async grep
-function M.async_grep(cmd, pattern, dir, opts)
+-- oz grep
+function M.oz_grep(cmd, pattern, dir, opts)
 	opts = opts or {}
 	local formatter = opts.formatter
 	local args = {}
@@ -205,7 +205,7 @@ local function parse_Grep_args(argstring)
 end
 
 -- :Grep init
-function M.asyncgrep_init(config)
+function M.oz_grep_init(config)
 	-- Grep usercmd
 	vim.api.nvim_create_user_command("Grep", function(args)
 		-- parse the usercmd args.
@@ -248,7 +248,7 @@ function M.asyncgrep_init(config)
 			table.insert(opt_flags, flags)
 		end
 
-		M.async_grep(opt_exe, pattern, target_dir, {
+		M.oz_grep(opt_exe, pattern, target_dir, {
 			flags = opt_flags,
 			formatter = grep_fm,
 		})

@@ -53,7 +53,7 @@ function M.Make_func(args, dir)
 				vim.cmd("cfirst")
 			elseif #vim.fn.getqflist() > 0 then
 				vim.cmd("cw | cfirst")
-				util.echoprint("Error occurred while running make", "healthError")
+				util.echoprint("Issue found: resolve then continue", "healthWarning")
 			else
 				vim.cmd("cw")
 				if exit_code == 0 then
@@ -108,7 +108,7 @@ function M.makeprg_autosave()
 	})
 end
 
-function M.asyncmake_init(config)
+function M.oz_make_init(config)
 	-- Make cmd
 	vim.api.nvim_create_user_command("Make", function(arg)
 		-- run make in cwd
