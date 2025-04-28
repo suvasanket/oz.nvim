@@ -2,6 +2,7 @@ local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
 local shell = require("oz.util.shell")
+local win = require("oz.util.win")
 
 local run_cmd = shell.run_command
 
@@ -55,53 +56,6 @@ local function status_buf_hl()
         syntax match String /'[^']*'/
         syntax match Number /\d\+/
     ]])
-end
-
--- status buf FileType
-local function status_buf_ft()
-	vim.api.nvim_create_autocmd("FileType", {
-		pattern = "GitStatus",
-		once = true,
-		callback = function(event)
-			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-			-- load async
-			vim.fn.timer_start(10, function()
-				status_buf_hl()
-			end)
-			vim.fn.timer_start(100, function()
-				require("oz.git.status.keymaps").keymaps_init(event.buf)
-			end)
-		end,
-	})
-end
-
--- create and open the status
-local function open_status_buf(lines)
-	if M.status_buf == nil or not vim.api.nvim_win_is_valid(M.status_win) then
-		M.status_buf = vim.api.nvim_create_buf(false, true)
-
-		vim.cmd("botright split")
-		M.status_win = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_buf(M.status_win, M.status_buf)
-
-		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
-
-		status_buf_ft()
-		vim.api.nvim_buf_set_option(M.status_buf, "ft", "GitStatus")
-
-		vim.api.nvim_create_autocmd({ "BufDelete", "BufHidden" }, {
-			buffer = M.status_buf,
-			callback = function()
-				M.status_buf = nil
-				M.status_win = nil
-			end,
-		})
-	else
-		vim.api.nvim_set_current_win(M.status_win)
-		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", false)
-	end
 end
 
 local function is_conflict(lines) -- FIXME
@@ -207,7 +161,27 @@ function M.GitStatus()
 
 	local lines = generate_status_content()
 
-	open_status_buf(lines)
+	-- open status
+	win.open_win("status", {
+		lines = lines,
+		win_type = "bot",
+		callback = function(buf_id, win_id)
+			M.status_buf = buf_id
+			M.status_win = win_id
+
+			-- opts
+			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+
+			-- async component
+			vim.fn.timer_start(10, function()
+				status_buf_hl()
+			end)
+			vim.fn.timer_start(100, function()
+				require("oz.git.status.keymaps").keymaps_init(buf_id)
+			end)
+		end,
+	})
+
 	M.state.in_conflict = is_conflict(lines)
 	s_util.get_heading_tbl(lines)
 end

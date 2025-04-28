@@ -181,7 +181,7 @@ local function handle_enter_key_helper(line)
 		g_util.set_cmdline(quoted_str)
 	elseif line:match("Stash list:") then -- stash detail
 		git.after_exec_complete(function(_, out, _)
-			open_in_ozgitwin(out, nil, "stdout")
+			open_in_ozgitwin(out, nil)
 		end, true)
 		vim.cmd("Git stash list --stat")
 	elseif line:match("^On branch") then -- remote branch detail
@@ -202,13 +202,13 @@ local function handle_enter_key()
 				refresh()
 				util.Notify("Checked out branch '" .. branch .. "'.", nil, "oz_git")
 			else
-				open_in_ozgitwin(err, nil, "stderr")
+				open_in_ozgitwin(err, nil)
 			end
 		end, true)
 		vim.cmd("Git checkout " .. branch)
 	elseif #stash ~= 0 then -- if stash
 		git.after_exec_complete(function(_, out, _)
-			open_in_ozgitwin(out, nil, "stdout")
+			open_in_ozgitwin(out, nil)
 		end, true)
 		vim.cmd(("Git stash show stash@{%s}"):format(stash.index))
 	else

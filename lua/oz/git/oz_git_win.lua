@@ -1,6 +1,7 @@
 local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
+local win = require("oz.util.win")
 
 M.oz_git_buf = nil
 M.oz_git_win = nil
@@ -14,12 +15,6 @@ local function set_cmd_history(cmd)
 		git_cmd.prev_cmd = git_cmd.cur_cmd
 	end
 	git_cmd.cur_cmd = cmd
-end
-
-local function ft_options()
-	vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-	vim.bo.bufhidden = "wipe"
-	vim.bo.swapfile = false
 end
 
 local grab_flags = {}
@@ -203,102 +198,72 @@ local function ft_mappings(buf)
 end
 
 -- highlights
---TODO error, fatal to red.
-local function ft_hl()
+local function oz_git_win_hl()
 	vim.cmd("syntax clear")
 
 	-- Syntax matches
-	vim.cmd("syntax match ozGitAuthor '\\<Author\\>' containedin=ALL")
-	vim.cmd("syntax match ozGitDate '\\<Date\\>' containedin=ALL")
-	vim.cmd("syntax match ozGitCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
-	vim.cmd([[syntax match ozGitBranchName /\(On branch \)\@<=\S\+/ contained]])
-	vim.cmd([[syntax match ozGitSection /^Untracked files:$/]])
-	vim.cmd([[syntax match ozGitSection /^Changes not staged for commit:$/]])
-	vim.cmd([[syntax match ozGitModified /^\s\+modified:\s\+.*$/]])
-	vim.cmd([[syntax match ozGitUntracked /^\s\+\%(\%(modified:\)\@!.\)*$/]])
+	vim.cmd([[
+        syntax match @attribute /[0-9a-f]\{7,40\}/ containedin=ALL
+        syntax match @function /Author/ containedin=ALL
+        syntax match @function /Date/ containedin=ALL
+        syntax match @function /\(On branch \)\@<=\S\+/ contained
+        syntax match @function /^Untracked files:$/
+        syntax match @function /^Changes not staged for commit:$/
+        syntax match @diff.delta /^\s\+modified:\s\+.*$/
+        syntax match ozGitUntracked /^\s\+\%(\%(modified:\)\@!.\)*$/
 
-	vim.cmd([[syntax match ozGitDiffMeta /^@@ .\+@@/]])
-	vim.cmd([[syntax match ozGitDiffAdded /^+.\+$/]])
-	vim.cmd([[syntax match ozGitDiffRemoved /^-.\+$/]])
-	vim.cmd([[syntax match ozGitDiffHeader /^diff --git .\+$/]])
-	vim.cmd([[syntax match ozGitDiffFile /^\(---\|+++\) .\+$/]])
+        syntax match @error /\<error\>\|\<fatal\>/
+        syntax match DiagnosticUnderlineOk /\v(https?|ftp|file):\/\/\S+/
+    ]])
+
+	-- diff
+	vim.cmd([[
+        syntax match @diff.delta /^@@ .\+@@/
+        syntax match @diff.plus /^+.\+$/
+        syntax match @diff.minus /^-.\+$/
+        syntax match @comment.todo /^diff --git .\+$/
+        syntax match @function /^\(---\|+++\) .\+$/
+    ]])
 
 	-- Highlight groups
-	vim.cmd("highlight default link ozGitBranchName @function")
 	vim.api.nvim_set_hl(0, "ozGitUntracked", { fg = "#757575" })
-	vim.cmd("highlight default link ozGitModified @diff.delta")
-	vim.cmd("highlight default link ozGitSection @function")
-
-	vim.cmd("highlight default link ozGitDiffAdded @diff.plus")
-	vim.cmd("highlight default link ozGitDiffRemoved @diff.minus")
-	vim.cmd("highlight default link ozGitDiffMeta @diff.delta")
-	vim.cmd("highlight default link ozGitDiffFile @function")
-	vim.cmd("highlight default link ozGitDiffHeader @comment.todo")
-
-	vim.cmd("highlight default link ozGitAuthor @function")
-	vim.cmd("highlight default link ozGitDate @function")
-	vim.cmd("highlight default link ozGitCommitHash @attribute")
 end
 
--- oz git ft
-function M.oz_git_ft()
-	local oz_git_ft_gp = vim.api.nvim_create_augroup("OzGitFt", { clear = true })
-
-	vim.api.nvim_create_autocmd("FileType", {
-		pattern = "oz_git",
-		group = oz_git_ft_gp,
-		once = true,
-		callback = function(event)
-			ft_options()
-			ft_hl()
-			ft_mappings(event.buf)
-		end,
-	})
-	return true
-end
-
-function M.open_oz_git_win(lines, cmd, type)
+function M.open_oz_git_win(lines, cmd)
 	if not lines then
 		return
 	end
 	if cmd then
 		set_cmd_history(cmd)
 	end
-	local height = math.min(math.max(#lines, 7), 15)
 
-	if M.oz_git_buf == nil or not vim.api.nvim_win_is_valid(M.oz_git_win) then
-		M.oz_git_buf = vim.api.nvim_create_buf(false, true)
-
-		vim.cmd("botright " .. height .. "split")
-		vim.cmd("resize " .. height)
-
-		M.oz_git_win = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_buf(M.oz_git_win, M.oz_git_buf)
-
-		vim.api.nvim_buf_set_lines(M.oz_git_buf, 0, -1, false, lines)
-
-		vim.api.nvim_buf_set_name(M.oz_git_buf, string.format("oz_git://%s", type))
-		if M.oz_git_ft() then
-			vim.api.nvim_buf_set_option(M.oz_git_buf, "ft", "oz_git")
-		else
-			vim.api.nvim_buf_set_option(M.oz_git_buf, "ft", "git")
-		end
-
-		vim.api.nvim_create_autocmd("BufDelete", {
-			buffer = M.oz_git_buf,
-			callback = function()
-				M.oz_git_buf = nil
-				M.oz_git_win = nil
-				git_cmd = {} -- FIXME will not clear the tbl.
-			end,
-		})
+	local win_type
+	if #lines < 50 then
+		local height = math.min(math.max(#lines, 7), 15)
+		win_type = ("bot %s"):format(height)
 	else
-		vim.api.nvim_set_current_win(M.oz_git_win)
-		vim.cmd("resize " .. height)
-		vim.api.nvim_buf_set_option(M.oz_git_buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(M.oz_git_buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(M.oz_git_buf, "modifiable", false)
+		win_type = "tab"
 	end
+
+	-- open win
+	win.open_win("oz_git", {
+		lines = lines,
+		win_type = win_type,
+		callback = function(buf_id, win_id)
+			M.oz_git_buf = buf_id
+			M.oz_git_win = win_id
+
+			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+
+			-- async
+			vim.fn.timer_start(10, function()
+				oz_git_win_hl()
+			end)
+			vim.fn.timer_start(100, function()
+				ft_mappings(buf_id)
+			end)
+		end,
+	})
 
 	return M.oz_git_buf, M.oz_git_win
 end

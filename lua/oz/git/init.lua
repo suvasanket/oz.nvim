@@ -10,7 +10,7 @@ M.running_git_jobs = {}
 M.state = {}
 
 -- helper: notify or open in window
-local function notify_or_open(output, args, type)
+local function notify_or_open(output, args)
 	if #output == 0 then
 		return
 	end
@@ -18,7 +18,7 @@ local function notify_or_open(output, args, type)
 	if #output <= 1 then
 		util.Notify(table.concat(output, "\n"), notfy_level, "oz_git")
 	else
-		oz_git_win.open_oz_git_win(output, args, type)
+		oz_git_win.open_oz_git_win(output, args)
 	end
 end
 
@@ -86,7 +86,7 @@ local function different_cmd_runner(args_table, args_str)
 			local command = table.remove(args_table, 1)
 
 			require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
-				oz_git_win.open_oz_git_win(lines, args_str, "stderr")
+				oz_git_win.open_oz_git_win(lines, args_str)
 				-- git suggestion
 				local suggestion = wizard.get_git_suggestions(lines, args_table)
 				if suggestion then
@@ -239,11 +239,10 @@ function M.run_git_job(args)
 			end
 
 			-- Show outputs.
-			local type = code == 0 and "std_out" or "std_err"
 			if #std_out > 0 then
-				notify_or_open(std_out, args, type)
+				notify_or_open(std_out, args)
 			else
-				notify_or_open(std_err, args, type)
+				notify_or_open(std_err, args)
 			end
 
 			-- Suggestion.

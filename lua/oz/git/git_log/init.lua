@@ -1,6 +1,7 @@
 local M = {}
 local util = require("oz.util")
 local shell = require("oz.util.shell")
+local win = require("oz.util.win")
 
 M.log_win = nil
 M.log_buf = nil
@@ -65,54 +66,6 @@ local function log_buf_hl()
     syntax match PathSeparator /\w\+\/\w\+/
     highlight PathSeparator guifg=#99BC85 guibg=NONE gui=italic
     ]])
-end
-
-local function log_buf_ft()
-	vim.api.nvim_create_autocmd("FileType", {
-		pattern = "GitLog",
-		once = true,
-		callback = function(event)
-			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-			vim.fn.timer_start(10, function()
-				log_buf_hl()
-			end)
-			vim.fn.timer_start(100, function()
-				require("oz.git.git_log.keymaps").keymaps_init(event.buf)
-			end)
-		end,
-	})
-	return true
-end
-
-local function open_commit_log_buf(lines)
-	if M.log_buf == nil or not vim.api.nvim_win_is_valid(M.log_win) then
-		M.log_buf = vim.api.nvim_create_buf(false, true)
-
-		vim.cmd("botright split")
-		M.log_win = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_buf(M.log_win, M.log_buf)
-
-		vim.api.nvim_buf_set_lines(M.log_buf, 0, -1, false, lines)
-
-		if log_buf_ft() then
-			vim.api.nvim_buf_set_option(M.log_buf, "ft", "GitLog")
-		else
-			vim.api.nvim_buf_set_option(M.log_buf, "ft", "oz_git")
-		end
-
-		vim.api.nvim_create_autocmd({ "BufDelete", "BufHidden" }, {
-			buffer = M.log_buf,
-			callback = function()
-				M.log_buf = nil
-				M.log_win = nil
-			end,
-		})
-	else
-		vim.api.nvim_set_current_win(M.log_win)
-		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(M.log_buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", false)
-	end
 end
 
 local function add_cherrypick_icon(log)
@@ -194,7 +147,27 @@ function M.commit_log(opts, args)
 
 	vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd())) -- change cwd to project
 	commit_log_lines = get_commit_log_lines(level, args)
-	open_commit_log_buf(commit_log_lines)
+
+	-- open log
+	win.open_win("log", {
+		lines = commit_log_lines,
+        win_type = "bot",
+		callback = function(buf_id, win_id)
+			M.log_buf = buf_id
+			M.log_win = win_id
+
+			-- opts
+            vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+
+			-- async component
+			vim.fn.timer_start(10, function()
+				log_buf_hl()
+			end)
+			vim.fn.timer_start(100, function()
+				require("oz.git.git_log.keymaps").keymaps_init(buf_id)
+			end)
+		end,
+	})
 end
 
 return M
