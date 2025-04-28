@@ -1,5 +1,8 @@
 local M = {}
 local util = require("oz.util")
+local shell = require("oz.util.shell")
+
+local run_cmd = shell.run_command
 
 M.status_win = nil
 M.status_buf = nil
@@ -121,10 +124,10 @@ end
 local function generate_status_content()
 	local status_tbl = {}
 	local stash_tbl = {}
-	local git_status_output = util.ShellOutputList("git status")
-	local git_stash_output = util.ShellOutputList("git stash list")
+	local status_ok, git_status_output = run_cmd({ "git", "status" }, M.state.cwd)
+	local stash_ok, git_stash_output = run_cmd({ "git", "stash", "list" }, M.state.cwd)
 
-	if #git_status_output ~= 0 then
+	if status_ok and #git_status_output > 0 then
 		for _, substr in ipairs(git_status_output) do
 			if not substr:match('%(use "git .-.%)') then
 				-- substr = substr:gsub("^[%s\t]+", "  ")
@@ -133,7 +136,7 @@ local function generate_status_content()
 		end
 	end
 
-	if #git_stash_output ~= 0 then
+	if stash_ok and #git_stash_output > 0 then
 		table.insert(stash_tbl, "Stash list:")
 		for _, substr in ipairs(git_stash_output) do
 			if substr ~= "" and not substr:match('%(use "git .-.%)') then
@@ -196,7 +199,9 @@ function M.GitStatus()
 	local s_util = require("oz.git.status.util")
 
 	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
-	M.state.current_branch = vim.fn.systemlist("git rev-parse --abbrev-ref HEAD")[1]
+	local _, branch = run_cmd({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, M.state.cwd)
+	M.state.current_branch = branch[1]
+
 	local lines = generate_status_content()
 
 	open_status_buf(lines)

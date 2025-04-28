@@ -62,24 +62,6 @@ function M.ShellCmd(cmd, on_success, on_error)
 	end
 end
 
-function M.ShellOutput(cmd)
-	local obj = vim.system({ "sh", "-c", cmd }, { text = true }):wait()
-	local sout = obj.stdout:gsub("^%s+", ""):gsub("%s+$", "")
-	if vim.v.shell_error ~= 0 then
-		return ""
-	end
-	return sout
-end
-
-function M.ShellOutputList(cmd)
-	local sout = vim.fn.systemlist(cmd)
-	if vim.v.shell_error ~= 0 then
-		return {}
-	else
-		return sout
-	end
-end
-
 function M.UserInput(msg, def)
 	local ok, input = pcall(vim.fn.input, msg, def or "")
 	if ok then
@@ -123,6 +105,10 @@ end
 
 function M.tbl_monitor()
 	return require("oz.util.tbl_monitor")
+end
+
+function M.args_parser()
+	return require("oz.util.parse_args")
 end
 
 function M.str_in_tbl(str, string_table)

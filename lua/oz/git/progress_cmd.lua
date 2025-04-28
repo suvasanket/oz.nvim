@@ -1,4 +1,5 @@
 local M = {}
+local util = require("oz.util")
 
 local has_fidget = pcall(require, "fidget")
 local fidget = has_fidget and require("fidget.progress") or nil
@@ -138,8 +139,8 @@ end
 
 -- open output for specific cmds
 local function cmd_output(cmd, output)
-	local cmds = { "remote", "request-pull", "ls-remote" }
-	if vim.tbl_contains(cmds, cmd) then
+	local cmds = { "request-pull", "ls-remote" }
+	if util.str_in_tbl(cmd, cmds) then
 		require("oz.git.oz_git_win").open_oz_git_win(output, cmd, "stdout")
 	end
 end
@@ -182,7 +183,7 @@ function M.run_git_with_progress(command, args, output_callback)
 			for _, line in ipairs(data) do
 				if line and line ~= "" then
 					local clean_output = clean_line(line)
-                    table.insert(all_output, 1, clean_output)
+					table.insert(all_output, 1, clean_output)
 
 					-- Update fidget message with latest error
 					if fidget and M.progress_handle then

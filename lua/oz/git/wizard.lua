@@ -1,9 +1,12 @@
 local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
+local shell = require("oz.util.shell")
 
 M.on_conflict_resolution = false
 M.on_conflict_resolution_complete = nil
+
+local shellout_str = shell.shellout_str
 
 function M.get_git_suggestions(data, arg_tbl)
 	local filtered_data = {}
@@ -51,7 +54,7 @@ function M.get_git_suggestions(data, arg_tbl)
 		{
 			trigger = "Please tell me who you are",
 			extract = function()
-				local uname = util.ShellOutput("whoami")
+				local uname = shellout_str("whoami")
 				return "config --global user.email | && config --global user.name " .. uname
 			end,
 		},
@@ -204,8 +207,8 @@ end
 
 -- commit push wizard --
 function M.push_wizard()
-	local remote = util.ShellOutput("git config --get remote.origin.url")
-	local no_unpushed = util.ShellOutput("git rev-list --count @{u}..HEAD")
+	local remote = shellout_str("git config --get remote.origin.url")
+	local no_unpushed = shellout_str("git rev-list --count @{u}..HEAD")
 	if remote ~= "" then
 		vim.notify(
 			"[󱦲" .. no_unpushed .. "] press 'P' to push any other key to dismiss.",
@@ -228,7 +231,7 @@ end
 -- conflict wizard --
 local conflicted_files = {}
 function M.start_conflict_resolution()
-	conflicted_files = util.ShellOutputList([[git status --short | awk '/^[ADU][ADU] / {print $2}']])
+	conflicted_files = shell.shellout_tbl([[git status --short | awk '/^[ADU][ADU] / {print $2}']])
 	if #conflicted_files > 0 then
 		vim.fn.setqflist({}, " ", {
 			lines = conflicted_files,
@@ -251,7 +254,6 @@ function M.start_conflict_resolution()
 					return
 				end
 			end
-			print("next")
 		end, { remap = false, silent = true })
 
 		g_util.temp_remap("n", "[x", function()
@@ -262,7 +264,6 @@ function M.start_conflict_resolution()
 					return
 				end
 			end
-			print("prev")
 		end, { remap = false, silent = true })
 
 		M.on_conflict_resolution = true

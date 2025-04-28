@@ -1,5 +1,6 @@
 local M = {}
 local util = require("oz.util")
+local shell = require("oz.util.shell")
 
 M.log_win = nil
 M.log_buf = nil
@@ -9,6 +10,9 @@ M.log_level = 1
 M.comming_from = nil
 M.grab_hashs = {}
 local user_set_args = nil
+
+local shellout_tbl = shell.shellout_tbl
+local run_cmd = shell.run_command
 
 function M.get_selected_hash()
 	local lines = {}
@@ -111,7 +115,7 @@ local function open_commit_log_buf(lines)
 end
 
 local function add_cherrypick_icon(log)
-	local picked_hashes = util.ShellOutputList("git rev-parse --verify --quiet --short CHERRY_PICK_HEAD")
+	local picked_hashes = shellout_tbl("git rev-parse --verify --quiet --short CHERRY_PICK_HEAD")
 	if #picked_hashes == 0 then
 		return log
 	else
@@ -128,23 +132,36 @@ local function add_cherrypick_icon(log)
 end
 
 local function get_commit_log_lines(level, args)
-	local log = {}
-	local fmt_flags
+	local log, fmt_flags, ok
 	if level == 2 then
-		fmt_flags = "--graph --abbrev-commit --decorate --format=format:'%h - %aD [%ar]%d%n''          %s - %an'"
+		fmt_flags = {
+			"--graph",
+			"--abbrev-commit",
+			"--decorate",
+			"--format=format:%h - %aD [%ar]%d%n          %s - %an",
+		}
 	elseif level == 3 then
-		fmt_flags =
-			"--graph --abbrev-commit --decorate --format=format:'%h - %aD [%ar] [committed: %cD] %d%n''          %s%n''          - %an <%ae> [committer: %cn <%ce>]'"
+		fmt_flags = {
+			"--graph",
+			"--abbrev-commit",
+			"--decorate",
+			"--format=format:%h - %aD [%ar] [committed: %cD] %d%n          %s%n          - %an <%ae> [committer: %cn <%ce>]",
+		}
 	else
-		fmt_flags = "--graph --abbrev-commit --decorate --format=format:'%h - [%ar] %s - %an%d'"
+		fmt_flags = {
+			"--graph",
+			"--abbrev-commit",
+			"--decorate",
+			"--format=format:%h - [%ar] %s - %an%d",
+		}
 	end
 	if args and #args > 0 then
 		user_set_args = args
-		log = util.ShellOutputList("git log " .. fmt_flags .. " " .. table.concat(args, " "))
+		ok, log = run_cmd({ "git", "log", unpack(args), unpack(fmt_flags) })
 	elseif user_set_args and user_set_args ~= "" then
-		log = util.ShellOutputList("git log " .. table.concat(user_set_args, " ") .. " " .. fmt_flags)
+		ok, log = run_cmd({ "git", "log", unpack(user_set_args), unpack(fmt_flags) })
 	else
-		log = util.ShellOutputList("git log " .. fmt_flags)
+		ok, log = run_cmd({ "git", "log", unpack(fmt_flags) })
 	end
 
 	log = add_cherrypick_icon(log)

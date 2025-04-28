@@ -1,5 +1,6 @@
 local M = {}
 local util = require("oz.util")
+local shell = require("oz.util.shell")
 
 function M.get_commit_filepath()
 	local git_dir_command = "git rev-parse --git-dir 2>/dev/null"
@@ -83,7 +84,7 @@ end
 
 local function get_initial_content()
 	local status_tbl = {}
-	local status_str = util.ShellOutput("git status")
+	local status_str = shell.shellout_str("git status")
 	for substr in status_str:gmatch("([^\n]*)\n?") do
 		if substr ~= "" and not substr:match('%(use "git .-.%)') then
 			table.insert(status_tbl, substr)
@@ -105,7 +106,7 @@ local function get_initial_content()
 end
 
 function M.git_commit(callback)
-	local changed = util.ShellOutputList("git diff --name-only --cached")
+	local changed = shell.shellout_tbl("git diff --name-only --cached")
 	if #changed > 0 then
 		local initial_content = get_initial_content()
 		if callback then

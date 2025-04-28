@@ -37,7 +37,7 @@ local function parse_lines(lines, filetype)
 	if cached_efm or custom_error_formats[filetype] then
 		local efm_format = cached_efm or custom_error_formats[filetype]
 		local opts = { lines = lines, efm = efm_format }
-		print("oz: using cached efm: " .. efm_format)
+		-- print("oz: using cached efm: " .. efm_format)
 		vim.fn.setqflist({}, "r", opts)
 		local qflist = vim.fn.getqflist()
 		return qflist

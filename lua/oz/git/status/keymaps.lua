@@ -15,6 +15,8 @@ local buf_id = nil
 
 local open_in_ozgitwin = require("oz.git.oz_git_win").open_oz_git_win
 local run_cmd = shell.run_command
+local shellout_str = shell.shellout_str
+local shellout_tbl = shell.shellout_tbl
 
 -- map helper
 local map = function(...)
@@ -178,15 +180,12 @@ local function handle_enter_key_helper(line)
 		local quoted_str = line:match('"([^"]+)"'):gsub("git", "Git"):gsub("<[^>]*>", "")
 		g_util.set_cmdline(quoted_str)
 	elseif line:match("Stash list:") then -- stash detail
-		git.after_exec_complete(function(code, out, err)
+		git.after_exec_complete(function(_, out, _)
 			open_in_ozgitwin(out, nil, "stdout")
 		end, true)
 		vim.cmd("Git stash list --stat")
 	elseif line:match("^On branch") then -- remote branch detail
-		local ok, remote = run_cmd({ "git", "remote" }, status.state.cwd)
-		if ok then
-			vim.cmd("Git remote show " .. remote)
-		end
+		vim.cmd("Git show-branch -a")
 	end
 end
 
@@ -208,8 +207,7 @@ local function handle_enter_key()
 		end, true)
 		vim.cmd("Git checkout " .. branch)
 	elseif #stash ~= 0 then -- if stash
-		print(vim.inspect(stash))
-		git.after_exec_complete(function(code, out, err)
+		git.after_exec_complete(function(_, out, _)
 			open_in_ozgitwin(out, nil, "stdout")
 		end, true)
 		vim.cmd(("Git stash show stash@{%s}"):format(stash.index))
@@ -283,9 +281,9 @@ end
 local function handle_diff_remote()
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
 
-	local cur_remote_branch_ref = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
-	if cur_remote_branch_ref and cur_remote_branch_ref ~= "" then
-		vim.cmd(("DiffviewOpen %s...%s"):format(cur_remote_branch_ref, current_branch))
+	local ok, cur_remote_branch_ref = run_cmd(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	if ok then
+		vim.cmd(("DiffviewOpen %s...%s"):format(cur_remote_branch_ref[1], current_branch))
 	end
 end
 
@@ -394,20 +392,31 @@ local function handle_discard_picked()
 	end
 end
 
+-- helper: get remotes
+local function get_remotes()
+	local ok, remotes = run_cmd({ "git", "remote" }, state.cwd)
+	if ok and #remotes ~= 0 then
+		state.remotes = remotes
+		return remotes
+	else
+		return {}
+	end
+end
+
 local function handle_remote_add_update()
 	local initial_input = " "
-	if util.ShellOutput("git remote") == "" then
+	if shellout_str("git remote") == "" then
 		initial_input = " origin " -- Suggest 'origin' if no remotes exist
 	end
 	local input_str = util.inactive_input(":Git remote add", initial_input)
 
 	if input_str then
-		local args = g_util.parse_args(input_str)
+		local args = util.args_parser().parse_args(input_str)
 		local remote_name = args[1]
 		local remote_url = args[2]
 
 		if remote_name and remote_url then
-			local remotes = util.ShellOutputList("git remote")
+			local remotes = get_remotes()
 			if vim.tbl_contains(remotes, remote_name) then
 				-- Remote exists, ask to update URL
 				local ans = util.prompt(
@@ -441,7 +450,7 @@ local function handle_remote_add_update()
 end
 
 local function handle_remote_remove()
-	local options = util.ShellOutputList("git remote")
+	local options = get_remotes()
 	if #options == 0 then
 		util.Notify("No remotes configured.", "info", "oz_git")
 		return
@@ -464,7 +473,7 @@ local function handle_remote_remove()
 end
 
 local function handle_remote_rename()
-	local options = util.ShellOutputList("git remote")
+	local options = get_remotes()
 	if #options == 0 then
 		util.Notify("No remotes to rename.", "info", "oz_git")
 		return
@@ -495,8 +504,8 @@ local function handle_push()
 		return
 	end
 
-	local cur_remote = util.ShellOutput(string.format("git config --get branch.%s.remote", current_branch))
-	local cur_remote_branch_ref = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- Fallback?
 
 	local refined_args, branch
@@ -508,7 +517,7 @@ local function handle_push()
 	end
 
 	if cur_remote_branch_ref == "" then
-		local remote = util.ShellOutputList("git remote")[1]
+		local remote = shellout_str("git remote")
 		refined_args = "-u " .. remote .. " " .. current_branch
 	else
 		refined_args = string.format("%s %s", cur_remote, branch)
@@ -525,8 +534,8 @@ local function handle_pull()
 		return
 	end
 
-	local cur_remote = util.ShellOutput(string.format("git config --get branch.%s.remote", current_branch))
-	local cur_remote_branch_ref = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 
 	if cur_remote == "" or cur_remote_branch_ref == "" then
 		util.Notify(
@@ -584,7 +593,7 @@ local function handle_branch_set_upstream()
 		return
 	end
 
-	local remote_branches_raw = util.ShellOutputList("git branch -r")
+	local remote_branches_raw = shellout_tbl("git branch -r")
 	local remote_branches = {}
 	for _, rb in ipairs(remote_branches_raw) do
 		local trimmed_rb = vim.trim(rb)
@@ -609,7 +618,7 @@ end
 local function handle_branch_unset_upstream()
 	local branch = s_util.get_branch_under_cursor()
 	if branch then
-		local upstream = util.ShellOutput(string.format("git rev-parse --abbrev-ref %s@{u}", branch))
+		local upstream = shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", branch))
 		if upstream == "" then
 			util.Notify("Branch '" .. branch .. "' has no upstream configured.", "info", "oz_git")
 			return

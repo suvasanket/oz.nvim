@@ -1,5 +1,7 @@
 local M = {}
 local util = require("oz.util")
+local shell = require("oz.util.shell")
+local state = require("oz.git.status").state
 -- local status = require("oz.git.status")
 
 --
@@ -7,14 +9,16 @@ M.headings_table = {}
 M.diff_lines = {}
 M.toggeled_headings = {}
 
+local run_cmd = shell.run_command
+
 function M.get_heading_tbl(lines)
 	if #lines <= 0 then
 		return
 	end
 	M.headings_table = {}
 	local current_heading = nil
-	local branch_line = util.ShellOutputList("git branch -vv")
-	local branch_heading = "On branch " .. require("oz.git.status").state.current_branch
+	local _, branch_line = run_cmd({ "git", "branch", "-vv" }, state.cwd)
+	local branch_heading = "On branch " .. state.current_branch
 
 	M.headings_table[branch_heading] = {}
 	for _, line in ipairs(branch_line) do
@@ -161,7 +165,7 @@ function M.generate_diff(file)
 		return nil
 	end
 
-	local diff = util.ShellOutputList("git diff " .. file)
+	local _, diff = run_cmd({ "git", "diff", file }, state.cwd)
 	local new_diff = {}
 	local grab = false
 

@@ -3,6 +3,7 @@ local util = require("oz.util")
 local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
+local shell = require("oz.util.shell")
 
 M.user_config = nil
 M.running_git_jobs = {}
@@ -13,7 +14,7 @@ local function notify_or_open(output, args, type)
 		return
 	end
 	local notfy_level = type == "std_out" and "info" or "error"
-	if #output <= 2 then
+	if #output <= 1 then
 		util.Notify(table.concat(output, "\n"), notfy_level, "oz_git")
 	else
 		oz_git_win.open_oz_git_win(output, args, type)
@@ -42,10 +43,12 @@ local function different_cmd_runner(args_table, args_str)
 		})
 	end
 
-	local remote_cmds = { "push", "pull", "fetch", "clone", "remote", "request-pull", "ls-remote", "submodule", "svn" }
+	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "ls-remote", "submodule", "svn" }
 	local interactive_cmd = { "add -p", "reset -p", "commit -p", "checkout -p" }
 
 	-- all the conditional commands here.
+
+	-- Status
 	if cmd == "status" then
 		local oz_git_buf = require("oz.git.oz_git_win").oz_git_buf
 		if oz_git_buf then
@@ -53,12 +56,16 @@ local function different_cmd_runner(args_table, args_str)
 		end
 		require("oz.git.status").GitStatus()
 		return true
+
+	-- Commit
 	elseif cmd == "commit" and #args_table == 1 then -- check if non staged commiting.
-		local changed = util.ShellOutputList("git diff --name-only --cached")
+		local changed = shell.shellout_tbl("git diff --name-only --cached")
 		if #changed < 1 then
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
+
+	-- interactive cmds
 	elseif util.str_in_tbl(args_str, interactive_cmd) then
 		g_util.run_term_cmd({
 			cmd = "git " .. util.str_in_tbl(args_str, interactive_cmd),
@@ -66,10 +73,14 @@ local function different_cmd_runner(args_table, args_str)
 				util.Notify("Interactive hunk selection ended.", nil, "oz_git")
 			end,
 		})
-	elseif vim.tbl_contains(args_table, "--help") then -- man
+
+	-- Man cmd
+	elseif vim.tbl_contains(args_table, "--help") then
 		vim.cmd("Man git-" .. cmd)
 		return true
-	elseif vim.tbl_contains(remote_cmds, cmd) then -- remote related
+
+	-- Progress cmd
+	elseif vim.tbl_contains(remote_cmds, cmd) then
 		if M.user_config and M.user_config.remote_operation_exec_method == "background" then -- user config
 			local command = table.remove(args_table, 1)
 
@@ -153,7 +164,6 @@ function M.cleanup_git_jobs(args)
 			for key, job_id in pairs(M.running_git_jobs) do
 				if key:match("^" .. args.cmd .. "%d*$") then
 					vim.fn.jobstop(job_id)
-					-- vim.fn.jobsend(job_id, ":wq\n")  -- sends a :wq command
 					M.running_git_jobs[key] = nil
 				end
 			end
@@ -342,9 +352,9 @@ function M.oz_git_usercmd_init(config)
 		local oil_path = require("oil").get_current_dir()
 
 		if g_util.if_in_git(oil_path) then
-			if vim.bo.ft == "oil" then
+			if vim.bo.ft == "oil" then -- if in oil buffer
 				path = oil_path
-			elseif path == "" then
+			elseif path == "" then -- if no arg is provided
 				path = vim.fn.expand("%")
 			end
 			require("oz.git.browse").browse(path)
