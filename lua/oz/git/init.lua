@@ -177,8 +177,8 @@ end
 
 -- Run Git cmd.
 function M.run_git_job(args)
-	args = g_util.expand_expressions(args)
-	local args_table = g_util.parse_args(args)
+	args = util.args_parser().expand_expressions(args)
+	local args_table = util.args_parser().parse_args(args)
 	local suggestion = nil
 	local std_out = {}
 	local std_err = {}
@@ -335,6 +335,23 @@ function M.oz_git_usercmd_init(config)
 			util.Notify("You are not in a git repo.", "warn", "oz_git")
 		end
 	end, { nargs = "*", complete = "file", desc = "oz_git: add/stage/rename current file." })
+
+	-- :GBrowse
+	g_util.User_cmd({ "GBrowse" }, function(opts)
+		local path = vim.trim(opts.args)
+		local oil_path = require("oil").get_current_dir()
+
+		if g_util.if_in_git(oil_path) then
+			if vim.bo.ft == "oil" then
+				path = oil_path
+			elseif path == "" then
+				path = vim.fn.expand("%")
+			end
+			require("oz.git.browse").browse(path)
+		else
+			util.Notify("You are not in a git repo.", "warn", "oz_git")
+		end
+	end, { nargs = "?", complete = "file", desc = "oz_git: browse file in the remote repo." })
 end
 
 return M

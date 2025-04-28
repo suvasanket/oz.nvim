@@ -6,6 +6,7 @@ local g_util = require("oz.git.util")
 local git = require("oz.git")
 local wizard = require("oz.git.wizard")
 local caching = require("oz.caching")
+local shell = require("oz.util.shell")
 
 local status_grab_buffer = status.status_grab_buffer
 local refresh = status.refresh_status_buf
@@ -13,6 +14,7 @@ local state = status.state
 local buf_id = nil
 
 local open_in_ozgitwin = require("oz.git.oz_git_win").open_oz_git_win
+local run_cmd = shell.run_command
 
 -- map helper
 local map = function(...)
@@ -181,8 +183,10 @@ local function handle_enter_key_helper(line)
 		end, true)
 		vim.cmd("Git stash list --stat")
 	elseif line:match("^On branch") then -- remote branch detail
-		local remote = util.ShellOutput("git remote")
-		vim.cmd("Git remote show " .. remote)
+		local ok, remote = run_cmd({ "git", "remote" }, status.state.cwd)
+		if ok then
+			vim.cmd("Git remote show " .. remote)
+		end
 	end
 end
 
