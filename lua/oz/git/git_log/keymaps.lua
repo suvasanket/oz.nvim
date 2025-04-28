@@ -85,7 +85,10 @@ end
 function M.keymaps_init(buf)
 	buf_id = buf
 	-- close
-	map("n", "q", "<cmd>close<cr>", { buffer = buf, desc = "Close git log buffer." })
+	map("n", "q", function()
+		vim.api.nvim_echo({ { "" } }, false, {})
+		vim.cmd("close")
+	end, { buffer = buf, desc = "Close git log buffer." })
 
 	-- increase log level
 	map("n", ">", function()
@@ -352,19 +355,19 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = "Reset commit(--hard).󰳽" })
 
 	-- [R]evert mappings
-	map({ "n", "x" }, "uu", handle_revert, { buffer = buf, desc = "Revert selection or current commit." })
+	map({ "n", "x" }, "uu", handle_revert, { buffer = buf, desc = "Revert selection or current commit.󰳽 " })
 	map("n", "ui", function()
 		local hash = get_selected_hash()
 		if #hash == 1 then
 			run_n_refresh("Git revert --edit " .. hash[1])
 		end
-	end, { buffer = buf, desc = "Revert commit with edit." })
+	end, { buffer = buf, desc = "Revert commit with edit.󰳽 " })
 	map("n", "ue", function()
 		local hash = get_selected_hash()
 		if #hash == 1 then
 			run_n_refresh("Git revert --no-edit " .. hash[1])
 		end
-	end, { buffer = buf, desc = "Revert commit with no-edit." })
+	end, { buffer = buf, desc = "Revert commit with no-edit.󰳽 " })
 	map("n", "ul", function()
 		run_n_refresh("Git revert --continue")
 	end, { buffer = buf, desc = "Revert continue." })

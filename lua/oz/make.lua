@@ -60,7 +60,6 @@ function M.Make_func(args, dir)
 					util.echoprint("Make completed successfully", "healthSuccess")
 				else
 					util.echoprint(("Nothing in quicfixlist exit_code:%s"):format(exit_code), "healthError")
-					util.Notify("Consult :help efm", "warn", "oz_make")
 				end
 			end
 		end,

@@ -9,6 +9,7 @@ local commit_log_lines = nil
 M.log_level = 1
 M.comming_from = nil
 M.grab_hashs = {}
+M.state = {}
 local user_set_args = nil
 
 local shellout_tbl = shell.shellout_tbl
@@ -115,7 +116,7 @@ local function open_commit_log_buf(lines)
 end
 
 local function add_cherrypick_icon(log)
-	local picked_hashes = shellout_tbl("git rev-parse --verify --quiet --short CHERRY_PICK_HEAD")
+	local picked_hashes = shellout_tbl("git rev-parse --verify --quiet --short CHERRY_PICK_HEAD", M.state.cwd)
 	if #picked_hashes == 0 then
 		return log
 	else
@@ -157,11 +158,11 @@ local function get_commit_log_lines(level, args)
 	end
 	if args and #args > 0 then
 		user_set_args = args
-		ok, log = run_cmd({ "git", "log", unpack(args), unpack(fmt_flags) })
+		ok, log = run_cmd({ "git", "log", unpack(args), unpack(fmt_flags) }, M.state.cwd)
 	elseif user_set_args and user_set_args ~= "" then
-		ok, log = run_cmd({ "git", "log", unpack(user_set_args), unpack(fmt_flags) })
+		ok, log = run_cmd({ "git", "log", unpack(user_set_args), unpack(fmt_flags) }, M.state.cwd)
 	else
-		ok, log = run_cmd({ "git", "log", unpack(fmt_flags) })
+		ok, log = run_cmd({ "git", "log", unpack(fmt_flags) }, M.state.cwd)
 	end
 
 	log = add_cherrypick_icon(log)
@@ -188,6 +189,9 @@ function M.commit_log(opts, args)
 		M.comming_from = opts.from
 		level = opts.level
 	end
+
+	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
+
 	vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd())) -- change cwd to project
 	commit_log_lines = get_commit_log_lines(level, args)
 	open_commit_log_buf(commit_log_lines)

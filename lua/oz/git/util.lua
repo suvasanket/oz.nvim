@@ -1,25 +1,7 @@
 local M = {}
 local original_mappings = {}
-
-function M.save_lines_to_commitfile(lines)
-	local git_dir_command = "git rev-parse --git-dir 2>/dev/null"
-	local git_dir = vim.fn.system(git_dir_command):gsub("%s+$", "")
-
-	if vim.v.shell_error ~= 0 then
-		return
-	end
-
-	local commit_msg_file = git_dir .. "/COMMIT_EDITMSG"
-
-	local file = io.open(commit_msg_file, "w")
-	if file then
-		-- Write all lines to the file
-		for _, line in ipairs(lines) do
-			file:write(line .. "\n")
-		end
-		file:close()
-	end
-end
+local util = require("oz.util")
+local shell = require("oz.util.shell")
 
 function M.set_cmdline(str)
 	local cmdline = str:gsub("%|", "")
@@ -31,7 +13,6 @@ function M.set_cmdline(str)
 end
 
 function M.if_in_git(path)
-	local shell = require("oz.util.shell")
 	local ok, output = shell.run_command({ "git", "rev-parse", "--is-inside-work-tree" }, path)
 
 	if ok then
@@ -163,6 +144,19 @@ function M.User_cmd(commands, func, opts)
 		end
 	else
 		error("commands must be a string or a table")
+	end
+end
+
+function M.get_project_root()
+	local ok, path = shell.run_command({ "git", "rev-parse", "--show-toplevel" })
+	if ok and #path ~= 0 then
+		local joined_path = table.concat(path, " ")
+		vim.trim(joined_path)
+		require("oz.git").state.root = joined_path
+
+		return joined_path
+	else
+		return util.GetProjectRoot()
 	end
 end
 

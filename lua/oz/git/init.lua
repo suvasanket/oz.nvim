@@ -7,6 +7,7 @@ local shell = require("oz.util.shell")
 
 M.user_config = nil
 M.running_git_jobs = {}
+M.state = {}
 
 -- helper: notify or open in window
 local function notify_or_open(output, args, type)

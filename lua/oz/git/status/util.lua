@@ -10,6 +10,7 @@ M.diff_lines = {}
 M.toggeled_headings = {}
 
 local run_cmd = shell.run_command
+local shellout_str = shell.shellout_str
 
 function M.get_heading_tbl(lines)
 	if #lines <= 0 then
@@ -100,7 +101,9 @@ end
 function M.get_file_under_cursor(original)
 	local entries = {}
 	local lines = {}
-	local cwd = require("oz.git.status").state.cwd or vim.fn.getcwd()
+	-- local cwd = require("oz.git.status").state.cwd or vim.fn.getcwd()
+	local root = require("oz.git").state.root or util.GetProjectRoot()
+
 	if vim.api.nvim_get_mode().mode == "n" then
 		local line = vim.fn.getline(".")
 		table.insert(lines, line)
@@ -118,9 +121,9 @@ function M.get_file_under_cursor(original)
 		local tbl = { "deleted:", "renamed:", "copied:" }
 		local absolute_path
 		if file then
-			absolute_path = vim.fs.normalize(cwd .. "/" .. file)
+			absolute_path = root .. "/" .. file
 		elseif dir then
-			absolute_path = vim.fs.normalize(cwd .. "/" .. dir)
+			absolute_path = root .. "/" .. dir
 		end
 
 		if vim.fn.filereadable(absolute_path) == 1 then -- file

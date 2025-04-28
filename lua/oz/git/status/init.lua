@@ -1,5 +1,6 @@
 local M = {}
 local util = require("oz.util")
+local g_util = require("oz.git.util")
 local shell = require("oz.util.shell")
 
 local run_cmd = shell.run_command
@@ -15,9 +16,10 @@ local function status_buf_hl()
 	vim.cmd("syntax clear")
 
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
-	vim.fn.matchadd("@error", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("WarningMsg", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("MoreMsg", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("healthError", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("healthWarning", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@field", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("healthSuccess", "^\\s\\+new file:\\s\\+.*$", 0, -1, { extend = true })
 
 	vim.fn.matchadd("@diff.plus", "^    +.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^    -.*$", 0, -1, { extend = true })
@@ -102,7 +104,7 @@ local function open_status_buf(lines)
 	end
 end
 
-local function is_conflict(lines)
+local function is_conflict(lines) -- FIXME
 	for _, line in pairs(lines) do
 		if
 			line:match("both modified:")
@@ -124,14 +126,15 @@ end
 local function generate_status_content()
 	local status_tbl = {}
 	local stash_tbl = {}
-	local status_ok, git_status_output = run_cmd({ "git", "status" }, M.state.cwd)
-	local stash_ok, git_stash_output = run_cmd({ "git", "stash", "list" }, M.state.cwd)
+	local git_root = g_util.get_project_root()
+	local status_ok, git_status_output = run_cmd({ "git", "status" }, git_root)
+	local stash_ok, git_stash_output = run_cmd({ "git", "stash", "list" }, git_root)
 
 	if status_ok and #git_status_output > 0 then
-		for _, substr in ipairs(git_status_output) do
-			if not substr:match('%(use "git .-.%)') then
+		for _, line in ipairs(git_status_output) do
+			if not line:match('%(use "git .-.%)') then
 				-- substr = substr:gsub("^[%s\t]+", "  ")
-				table.insert(status_tbl, substr)
+				table.insert(status_tbl, line)
 			end
 		end
 	end
