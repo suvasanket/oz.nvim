@@ -152,8 +152,8 @@ function M.init(args)
 		vim.cmd("highlight BoldKey gui=bold guifg=#99BC85 cterm=bold")
 		vim.cmd('syntax match BoldKey /"\\(.*\\)"/ contains=NONE')
 		vim.cmd([[
-        syntax match KeyMode /\[.*\]/
-        highlight link KeyMode Comment
+            syntax match KeyMode /\[.*\]/
+            highlight link KeyMode Comment
         ]])
 		if has_headers then
 			vim.cmd("highlight HeaderName gui=bold guifg=#DFD3C3 guibg=#2F2F2F cterm=bold")

@@ -216,7 +216,7 @@ local function oz_git_win_hl()
         syntax match @diff.delta /^\s\+modified:\s\+.*$/
         syntax match ozGitUntracked /^\s\+\%(\%(modified:\)\@!.\)*$/
 
-        syntax match @error /\<error\>\|\<fatal\>/
+        syntax match @error /^\<error\>\|\<fatal\>/
         syntax match DiagnosticUnderlineOk /\v(https?|ftp|file):\/\/\S+/
     ]])
 
@@ -257,7 +257,9 @@ function M.open_oz_git_win(lines, cmd)
 			M.oz_git_buf = buf_id
 			M.oz_git_win = win_id
 
+            -- opts
 			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+            vim.opt_local.fillchars:append({ eob = ' ' })
 
 			-- async
 			vim.fn.timer_start(10, function()

@@ -1,6 +1,6 @@
 local M = {}
 local util = require("oz.util")
-local p = require("oz.caching")
+local cache = require("oz.caching")
 
 function M.detect_compiler(ft)
 	-- Try common suffix variations dynamically
@@ -18,6 +18,59 @@ function M.detect_compiler(ft)
 	end
 
 	return nil
+end
+
+local function setprojectCMD(project_path, file, ft, cmd)
+	local key = [[{project_path}${ft}]]
+	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+
+	-- if more than one file name in cmd
+	local filenames = {} -- we can use file name in future
+	for filename in cmd:gmatch("[%w%-%_%.]+%.[%w]+") do
+		table.insert(filenames, filename)
+	end
+	if #filenames == 1 then
+		if cmd:find(file) then
+			cmd = cmd:gsub(file, "{filename}")
+		end
+	end
+
+	cache.set_data(key, cmd, "data")
+end
+
+local function getprojectCMD(project_path, file, ft)
+	local key = [[{project_path}${ft}]]
+	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+
+	local out = cache.get_data(key, "data")
+	if out and out:find("{filename}") then
+		out = out:gsub("{filename}", file)
+	end
+	return out
+end
+
+local function setftCMD(file, ft, cmd)
+    if file:match("%.") then
+        file = vim.fn.fnamemodify(file, ":r")
+    end
+    if cmd:find(file) then
+        cmd = cmd:gsub(file, "{filename}")
+    end
+
+    cache.set_data(ft, cmd, "ft")
+end
+
+local function getftCMD(file, ft)
+    if file:match("%.") then
+        file = vim.fn.fnamemodify(file, ":r")
+    end
+
+    local output = cache.get_data(ft, "ft")
+
+    if output and output:find("{filename}") then
+        output = output:gsub("{filename}", file)
+    end
+    return output
 end
 
 -- detect any shebang in the file
@@ -77,9 +130,9 @@ function M.cmd_func(type, func)
 		-- p: 2 , 3
 		local cmd
 		if project_path then
-			cmd = p.getprojectCMD(project_path, current_file, ft) or p.getftCMD(current_file, ft)
+			cmd = getprojectCMD(project_path, current_file, ft) or getftCMD(current_file, ft)
 		else
-			cmd = p.getftCMD(current_file, ft)
+			cmd = getftCMD(current_file, ft)
 		end
 		if not cmd then
 			-- p: 4
@@ -98,13 +151,13 @@ function M.cmd_func(type, func)
 			-- check if its a valid cmd or not
 			if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
 				if cmd ~= input and project_path then
-					p.setprojectCMD(project_path, current_file, ft, input)
+					setprojectCMD(project_path, current_file, ft, input)
 				end
 				if input:find(current_file) then
 					if project_path then
-						p.setprojectCMD(project_path, current_file, ft, input)
+						setprojectCMD(project_path, current_file, ft, input)
 					else
-						p.setftCMD(current_file, ft, input)
+						setftCMD(current_file, ft, input)
 					end
 				end
 			end

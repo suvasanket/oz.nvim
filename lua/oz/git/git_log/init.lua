@@ -158,6 +158,7 @@ function M.commit_log(opts, args)
 
 			-- opts
             vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+            vim.opt_local.fillchars:append({ eob = ' ' })
 
 			-- async component
 			vim.fn.timer_start(10, function()

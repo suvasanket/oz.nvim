@@ -9,7 +9,7 @@ function M.remove_oz_json(name)
 	local path = data_dir .. "/oz/" .. name .. ".json"
 	if vim.fn.filereadable(path) == 1 then
 		os.remove(path)
-		util.Notify("oz: cache remove: " .. name)
+		util.Notify("[cache]Cache removed: " .. name, "info", "oz_doctor")
 	end
 end
 
@@ -19,22 +19,36 @@ local function file_exists(filepath)
 	return stat and stat.type == "file"
 end
 
--- ensure dir exists
-local function ensure_dir(filepath)
-	local dir = filepath:match("(.+)/[^/]+$")
-	if dir then
-		local cmd = { "mkdir", "-p", dir }
-		util.ShellCmd(cmd, nil, function()
-			error("oz: something went wrong while creating dir.")
-		end)
+-- write to the file
+local function write_to_file(full_path, content)
+	local dir_path = full_path:match("^(.*/)")
+
+	local function create_dir(path)
+		local cmd = "mkdir -p " .. path
+		if vim.fn.has("win32") == 1 then
+			cmd = "mkdir " .. path .. "^& exit"
+		end
+		vim.fn.system(cmd)
+	end
+
+	if dir_path and dir_path ~= "" then
+		create_dir(dir_path)
+	end
+
+	-- Write the content to the file
+	local file = io.open(full_path, "w")
+	if file then
+		file:write(content)
+		file:close()
+	else
+		util.Notify("[cache] Failed to open file.", "error", "oz_doctor")
 	end
 end
 
 -- set data
-function M.set_data(key, value, json_name, args)
+function M.set_data(key, value, json_name)
 	-- Ensure parent directory exists.
 	local json_file = data_dir .. "/oz/" .. json_name .. ".json"
-	ensure_dir(json_file)
 
 	-- delete empty value
 	if value == "" then
@@ -52,15 +66,7 @@ function M.set_data(key, value, json_name, args)
 				local ok, decoded = pcall(vim.fn.json_decode, content)
 				if ok and type(decoded) == "table" then
 					data = decoded
-				else
-					if args.verbose then
-						util.Notify("Failed to decode JSON from " .. json_file, "warn")
-					end
 				end
-			end
-		else
-			if args.verbose then
-				util.Notify("Failed to open file " .. json_file, "error")
 			end
 		end
 	end
@@ -72,30 +78,18 @@ function M.set_data(key, value, json_name, args)
 	local new_content = vim.fn.json_encode(data)
 
 	-- Write back the content to file.
-	local f = io.open(json_file, "w")
-	if f then
-		f:write(new_content)
-		f:close()
-	else
-		util.Notify("oz: Error occurred while writing data to " .. json_name, "error")
-	end
+	write_to_file(json_file, new_content)
 end
 
-function M.get_data(key, json_name, args)
+function M.get_data(key, json_name)
 	json_name = data_dir .. "/oz/" .. json_name .. ".json"
 
 	if not file_exists(json_name) then
-		if args.verbose then
-			util.Notify("oz: File does not exist: " .. json_name, "warn")
-		end
 		return nil
 	end
 
 	local file = io.open(json_name, "r")
 	if not file then
-		if args.verbose then
-			util.Notify("oz: Failed to open file: " .. json_name, "error")
-		end
 		return nil
 	end
 
@@ -103,78 +97,15 @@ function M.get_data(key, json_name, args)
 	file:close()
 
 	if not content or content == "" then
-		if args.verbose then
-			util.Notify("oz: File is empty: " .. json_name, "warn")
-		end
 		return nil
 	end
 
 	local ok, data = pcall(vim.fn.json_decode, content)
 	if not ok then
-		if args.verbose then
-			util.Notify("oz: Failed to decode JSON from " .. json_name, "error")
-		end
 		return nil
 	end
 
 	return data[key]
-end
-
--- set project cmd
-function M.setprojectCMD(project_path, file, ft, cmd)
-	local key = [[{project_path}${ft}]]
-	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
-
-	-- if more than one file name in cmd
-	local filenames = {} -- we can use file name in future
-	for filename in cmd:gmatch("[%w%-%_%.]+%.[%w]+") do
-		table.insert(filenames, filename)
-	end
-	if #filenames == 1 then
-		if cmd:find(file) then
-			cmd = cmd:gsub(file, "{filename}")
-		end
-	end
-
-	M.set_data(key, cmd, "data")
-end
-
--- get project cmd
-function M.getprojectCMD(project_path, file, ft)
-	local key = [[{project_path}${ft}]]
-	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
-
-	local out = M.get_data(key, "data")
-	if out and out:find("{filename}") then
-		out = out:gsub("{filename}", file)
-	end
-	return out
-end
-
--- set ft cmd
-function M.setftCMD(file, ft, cmd)
-	if file:match("%.") then
-		file = vim.fn.fnamemodify(file, ":r")
-	end
-	if cmd:find(file) then
-		cmd = cmd:gsub(file, "{filename}")
-	end
-
-	M.set_data(ft, cmd, "ft")
-end
-
--- get ft cmd
-function M.getftCMD(file, ft)
-	if file:match("%.") then
-		file = vim.fn.fnamemodify(file, ":r")
-	end
-
-	local output = M.get_data(ft, "ft")
-
-	if output and output:find("{filename}") then
-		output = output:gsub("{filename}", file)
-	end
-	return output
 end
 
 return M
