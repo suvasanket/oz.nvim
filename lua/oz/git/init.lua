@@ -357,7 +357,9 @@ function M.oz_git_usercmd_init(config)
 			elseif path == "" then -- if no arg is provided
 				path = vim.fn.expand("%")
 			end
-			require("oz.git.browse").browse(path)
+			if path ~= "" then
+				require("oz.git.browse").browse(path)
+			end
 		else
 			util.Notify("You are not in a git repo.", "warn", "oz_git")
 		end

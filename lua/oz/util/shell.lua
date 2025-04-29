@@ -67,7 +67,7 @@ function M.shellout_str(str, cwd)
 	local ok, output = M.run_command(str, cwd)
 	if ok then
 		local final_out = #output == 1 and output[1] or table.concat(output, "\n")
-		return final_out
+		return vim.trim(final_out)
 	else
 		return ""
 	end

@@ -155,9 +155,13 @@ local function ft_mappings(buf)
 
 	map("n", "<cr>", function()
 		if not extract_git_command_and_flag() then
-			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
+			if vim.api.nvim_get_current_line():match([[https?://[^\s]+]]) then -- if on url
+				vim.cmd("normal gx")
+			else -- press <cr>
+				vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
+			end
 		end
-	end, { buffer = buf, desc = ":)" })
+	end, { buffer = buf, desc = "press enter on things then you'll know what it can do." })
 
 	-- refresh
 	map("n", "<C-r>", function()

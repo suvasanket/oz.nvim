@@ -875,9 +875,7 @@ function M.keymaps_init(buf)
 	)
 
 	-- Remote mappings
-	map("n", "MM", function()
-		run_n_refresh("Git remote -v")
-	end, { buffer = buf_id, desc = "Remote list." })
+	map("n", "MM", "<cmd>Git remote -v<cr>", { buffer = buf_id, desc = "Remote list." })
 	map("n", "Ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
 	map("n", "Md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote.󰳽 " })
 	map("n", "Mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote.󰳽 " })
