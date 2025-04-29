@@ -247,6 +247,13 @@ local function handle_goto_untracked()
 	g_util.goto_str("Untracked files:")
 end
 
+local function handle_goto_gitignore()
+	local path = s_util.get_file_under_cursor(true)
+	if #path > 0 then
+		require("oz.git.status.add_to_ignore").add_to_gitignore(path)
+	end
+end
+
 local function handle_diff_file_history()
 	local cur_file = s_util.get_file_under_cursor()
 	if #cur_file > 0 then
@@ -687,7 +694,7 @@ local function handle_show_help()
 			["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "c" },
 			["Diff mappings"] = { "dd", "dc", "dm", "db" },
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
-			["Goto mappings"] = { "gu", "gs", "gU", "gl", "gL", "g<Space>", "g?" }, -- Added gL
+			["Goto mappings"] = { "gI", "gu", "gs", "gU", "gl", "gL", "g<Space>", "g?" }, -- Added gL
 			["Remote mappings"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
 			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
 			["Conflict resolution mappings"] = { "xo", "xc", "xp" },
@@ -804,6 +811,8 @@ function M.keymaps_init(buf)
 	map("n", "gu", handle_goto_unstaged, { buffer = buf_id, desc = "goto unstaged changes section." })
 	map("n", "gs", handle_goto_staged, { buffer = buf_id, desc = "goto staged for commit section." })
 	map("n", "gU", handle_goto_untracked, { buffer = buf_id, desc = "goto untracked files section." })
+	-- Add to gitignore
+	map({ "n", "x" }, "gI", handle_goto_gitignore, { buffer = buf_id, desc = "Add file or dir to .gitigore.󰳽 " })
 
 	-- [d]iff mode
 	map("n", "dd", handle_diff_file_changes, { buffer = buf_id, desc = "Diff file changes.󰳽 " })

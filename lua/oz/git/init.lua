@@ -10,11 +10,11 @@ M.running_git_jobs = {}
 M.state = {}
 
 -- helper: notify or open in window
-local function notify_or_open(output, args)
+local function notify_or_open(output, args, exit_code)
 	if #output == 0 then
 		return
 	end
-	local notfy_level = type == "std_out" and "info" or "error"
+	local notfy_level = exit_code == 0 and "info" or "error"
 	if #output <= 1 then
 		util.Notify(table.concat(output, "\n"), notfy_level, "oz_git")
 	else
@@ -240,9 +240,9 @@ function M.run_git_job(args)
 
 			-- Show outputs.
 			if #std_out > 0 then
-				notify_or_open(std_out, args)
+				notify_or_open(std_out, args, code)
 			else
-				notify_or_open(std_err, args)
+				notify_or_open(std_err, args, code)
 			end
 
 			-- Suggestion.
