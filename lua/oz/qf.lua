@@ -94,8 +94,6 @@ function M.capture_lines_to_qf(lines, ft, if_error)
 
 		if parsed then
 			vim.fn.setqflist(parsed, "r")
-		else
-            util.Notify("No formats found, consult :help efm", "warn", "oz")
 		end
 	end
 end

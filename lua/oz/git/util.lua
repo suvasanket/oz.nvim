@@ -104,7 +104,9 @@ function M.run_term_cmd(args)
 		return
 	end
 
-	vim.fn.setenv("VISUAL", "nvr -O") -- FIXME check if nvr installed or not then set.
+	if vim.fn.executable("nvr") == 1 then
+		vim.fn.setenv("VISUAL", "nvr -O")
+	end
 	vim.cmd(args.open_in or "tabnew")
 	vim.cmd("term " .. args.cmd)
 

@@ -282,6 +282,13 @@ local function handle_diff_file_changes()
 				git.cleanup_git_jobs({ cmd = "difftool" })
 			end)
 		end
+	else
+		if util.usercmd_exist("DiffviewOpen") then
+			vim.cmd("DiffviewOpen")
+		else
+			--FIXME: add check if tabclosed then auto remove its buffers then it will continue otherwise remains in bg.
+			vim.cmd("Git difftool -y --cached")
+		end
 	end
 end
 

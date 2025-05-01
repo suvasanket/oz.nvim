@@ -120,14 +120,14 @@ local function term_cmd_init()
 
 				if M.cached_cmd then
 					M.run_in_term(M.cached_cmd)
-					util.Notify("running '" .. M.cached_cmd .. "'", nil, "oz_term")
+					-- util.Notify("running '" .. M.cached_cmd .. "'", nil, "oz_term")
 				end
 			else
 				-- re running
 				if M.cached_cmd then
 					M.close_term()
 					M.run_in_term(M.cached_cmd)
-					util.Notify("reruning '" .. M.cached_cmd .. "'", nil, "oz_term")
+					-- util.Notify("reruning '" .. M.cached_cmd .. "'", nil, "oz_term")
 				else
 					util.Notify("Give a initial cmd to start oz_term", "warn", "oz_term")
 				end
