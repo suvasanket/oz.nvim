@@ -27,7 +27,8 @@ local function status_buf_hl()
 
 	-- heading
 	vim.cmd([[
-        syntax match ozInactivePrompt /^[A-Z][^ \t].*/
+        syntax match ozInactivePrompt /^[a-z][^ \t].*/
+        syntax match Bold /^[A-Z][^ \t].*/
         highlight ozGitStatusHeading guifg=#ffffff ctermfg=46 gui=bold
 
         syntax match ozGitStatusHeading "^On branch " nextgroup=ozGitStatusBranchName

@@ -180,7 +180,7 @@ function M.Make_func(arg_str, dir)
 				if exit_code == 0 then
 					util.echoprint("Make completed successfully", "healthSuccess")
 				else
-                    util.Notify("Consult :help efm, then set error format.", "warn", "oz_make")
+					util.Notify("Consult :help efm, then set error format.", "warn", "oz_make")
 					if #output > 0 then
 						make_err_win(output)
 					else
@@ -254,7 +254,7 @@ function M.oz_make_init(config)
 	-- override make
 	if config.override_make then
 		vim.cmd([[
-            cnoreabbrev <expr> make getcmdline() == 'make' ? 'Make' : 'make'
+            cnoreabbrev <expr> make getcmdtype() == ':' && getcmdline() ==# 'make' ? 'Make' : 'make'
         ]])
 	end
 

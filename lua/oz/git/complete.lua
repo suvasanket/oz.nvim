@@ -1,5 +1,6 @@
 local M = {}
 local util = require("oz.util")
+local cache = require("oz.caching")
 
 -- Cache for git commands to avoid repeated system calls
 local git_commands_cache = nil
@@ -7,6 +8,7 @@ local git_branches_cache = {}
 local git_remotes_cache = nil
 local git_files_cache = nil
 local cache_timeout = 30 -- seconds
+local json_name = "git_cmd_completion"
 
 -- Helper function to run git commands and capture output
 local function capture_git_output(cmd)
@@ -30,47 +32,53 @@ local function capture_git_output(cmd)
 end
 
 local function get_command_flags(command)
-	local handle, output = io.popen("git " .. command .. " -h 2>&1"), {}
-	if not handle then
-		return output
-	end
+	local cached_flags = cache.get_data(command, json_name)
+	if cached_flags and #cached_flags > 0 then
+		return cached_flags
+	else
+		local handle, output = io.popen("git " .. command .. " -h 2>&1"), {}
+		if not handle then
+			return output
+		end
 
-	output = handle:read("*a")
-	handle:close()
+		output = handle:read("*a")
+		handle:close()
 
-	if not output then
-		return {}
-	end
+		if not output then
+			return {}
+		end
 
-	local flags, stripped_str = {}, output:gsub("%b()", ""):gsub("%b[]", ""):gsub("%b<>", "")
-	for _, line in ipairs(vim.split(stripped_str, "\n")) do
-		local comma_index = line:find(",")
-		if comma_index then
-			local potential_long_flag = line:sub(comma_index + 1):match("%s*(--%S+)")
-			if
-				potential_long_flag
-				and vim.startswith(potential_long_flag, "-")
-				and not potential_long_flag:find(",")
-			then
-				util.tbl_insert(flags, potential_long_flag)
+		local flags, stripped_str = {}, output:gsub("%b()", ""):gsub("%b[]", ""):gsub("%b<>", "")
+		for _, line in ipairs(vim.split(stripped_str, "\n")) do
+			local comma_index = line:find(",")
+			if comma_index then
+				local potential_long_flag = line:sub(comma_index + 1):match("%s*(--%S+)")
+				if
+					potential_long_flag
+					and vim.startswith(potential_long_flag, "-")
+					and not potential_long_flag:find(",")
+				then
+					util.tbl_insert(flags, potential_long_flag)
+				else
+					local first_flag = line:match("%s*(-%S+)")
+					if first_flag and vim.startswith(first_flag, "-") and not first_flag:find(",") then
+						util.tbl_insert(flags, first_flag)
+					end
+				end
 			else
-				local first_flag = line:match("%s*(-%S+)")
+				local first_flag, long_flag = line:match("%s*(-%S+)"), line:match("%s*(--%S+)")
 				if first_flag and vim.startswith(first_flag, "-") and not first_flag:find(",") then
 					util.tbl_insert(flags, first_flag)
 				end
-			end
-		else
-			local first_flag, long_flag = line:match("%s*(-%S+)"), line:match("%s*(--%S+)")
-			if first_flag and vim.startswith(first_flag, "-") and not first_flag:find(",") then
-				util.tbl_insert(flags, first_flag)
-			end
-			if long_flag and vim.startswith(long_flag, "-") and not long_flag:find(",") then
-				util.tbl_insert(flags, long_flag)
+				if long_flag and vim.startswith(long_flag, "-") and not long_flag:find(",") then
+					util.tbl_insert(flags, long_flag)
+				end
 			end
 		end
-	end
 
-	return flags
+		cache.set_data(command, flags, json_name)
+		return flags
+	end
 end
 
 -- Get all available git commands
@@ -79,28 +87,29 @@ local function get_git_commands()
 		return git_commands_cache
 	end
 
-	-- Capture core git commands
-	local core_cmds = capture_git_output("git --help | grep -E '^   [a-z]' | awk '{print $1}'")
+	local all_cmds = cache.get_data("all_cmds", json_name) or {}
 
-	-- Capture additional commands from git help -a
-	local additional_cmds = capture_git_output("git help --all | grep -E '^ +[a-z]' | awk '{print $1}'")
+	if #all_cmds == 0 then
+		local core_cmds = capture_git_output("git --help | grep -E '^   [a-z]' | awk '{print $1}'")
+		local additional_cmds = capture_git_output("git help --all | grep -E '^ +[a-z]' | awk '{print $1}'")
 
-	-- Combine and sort
-	local all_cmds = {}
-	for _, cmd in ipairs(core_cmds) do
-		table.insert(all_cmds, cmd)
-	end
-
-	for _, cmd in ipairs(additional_cmds) do
-		-- Avoid duplicates
-		if not vim.tbl_contains(all_cmds, cmd) then
+		-- Combine and sort
+		for _, cmd in ipairs(core_cmds) do
 			table.insert(all_cmds, cmd)
 		end
+
+		-- Avoid duplicates
+		for _, cmd in ipairs(additional_cmds) do
+			if not vim.tbl_contains(all_cmds, cmd) then
+				table.insert(all_cmds, cmd)
+			end
+		end
+
+		table.sort(all_cmds)
+		cache.set_data("all_cmds", all_cmds, json_name)
 	end
 
-	table.sort(all_cmds)
 	git_commands_cache = all_cmds
-
 	return all_cmds
 end
 

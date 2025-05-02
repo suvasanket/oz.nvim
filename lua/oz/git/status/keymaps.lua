@@ -792,11 +792,11 @@ function M.keymaps_init(buf)
 	end, { buffer = buf_id, desc = "Stash save optionally add a message." })
 
 	-- commit map
-	map("n", "cc", handle_commit, { buffer = buf_id, desc = ":Git commit" })
+	map("n", "cc", handle_commit, { buffer = buf_id, desc = "Create a commit" })
 	-- commit ammend --no edit
-	map("n", "ce", handle_commit_amend_no_edit, { buffer = buf_id, desc = ":Git commit --amend --no-edit" })
+	map("n", "ce", handle_commit_amend_no_edit, { buffer = buf_id, desc = "Ammend all changes without edit." })
 	-- commit amend
-	map("n", "ca", handle_commit_amend, { buffer = buf_id, desc = ":Git commit --amend" })
+	map("n", "ca", handle_commit_amend, { buffer = buf_id, desc = "Ammend previous commit." })
 	-- G commit cmdline
 	map(
 		"n",

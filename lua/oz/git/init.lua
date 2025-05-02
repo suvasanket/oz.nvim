@@ -9,7 +9,10 @@ M.user_config = nil
 M.running_git_jobs = {}
 M.state = {}
 
--- helper: notify or open in window
+--- helper: notify or open in window
+---@param output table
+---@param args string
+---@param exit_code number
 local function notify_or_open(output, args, exit_code)
 	if #output == 0 then
 		return
@@ -22,9 +25,12 @@ local function notify_or_open(output, args, exit_code)
 	end
 end
 
--- CMD parser
-local function different_cmd_runner(args_table, args_str)
-	local cmd = args_table[1]
+--- CMD pareser
+---@param args_tbl table
+---@param args_str string
+---@return boolean
+local function special_cmd_exec(args_tbl, args_str)
+	local cmd = args_tbl[1]
 
 	local editor_req_cmds =
 		{ "commit", "commit --amend", "tag -a", "rebase -i", "merge --no-commit", "notes add", "filter-branch" }
@@ -47,7 +53,7 @@ local function different_cmd_runner(args_table, args_str)
 	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "ls-remote", "submodule", "svn" }
 	local interactive_cmd = { "add -p", "reset -p", "commit -p", "checkout -p" }
 
-	-- all the conditional commands here.
+	-- All special cmd exec --
 
 	-- Status
 	if cmd == "status" then
@@ -59,12 +65,27 @@ local function different_cmd_runner(args_table, args_str)
 		return true
 
 	-- Commit
-	elseif cmd == "commit" and #args_table == 1 then -- check if non staged commiting.
+	elseif cmd == "commit" and #args_tbl == 1 then -- check if non staged commiting.
 		local changed = shell.shellout_tbl("git diff --name-only --cached")
 		if #changed < 1 then
 			util.Notify("Nothing to commit.", "error", "oz_git")
 			return true
 		end
+
+	-- Grep
+	elseif cmd == "grep" then
+		table.remove(args_tbl, 1)
+		local ok, out = shell.run_command({ "git", "grep", "-n", "--column", unpack(args_tbl) })
+		if ok then
+			vim.fn.setqflist({}, " ", {
+				lines = out,
+				efm = "%f:%l:%c:%m",
+			})
+			if #vim.fn.getqflist() > 0 then
+				vim.cmd("cw")
+			end
+		end
+		return true
 
 	-- interactive cmds
 	elseif util.str_in_tbl(args_str, interactive_cmd) then
@@ -76,25 +97,25 @@ local function different_cmd_runner(args_table, args_str)
 		})
 
 	-- Man cmd
-	elseif vim.tbl_contains(args_table, "--help") then
+	elseif vim.tbl_contains(args_tbl, "--help") then
 		vim.cmd("Man git-" .. cmd)
 		return true
 
-	-- Progress cmd
+	-- Progress cmds
 	elseif vim.tbl_contains(remote_cmds, cmd) then
 		if M.user_config and M.user_config.remote_operation_exec_method == "background" then -- user config
-			local command = table.remove(args_table, 1)
+			local command = table.remove(args_tbl, 1)
 
-			require("oz.git.progress_cmd").run_git_with_progress(command, args_table, function(lines)
+			require("oz.git.progress_cmd").run_git_with_progress(command, args_tbl, function(lines)
 				oz_git_win.open_oz_git_win(lines, args_str)
 				-- git suggestion
-				local suggestion = wizard.get_git_suggestions(lines, args_table)
+				local suggestion = wizard.get_git_suggestions(lines, args_tbl)
 				if suggestion then
 					g_util.set_cmdline(suggestion)
 				end
 			end)
 		elseif M.user_config and M.user_config.remote_operation_exec_method == "term" then
-			vim.cmd("hor term git " .. table.concat(args_table, " "))
+			vim.cmd("hor term git " .. table.concat(args_tbl, " "))
 			vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
 			vim.cmd("resize 9")
 			vim.api.nvim_buf_set_name(0, "")
@@ -102,11 +123,15 @@ local function different_cmd_runner(args_table, args_str)
 		end
 		return true
 	end
+	return false
 end
 
 -- callback to run after :Git cmd complete
 local exec_complete_callback = nil
 local exec_complete_callback_return = false
+--- callback func
+---@param callback function
+---@param ret boolean|nil
 function M.after_exec_complete(callback, ret)
 	if callback then
 		exec_complete_callback = callback
@@ -155,7 +180,8 @@ function M.refresh_buf()
 	end
 end
 
--- remove any running jobs.
+--- remove any running jobs.
+---@param args table
 function M.cleanup_git_jobs(args)
 	if args then
 		if args.job_id then
@@ -186,7 +212,8 @@ function M.cleanup_git_jobs(args)
 	end
 end
 
--- Run Git cmd.
+--- Run Git cmd.
+---@param args string
 function M.run_git_job(args)
 	args = util.args_parser().expand_expressions(args)
 	local args_table = util.args_parser().parse_args(args)
@@ -194,7 +221,7 @@ function M.run_git_job(args)
 	local std_out = {}
 	local std_err = {}
 
-	if different_cmd_runner(args_table, args) then
+	if special_cmd_exec(args_table, args) then
 		return
 	end
 

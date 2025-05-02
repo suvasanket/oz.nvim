@@ -2,7 +2,10 @@ local M = {}
 
 local util = require("oz.util")
 
-local function parse_search_cmd(cmd)
+--- cmd parser
+---@param cmd string
+---@return table
+function M.grep_cmd_parser(cmd)
 	local tokens = {}
 	for token in cmd:gmatch("%S+") do
 		table.insert(tokens, token)
@@ -52,9 +55,11 @@ function M.cmd_contains_grep(cmd)
 	return false
 end
 
--- grep -> qf
+--- grep -> qf
+---@param cmd string
+---@param dir string
 function M.grep_to_qf(cmd, dir)
-	local parsed = parse_search_cmd(cmd)
+	local parsed = M.grep_cmd_parser(cmd) --REMOVE me
 	local flags = parsed.flags
 	local exe = parsed.exe
 	local target = dir or parsed.target or "."
@@ -227,7 +232,7 @@ function M.oz_grep_init(config)
 			end
 		end
 		-- parse the user option grepprg.
-		local parsed_opt = parse_search_cmd(grep_opt)
+		local parsed_opt = M.grep_cmd_parser(grep_opt)
 		local opt_flags = parsed_opt.flags
 		local opt_exe = parsed_opt.exe
 		local grep_fm = vim.o.grepformat
@@ -262,7 +267,7 @@ function M.oz_grep_init(config)
 	-- override grep
 	if config.override_grep then
 		vim.cmd([[
-        cnoreabbrev <expr> grep getcmdline() == 'grep' ? 'Grep' : 'grep'
+            cnoreabbrev <expr> grep getcmdtype() == ':' && getcmdline() ==# 'grep' ? 'Grep' : 'grep'
         ]])
 	end
 end

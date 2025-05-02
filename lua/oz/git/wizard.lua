@@ -231,7 +231,13 @@ end
 -- conflict wizard --
 local conflicted_files = {}
 function M.start_conflict_resolution()
-	conflicted_files = shell.shellout_tbl([[git status --short | awk '/^[ADU][ADU] / {print $2}']])
+	local res = shell.shellout_tbl("git status --short")
+	for _, line in ipairs(res) do
+		if line:match("^.[ADU] ") then
+			table.insert(conflicted_files, line:sub(3))
+		end
+	end
+
 	if #conflicted_files > 0 then
 		vim.fn.setqflist({}, " ", {
 			lines = conflicted_files,
@@ -267,14 +273,11 @@ function M.start_conflict_resolution()
 		end, { remap = false, silent = true })
 
 		M.on_conflict_resolution = true
-	else
-		util.Notify("ShellError: git status --short | awk '/^[ADU][ADU] / {print $2}", "error", "oz_git")
 	end
 end
 
 function M.complete_conflict_resolution()
 	if #conflicted_files == 0 then
-		util.Notify("ShellError: git status --short | awk '/^[ADU][ADU] / {print $2}", "error", "oz_git")
 		return
 	end
 	g_util.restore_mapping("n", "[x")
@@ -284,7 +287,7 @@ function M.complete_conflict_resolution()
 	vim.cmd("cclose")
 
 	for _, file in ipairs(conflicted_files) do
-		local lines = vim.fn.readfile(file)
+		local lines = vim.fn.readfile(vim.trim(file))
 		local new_lines = {}
 		for _, line in ipairs(lines) do
 			if not (line:match("^<<<<<<<") or line:match("^=======") or line:match("^>>>>>>>")) then

@@ -1,9 +1,19 @@
 local M = {}
 
-function M.tbl_insert(tbl, item)
+---add to tbl with check
+---@param tbl table
+---@param item any
+---@param pos integer|nil
+---@return table
+function M.tbl_insert(tbl, item, pos)
 	if not vim.tbl_contains(tbl, item) then
-		table.insert(tbl, item)
+		if pos then
+			table.insert(tbl, pos, item)
+		else
+			table.insert(tbl, item)
+		end
 	end
+	return tbl
 end
 
 function M.GetProjectRoot(markers, path_or_bufnr)

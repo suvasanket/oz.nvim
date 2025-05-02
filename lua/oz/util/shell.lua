@@ -19,6 +19,11 @@ local function trim_empty_strings(tbl)
 	return result
 end
 
+---Run shellcmd
+---@param cmd string|table
+---@param cwd string|nil
+---@return boolean
+---@return table
 function M.run_command(cmd, cwd)
 	local stdout_lines = {}
 	local stderr_lines = {}

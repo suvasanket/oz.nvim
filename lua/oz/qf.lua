@@ -1,6 +1,5 @@
 local M = {}
 local p = require("oz.caching")
-local util = require("oz.util")
 local ft_efm_json = "ft_efm"
 
 -- efm patterns
@@ -31,7 +30,10 @@ local language_patterns = {
 	},
 }
 
--- parse function
+--- parse lines funciton
+---@param lines table
+---@param filetype string
+---@return table
 local function parse_lines(lines, filetype)
 	local cached_efm = p.get_data(filetype, ft_efm_json)
 	if cached_efm or custom_error_formats[filetype] then
@@ -66,12 +68,16 @@ local function parse_lines(lines, filetype)
 
 		return results
 	else
-		return nil
+		return {}
 	end
 end
 
 local keywords = { "error", "warn", "warning", "err", "issue", "trace", "file", "stacktrace" }
 
+--- check if str cotains
+---@param lines table
+---@param words table
+---@return boolean
 local function lines_contains_keyword(lines, words)
 	for _, line in ipairs(lines) do
 		for _, keyword in ipairs(words) do
@@ -84,15 +90,19 @@ local function lines_contains_keyword(lines, words)
 end
 
 -- lines -> qf
+--- capture lines to quickfix
+---@param lines table
+---@param ft string
+---@param if_error boolean|nil
 function M.capture_lines_to_qf(lines, ft, if_error)
-    if not if_error then
-        if_error = lines_contains_keyword(lines, keywords)
-    end
+	if not if_error then
+		if_error = lines_contains_keyword(lines, keywords)
+	end
 
 	if if_error then
 		local parsed = parse_lines(lines, ft)
 
-		if parsed then
+		if #parsed > 0 then
 			vim.fn.setqflist(parsed, "r")
 		end
 	end
