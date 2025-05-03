@@ -45,10 +45,10 @@ local function status_buf_hl()
 	-- branch
 	vim.cmd([[
         syntax match ozGitStatusBranchName "\S\+" contained
-        syntax match ozGitStatusCurBranch /\*\s\w\+/
 
         highlight default link ozGitStatusBranchName @attribute
-        highlight default link ozGitStatusCurBranch @attribute
+        syntax match @attribute /\*\s\w\+/
+        syntax match ozInactivePrompt /^.*Your branch.*$/
     ]])
 
 	-- misc
@@ -88,9 +88,11 @@ local function generate_status_content()
 	if status_ok and #git_status_output > 0 then
 		for _, line in ipairs(git_status_output) do
 			if not line:match('%(use "git .-.%)') then
-				-- substr = substr:gsub("^[%s\t]+", "  ")
 				table.insert(status_tbl, line)
 			end
+		end
+		if not status_tbl[2]:match("Your branch") then
+			table.insert(status_tbl, 2, "")
 		end
 	end
 
@@ -101,6 +103,9 @@ local function generate_status_content()
 				table.insert(stash_tbl, "\t" .. substr)
 			end
 		end
+	end
+	if status_tbl[#status_tbl] ~= "" then
+		table.insert(status_tbl, "")
 	end
 	return util.join_tables(status_tbl, stash_tbl)
 end
@@ -172,7 +177,7 @@ function M.GitStatus()
 
 			-- opts
 			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-            vim.opt_local.fillchars:append({ eob = ' ' })
+			vim.opt_local.fillchars:append({ eob = " " })
 
 			-- async component
 			vim.fn.timer_start(10, function()

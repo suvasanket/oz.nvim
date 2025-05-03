@@ -1,9 +1,10 @@
 local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
+local shell = require("oz.util.shell")
 
 local run_command = function(tbl, cwd)
-	local ok, out = require("oz.util.shell").run_command(tbl, cwd)
+	local ok, out = shell.run_command(tbl, cwd)
 	return ok, vim.trim(table.concat(out, "\n"))
 end
 
@@ -42,15 +43,18 @@ function M.browse(target_path)
 	end
 
 	-- 3. get current branch
-	local ok_branch, branch = run_command({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, git_root)
-	if not ok_branch or branch == "HEAD" then
+	local ok_branch, cur_local_branch = run_command({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, git_root)
+	if not ok_branch or cur_local_branch == "HEAD" then
 		util.Notify("Could not get the current branch.", "error", "oz_git")
 	end
+	local cur_remote_branch_ref =
+		shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", cur_local_branch))
+	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$")
 
 	-- 4. get remote url
 	local ok_remote, remote_url
 	local ok_remote_name, cur_remote =
-		run_command({ "git", "config", "--get", string.format("branch.%s.remote", branch) })
+		run_command({ "git", "config", "--get", string.format("branch.%s.remote", cur_local_branch) })
 	if ok_remote_name then
 		ok_remote, remote_url = run_command({ "git", "remote", "get-url", cur_remote }, git_root)
 		if not ok_remote then
@@ -62,7 +66,7 @@ function M.browse(target_path)
 	-- 5. Calculate the relative path from git root
 	local clean_git_root = git_root:gsub("/$", ""):gsub("\\$", "")
 
-	local file_exist_in_remote = get_relative_path(target_path, cur_remote, branch, git_root)
+	local file_exist_in_remote = get_relative_path(target_path, cur_remote, cur_remote_branch, git_root)
 	if not file_exist_in_remote then
 		util.Notify("Provided entry is not available in remote.", "error", "oz_git")
 		return
@@ -120,7 +124,7 @@ function M.browse(target_path)
 		-- If relative_path is empty, we are Browse the repo root
 		if relative_path == "" then
 			path_segment = "/tree/" -- Most services use /tree/ for root
-			branch = branch -- Use branch/commit as is
+			cur_local_branch = cur_local_branch
 			relative_path = "" -- No relative path needed
 		end
 	end
@@ -135,11 +139,12 @@ function M.browse(target_path)
 	then
 		-- Attempt Azure-specific file URL construction
 		-- Note: URI encoding might be needed for branch/path, handled by open command usually
-		final_url = base_url .. "?path=" .. "/" .. relative_path .. "&version=GB" .. branch .. "&line=1" -- Add line=1 maybe
+        -- might change remote_branch to local_branch
+		final_url = base_url .. "?path=" .. "/" .. relative_path .. "&version=GB" .. cur_remote_branch .. "&line=1" -- Add line=1 maybe
 		vim.notify("Using Azure-specific URL format.", vim.log.levels.INFO)
 	else
 		-- Standard construction for others or Azure directories/root
-		final_url = table.concat({ base_url, path_segment, branch, "/", relative_path }, "")
+		final_url = table.concat({ base_url, path_segment, cur_remote_branch, "/", relative_path }, "")
 		final_url = final_url:gsub("///", "/"):gsub("//", "/")
 		final_url = final_url:gsub(":/", "://")
 	end

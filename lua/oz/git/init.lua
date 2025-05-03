@@ -54,26 +54,8 @@ local function special_cmd_exec(args_tbl, args_str)
 	local interactive_cmd = { "add -p", "reset -p", "commit -p", "checkout -p" }
 
 	-- All special cmd exec --
-
-	-- Status
-	if cmd == "status" then
-		local oz_git_buf = require("oz.git.oz_git_win").oz_git_buf
-		if oz_git_buf then
-			vim.api.nvim_buf_delete(oz_git_buf, { force = true })
-		end
-		require("oz.git.status").GitStatus()
-		return true
-
-	-- Commit
-	elseif cmd == "commit" and #args_tbl == 1 then -- check if non staged commiting.
-		local changed = shell.shellout_tbl("git diff --name-only --cached")
-		if #changed < 1 then
-			util.Notify("Nothing to commit.", "error", "oz_git")
-			return true
-		end
-
 	-- Grep
-	elseif cmd == "grep" then
+	if cmd == "grep" then
 		table.remove(args_tbl, 1)
 		local ok, out = shell.run_command({ "git", "grep", "-n", "--column", unpack(args_tbl) })
 		if ok then
@@ -85,6 +67,11 @@ local function special_cmd_exec(args_tbl, args_str)
 				vim.cmd("cw")
 			end
 		end
+		return true
+
+	-- git blame
+	elseif cmd == "blame" then
+		require("oz.git.blame").git_blame_init()
 		return true
 
 	-- interactive cmds

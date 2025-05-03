@@ -8,6 +8,10 @@ M.on_conflict_resolution_complete = nil
 
 local shellout_str = shell.shellout_str
 
+--- Get suggestion if error in user-cmd
+---@param data table
+---@param arg_tbl table
+---@return string|nil
 function M.get_git_suggestions(data, arg_tbl)
 	local filtered_data = {}
 	for _, line in ipairs(data) do
@@ -36,7 +40,7 @@ function M.get_git_suggestions(data, arg_tbl)
 				if #arg_tbl == 1 then
 					return arg_tbl[1]
 				end
-				return arg_tbl[1] .. "| " .. table.concat(arg_tbl, " ", 2)
+				return string.format("%s| %s", arg_tbl[1], table.concat(arg_tbl, " ", 2))
 			end,
 		},
 		{
@@ -79,7 +83,7 @@ function M.get_git_suggestions(data, arg_tbl)
 		{
 			trigger = "Please commit or stash",
 			extract = function()
-				vim.notify_once("Chief, please commit or stash before we proceed.")
+				vim.notify_once("Please commit or stash before we proceed.")
 				return "stash"
 			end,
 		},
@@ -105,8 +109,8 @@ function M.get_git_suggestions(data, arg_tbl)
 		{
 			trigger = "fix conflicts",
 			extract = function()
-				vim.notify_once("We've got your back, Chief.")
-				return "status"
+				vim.notify_once("We are in a conflict, press enter for details.")
+				return "Git"
 			end,
 		},
 		-- Detached HEAD suggestions
@@ -199,7 +203,9 @@ function M.get_git_suggestions(data, arg_tbl)
 		if output_str:find(pattern.trigger) then
 			local suggestion = pattern.extract(output_str)
 			if suggestion then
-				return "Git " .. suggestion
+				suggestion = suggestion:sub(1, 3) == "Git" and suggestion or "Git " .. suggestion
+				print(suggestion)
+				return suggestion
 			end
 		end
 	end

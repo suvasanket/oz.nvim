@@ -119,24 +119,24 @@ function M.get_file_under_cursor(original)
 		local dir = line:match("(%S+/)")
 
 		local tbl = { "deleted:", "renamed:", "copied:" }
-		local absolute_path
+		local absolute_dir_path, absolute_file_path
 		if file then
-			absolute_path = root .. "/" .. file
+			absolute_file_path = root .. "/" .. file
 		elseif dir then
-			absolute_path = root .. "/" .. dir
+			absolute_dir_path = root .. "/" .. dir
 		end
 
-		if vim.fn.filereadable(absolute_path) == 1 then -- file
+		if vim.fn.filereadable(absolute_file_path) == 1 then -- file
 			if original then
 				table.insert(entries, file)
 			else
-				table.insert(entries, absolute_path)
+				table.insert(entries, absolute_file_path)
 			end
-		elseif vim.fn.isdirectory(absolute_path) == 1 then -- dir
+		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then -- dir
 			if original then
 				table.insert(entries, dir)
 			else
-				table.insert(entries, absolute_path)
+				table.insert(entries, absolute_dir_path)
 			end
 		else
 			for _, string in pairs(tbl) do

@@ -55,7 +55,7 @@ function M.run_command(cmd, cwd)
 	})
 
 	if not job_id or job_id <= 0 then
-		return false, cmd
+		return false, {}
 	end
 
 	local result = vim.fn.jobwait({ job_id }, -1)
