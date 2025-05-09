@@ -94,7 +94,7 @@ local function make_err_buf_mappings(buf_id)
 		else
 			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<cr>", true, false, true), "n", false)
 		end
-	end)
+	end, { buffer = buf_id, desc = "open the entry." })
 end
 
 -- show err in a wind

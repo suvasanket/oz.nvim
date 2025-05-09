@@ -182,9 +182,9 @@ local function term_buf_mappings(config)
 			vim.cmd.wincmd("p")
 			vim.cmd("cfirst")
 		else
-			print("Nothing to add")
+			util.echoprint("Nothing to add", "healthWarning")
 		end
-	end, { desc = "add any {err|warn|stacktrace} to quickfix(*)", buffer = 0, silent = true })
+	end, { desc = "add any {err|warn|stacktrace} to quickfix <%>", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.open_entry, function()
 		-- if url
@@ -216,11 +216,12 @@ local function term_buf_mappings(config)
 				false
 			)
 		end
-	end, { desc = "open entry(file, dir) under cursor(*)", buffer = 0, silent = true })
+	end, { desc = "open entry(file, dir) under cursor <%>", buffer = 0, silent = true })
 
 	util.Map("n", config.mappings.show_keybinds, function()
-		util.Show_buf_keymaps({
-			subtext = { "(*): have limited usablity" },
+		local show_map = require("oz.util.help_keymaps")
+		show_map.show_maps({
+			subtext = { "[<%> means limited usablity.]" },
 		})
 	end, { desc = "show keymaps", noremap = true, silent = true, buffer = 0 })
 

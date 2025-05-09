@@ -92,10 +92,14 @@ end
 
 local function term_highlight()
 	vim.cmd("syntax clear")
-	vim.api.nvim_set_hl(0, "OzGitTermPlus", { fg = "#000000", bg = "#A0C878" })
-	vim.api.nvim_set_hl(0, "OzGitTermMinus", { fg = "#000000", bg = "#E17564" })
-	vim.fn.matchadd("OzGitTermPlus", "^+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("OzGitTermMinus", "^-.*$", 0, -1, { extend = true })
+
+	vim.cmd([[
+        syntax match @diff.delta /^@@ .\+@@/
+        syntax match @diff.plus /^+.\+$/
+        syntax match @diff.minus /^-.\+$/
+        syntax match @field /^diff --git .\+$/
+        syntax match @field /^\(---\|+++\) .\+$/
+    ]])
 end
 
 function M.run_term_cmd(args)

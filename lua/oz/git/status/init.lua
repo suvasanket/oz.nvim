@@ -28,9 +28,9 @@ local function status_buf_hl()
 	-- heading
 	vim.cmd([[
         syntax match ozInactivePrompt /^[a-z][^ \t].*/
-        syntax match Bold /^[A-Z][^ \t].*/
         highlight ozGitStatusHeading guifg=#ffffff ctermfg=46 gui=bold
 
+        syntax match ozGitStatusHeading /^[A-Z][^ \t].*:/
         syntax match ozGitStatusHeading "^On branch " nextgroup=ozGitStatusBranchName
         syntax match ozGitStatusHeading "^Stash list:"
         syntax match ozGitStatusHeading "^Changes not staged for commit:"
@@ -53,9 +53,9 @@ local function status_buf_hl()
 
 	-- misc
 	vim.cmd([[
-        syn region @boolean matchgroup=Delimiter start="\[" end="\]"
-        syntax match String /'[^']*'/
-        syntax match Number /\d\+/
+        syn region @property matchgroup=Delimiter start="\[" end="\]"
+        syntax match String /'[^']*'/ containedin=ALL
+        syntax match Number /\s\d\+/ containedin=ALL
     ]])
 end
 
@@ -123,6 +123,8 @@ local function get_toggled_headings(tbl1, tbl2)
 	return result
 end
 
+--- refresh status buffer
+---@param passive boolean|nil
 function M.refresh_status_buf(passive)
 	local s_util = require("oz.git.status.util")
 	if passive then -- passive refresh
@@ -134,7 +136,7 @@ function M.refresh_status_buf(passive)
 		s_util.get_heading_tbl(lines)
 
 		-- retoggle any user toggeled headings
-		local toggled_headings = get_toggled_headings(s_util.toggeled_headings, s_util.headings_table)
+		local toggled_headings = get_toggled_headings(s_util.toggled_headings, s_util.headings_table)
 		for _, item in ipairs(toggled_headings) do
 			s_util.toggle_section(item)
 		end
@@ -147,7 +149,8 @@ function M.refresh_status_buf(passive)
 			M.GitStatus()
 
 			-- retoggle any user toggeled headings
-			local toggled_headings = get_toggled_headings(s_util.toggeled_headings, s_util.headings_table)
+			local toggled_headings = get_toggled_headings(s_util.toggled_headings, s_util.headings_table)
+			-- print(vim.inspect(s_util.toggled_headings))
 			for _, item in ipairs(toggled_headings) do
 				s_util.toggle_section(item)
 			end

@@ -51,7 +51,7 @@ local function special_cmd_exec(args_tbl, args_str)
 	end
 
 	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "ls-remote", "submodule", "svn" }
-	local interactive_cmd = { "add -p", "reset -p", "commit -p", "checkout -p" }
+	local interactive_cmd = { "add -p", "add -i", "reset -p", "commit -p", "checkout -p" }
 
 	-- All special cmd exec --
 	-- Grep
@@ -79,7 +79,7 @@ local function special_cmd_exec(args_tbl, args_str)
 		g_util.run_term_cmd({
 			cmd = "git " .. util.str_in_tbl(args_str, interactive_cmd),
 			on_exit_callback = function()
-				util.Notify("Interactive hunk selection ended.", nil, "oz_git")
+				util.Notify("Interactive hunk selection exited.", nil, "oz_git")
 			end,
 		})
 

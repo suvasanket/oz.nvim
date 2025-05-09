@@ -85,7 +85,7 @@ end
 -- mappings
 local function ft_mappings(buf)
 	local user_mappings = require("oz.git").user_config.mappings
-	local map = g_util.map
+	local map = util.Map
 
 	map("n", "q", function()
 		vim.cmd("close")
@@ -124,7 +124,7 @@ local function ft_mappings(buf)
 				end
 			end
 		end
-	end, { buffer = buf, desc = "pick any valid entry under cursor." })
+	end, { buffer = buf, desc = "pick any valid entry under cursor. <*>" })
 
 	-- enter cmdline
 	map("n", { "i", "a" }, function()
@@ -161,7 +161,7 @@ local function ft_mappings(buf)
 				vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
 			end
 		end
-	end, { buffer = buf, desc = "press enter on things then you'll know what it can do." })
+	end, { buffer = buf, desc = "press enter on things then you'll know what it can do. <*>" })
 
 	-- refresh
 	map("n", "<C-r>", function()
@@ -179,15 +179,6 @@ local function ft_mappings(buf)
 		util.tbl_monitor().stop_all_monitoring()
 	end, { buffer = buf, desc = "discard any picked entry." })
 
-	-- show help
-	map("n", "g?", function()
-		util.Show_buf_keymaps({
-			header_name = {
-				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-			},
-		})
-	end, { buffer = buf, desc = "show all keymaps." })
-
 	map("n", "<C-o>", function()
 		if git_cmd.prev_cmd then
 			vim.cmd("Git " .. git_cmd.prev_cmd)
@@ -199,6 +190,19 @@ local function ft_mappings(buf)
 			vim.cmd("Git " .. git_cmd.next_cmd)
 		end
 	end, { remap = false, buffer = buf, desc = "go to next cmd buffer." })
+
+	-- open reflog
+	map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
+
+	-- show help
+	map("n", "g?", function()
+		local show_map = require("oz.util.help_keymaps")
+		show_map.show_maps({
+			group = {
+				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
+			},
+		})
+	end, { buffer = buf, desc = "show all keymaps." })
 end
 
 -- highlights
@@ -208,15 +212,10 @@ local function oz_git_win_hl()
 	-- Syntax matches
 	vim.cmd([[
         syntax match @attribute /[0-9a-f]\{7,40\}/ containedin=ALL
-        syntax match @function /Author/ containedin=ALL
-        syntax match @function /Date/ containedin=ALL
-        syntax match @function /\(On branch \)\@<=\S\+/ contained
-        syntax match @function /^Untracked files:$/
-        syntax match @function /^Changes not staged for commit:$/
-        syntax match @diff.delta /^\s\+modified:\s\+.*$/
-        syntax match ozGitUntracked /^\s\+\%(\%(modified:\)\@!.\)*$/
+        syntax match @function /^Author:/ containedin=ALL
+        syntax match @function /^Date:/ containedin=ALL
 
-        syntax match @error /^\<error\>\|\<fatal\>/
+        syntax match @error /^\<error:\>\|\<fatal:\>/
         syntax match DiagnosticUnderlineOk /\v(https?|ftp|file):\/\/\S+/
     ]])
 
@@ -225,12 +224,9 @@ local function oz_git_win_hl()
         syntax match @diff.delta /^@@ .\+@@/
         syntax match @diff.plus /^+.\+$/
         syntax match @diff.minus /^-.\+$/
-        syntax match @comment.todo /^diff --git .\+$/
-        syntax match @function /^\(---\|+++\) .\+$/
+        syntax match @field /^diff --git .\+$/
+        syntax match @field /^\(---\|+++\) .\+$/
     ]])
-
-	-- Highlight groups
-	vim.api.nvim_set_hl(0, "ozGitUntracked", { fg = "#757575" })
 end
 
 function M.open_oz_git_win(lines, cmd)
@@ -253,13 +249,14 @@ function M.open_oz_git_win(lines, cmd)
 	win.open_win("oz_git", {
 		lines = lines,
 		win_type = win_type,
+		reuse = false,
 		callback = function(buf_id, win_id)
 			M.oz_git_buf = buf_id
 			M.oz_git_win = win_id
 
-            -- opts
+			-- opts
 			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-            vim.opt_local.fillchars:append({ eob = ' ' })
+			vim.opt_local.fillchars:append({ eob = " " })
 
 			-- async
 			vim.fn.timer_start(10, function()

@@ -102,9 +102,9 @@ function M.capture_lines_to_qf(lines, ft, if_error)
 	if if_error then
 		local parsed = parse_lines(lines, ft)
 
-		if #parsed > 0 then
-			vim.fn.setqflist(parsed, "r")
-		end
+        vim.fn.setqflist(parsed, "r")
+		-- if #parsed > 0 then
+		-- end
 	end
 end
 

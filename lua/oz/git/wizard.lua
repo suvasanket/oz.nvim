@@ -204,7 +204,6 @@ function M.get_git_suggestions(data, arg_tbl)
 			local suggestion = pattern.extract(output_str)
 			if suggestion then
 				suggestion = suggestion:sub(1, 3) == "Git" and suggestion or "Git " .. suggestion
-				print(suggestion)
 				return suggestion
 			end
 		end
@@ -310,7 +309,7 @@ function M.complete_conflict_resolution()
 end
 
 function M.rebase_buf_mappigs(buf)
-	local map = g_util.map
+	local map = util.Map
 
 	-- Helper fucntion --
 	local function set_prefix(str)

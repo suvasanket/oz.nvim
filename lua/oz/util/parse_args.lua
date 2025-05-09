@@ -1,5 +1,8 @@
 local M = {}
 
+--- expand_expressions
+---@param str string
+---@return string
 function M.expand_expressions(str)
 	local pattern = "%%[:%w]*"
 
@@ -10,6 +13,9 @@ function M.expand_expressions(str)
 	return expanded_str
 end
 
+--- parse_args
+---@param argstring string
+---@return table
 function M.parse_args(argstring)
 	local args = {}
 	local i = 1

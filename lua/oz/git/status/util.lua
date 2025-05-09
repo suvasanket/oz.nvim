@@ -7,10 +7,10 @@ local state = require("oz.git.status").state
 --
 M.headings_table = {}
 M.diff_lines = {}
-M.toggeled_headings = {}
+M.toggled_headings = {}
 
 local run_cmd = shell.run_command
-local shellout_str = shell.shellout_str
+-- local shellout_str = shell.shellout_str
 
 function M.get_heading_tbl(lines)
 	if #lines <= 0 then
@@ -59,6 +59,19 @@ local function find_line_number(line_content)
 	return nil
 end
 
+local function get_toggled_headings(tbl1, tbl2)
+	local result = {}
+	for _, f_key in pairs(tbl1) do
+		for s_key, _ in pairs(tbl2) do
+			if string.find(f_key, s_key:match("^(.-) ")) then
+				util.tbl_insert(result, s_key)
+			end
+		end
+	end
+
+	return result
+end
+
 function M.toggle_section(arg_heading)
 	local buf = require("oz.git.status").status_buf
 	local current_line = arg_heading or vim.api.nvim_get_current_line()
@@ -75,10 +88,11 @@ function M.toggle_section(arg_heading)
 		local next_line_content = next_lines[1]
 
 		if not arg_heading then -- adding toggled lines to the M.toggeled_headings
-			if vim.list_contains(M.toggeled_headings, current_line) then
-				util.remove_from_tbl(M.toggeled_headings, current_line)
+			local toggled_lines = current_line:match("^(%w+%s+%w+)") -- split out the first two words
+			if vim.list_contains(M.toggled_headings, toggled_lines) then
+				util.remove_from_tbl(M.toggled_headings, toggled_lines)
 			else
-				util.tbl_insert(M.toggeled_headings, current_line)
+				util.tbl_insert(M.toggled_headings, toggled_lines)
 			end
 		end
 

@@ -2,6 +2,11 @@ local M = {}
 local key_help_win = nil
 local key_help_buf = nil
 
+--- helper: filter keys from user provided 'key'
+---@param tbl table
+---@param str string
+---@return table
+---@return table
 local function filter_table(tbl, str)
 	local result = {}
 	local new_keys = {}
@@ -18,7 +23,11 @@ local function filter_table(tbl, str)
 	return result, new_keys
 end
 
-function M.init(args)
+--- show mappings
+---@param args {title: string, no_empty: boolean, key: string, group: table<string, string[]>, subtext: string[]}
+---@return integer|nil
+---@return integer|nil
+function M.show_maps(args)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local modes = { "n", "v", "i", "t" }
 	local sub_keys = {}
@@ -54,12 +63,12 @@ function M.init(args)
 	end
 
 	local keymaps = {}
-	local has_headers = args and args.header_name and not vim.tbl_isempty(args.header_name)
+	local has_headers = args and args.group and not vim.tbl_isempty(args.group)
 
 	if has_headers then
 		-- Process header groups
 		local grouped_keymaps = {}
-		for header_name, keys in pairs(args.header_name) do
+		for header_name, keys in pairs(args.group) do
 			for _, key in ipairs(keys) do
 				if all_keymaps[key] then
 					if not grouped_keymaps[header_name] then
@@ -152,8 +161,8 @@ function M.init(args)
 		vim.cmd("highlight BoldKey gui=bold guifg=#99BC85 cterm=bold")
 		vim.cmd('syntax match BoldKey /"\\(.*\\)"/ contains=NONE')
 		vim.cmd([[
-            syntax match KeyMode /\[.*\]/
-            highlight link KeyMode Comment
+            syntax match Comment /\[.*\]/
+            syntax match @keyword /<.*>/
         ]])
 		if has_headers then
 			vim.cmd("highlight HeaderName gui=bold guifg=#DFD3C3 guibg=#2F2F2F cterm=bold")
