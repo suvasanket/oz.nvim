@@ -36,7 +36,14 @@ local function special_cmd_exec(args_tbl, args_str)
 		{ "commit", "commit --amend", "tag -a", "rebase -i", "merge --no-commit", "notes add", "filter-branch" }
 	if util.str_in_tbl(args_str, editor_req_cmds) then
 		if vim.fn.executable("nvr") ~= 1 then
-			util.Notify("neovim-remote not found, install to use editor required commands.")
+			local confirm_ans = util.prompt(
+				"neovim-remote not found, install to use editor required commands.",
+				"&visit\n&nevermind",
+				1
+			)
+			if confirm_ans == 1 then
+				util.open_url("https://github.com/mhinz/neovim-remote/blob/master/INSTALLATION.md")
+			end
 			return true
 		end
 		vim.api.nvim_create_autocmd("FileType", {

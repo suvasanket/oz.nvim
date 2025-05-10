@@ -252,4 +252,22 @@ function M.get_unique_key(tbl, key)
 	return key
 end
 
+--- open url
+---@param url string
+function M.open_url(url)
+	local open_cmd
+	if vim.fn.has("macunix") == 1 then
+		open_cmd = "open"
+	elseif vim.fn.has("win32") == 1 then
+		open_cmd = "start" -- Use 'start' for URLs/files on Windows
+	else -- Assume Linux/other Unix-like
+		open_cmd = "xdg-open"
+	end
+
+	local open_job_id = vim.fn.jobstart({ open_cmd, url }, { detach = true })
+	if not open_job_id or open_job_id <= 0 then
+		M.Notify("Opening url unsuccessful!", "error", "oz_doctor")
+	end
+end
+
 return M

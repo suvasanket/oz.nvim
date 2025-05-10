@@ -139,7 +139,7 @@ function M.browse(target_path)
 	then
 		-- Attempt Azure-specific file URL construction
 		-- Note: URI encoding might be needed for branch/path, handled by open command usually
-        -- might change remote_branch to local_branch
+		-- might change remote_branch to local_branch
 		final_url = base_url .. "?path=" .. "/" .. relative_path .. "&version=GB" .. cur_remote_branch .. "&line=1" -- Add line=1 maybe
 		vim.notify("Using Azure-specific URL format.", vim.log.levels.INFO)
 	else
@@ -150,22 +150,7 @@ function M.browse(target_path)
 	end
 
 	-- 9. Determine the OS-specific open command
-	local open_cmd
-	if vim.fn.has("macunix") == 1 then
-		open_cmd = "open"
-	elseif vim.fn.has("win32") == 1 then
-		open_cmd = "start" -- Use 'start' for URLs/files on Windows
-	else -- Assume Linux/other Unix-like
-		open_cmd = "xdg-open"
-	end
-
-	local open_job_id = vim.fn.jobstart({ open_cmd, final_url }, { detach = true })
-
-	if not open_job_id or open_job_id <= 0 then
-		vim.notify("Failed to execute command: " .. open_cmd .. " " .. final_url, vim.log.levels.ERROR)
-		-- Fallback attempt with os.execute (might block briefly, less safe quoting)
-		-- os.execute(open_cmd .. " " .. vim.fn.shellescape(final_url))
-	end
+	util.open_url(final_url)
 end
 
 return M
