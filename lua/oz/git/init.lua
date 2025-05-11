@@ -142,6 +142,7 @@ local nvr_diff_cmd = [[nvr -s -d "$LOCAL" "$REMOTE"]]
 local nvr_merge_cmd = [[nvr -s -d $LOCAL $BASE $REMOTE $MERGED -c 'wincmd J | wincmd =']]
 
 local job_env = {
+	-- GIT_EDITOR = "nvim --listen '$NVIM' --remote-wait", -- future implementation
 	GIT_EDITOR = "nvr -cc split --remote-wait",
 	GIT_SEQUENCE_EDITOR = "nvr -cc split --remote-wait",
 

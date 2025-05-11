@@ -10,14 +10,14 @@ local defaults = {
 		Rerun = "<leader>ar",
 	},
 
-    -- Git
-    oz_git = {
-        remote_operation_exec_method = "background", -- |background,term|
-        mappings = {
-            toggle_pick = "<Space>",
-            unpick_all = "<C-Space>",
-        },
-    },
+	-- Git
+	oz_git = {
+		remote_operation_exec_method = "background", -- |background,term|
+		mappings = {
+			toggle_pick = "<Space>",
+			unpick_all = "<C-Space>",
+		},
+	},
 
 	-- all oz_term options
 	oz_term = {
@@ -53,13 +53,15 @@ local defaults = {
 		},
 		-- oil integration
 		oil = {
-			cur_entry_async = true, -- false: run in oz_term instead of running async in background
-			cur_entry_fullpath = true, -- false: only file or dir name will be used
-			cur_entry_splitter = "$", -- this char will be used to define the pre and post of the entry
+			entry_exec = {
+				method = "async", -- |async, term|
+				use_fullpath = true, -- false: only file or dir name will be used
+				lead_prefix = ":", -- this char will be used to define the pre and post of the entry
+			},
 			mappings = {
 				term = "<global>",
 				compile = "<global>",
-				cur_entry_cmd = "<C-g>",
+				entry_exec = "<C-g>",
 				show_keybinds = "g?", -- override existing g?
 			},
 		},
@@ -71,33 +73,80 @@ local defaults = {
 	},
 }
 
+---check if start with cmd
+---@param cmds table
+---@return boolean
+local function start_with_cmd(cmds)
+	for i, arg in ipairs(vim.v.argv) do
+		if arg == "-c" and vim.v.argv[i + 1] then
+			for _, cmd in ipairs(cmds) do
+				-- if vim.v.argv[i + 1] == cmd then
+				if vim.startswith(vim.v.argv[i + 1], cmd) then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+function PrintTimeSinceStart()
+	print(string.format("Time since start: %.3f ms", vim.loop.hrtime() / 1e9))
+end
+
 -- Setup function
 function M.setup(opts)
 	-- Merge user-provided options with defaults
 	opts = opts or {}
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
 
-    -- Initialize mappings
-    vim.schedule(function()
-        M.mappings_init()
-    end)
+	-- Initialize mappings
+	vim.schedule(function()
+		M.mappings_init()
+	end)
 
-    -- Initialize oz git
-    if M.config.oz_git then
-        require("oz.git").oz_git_usercmd_init(M.config.oz_git)
-    end
+	-- Initialize oz git
+	if M.config.oz_git then
+		if start_with_cmd({ "G", "Git" }) then
+			require("oz.git").oz_git_usercmd_init(M.config.oz_git)
+		else -- lazy
+			vim.fn.timer_start(400, function()
+				require("oz.git").oz_git_usercmd_init(M.config.oz_git)
+			end)
+		end
+	end
 
 	-- Initialize :Term
-	require("oz.term").Term_init(M.config.oz_term)
+	if M.config.oz_term then
+		if start_with_cmd({ "Term", "Term!" }) then
+			require("oz.term").Term_init(M.config.oz_term)
+		else -- lazy
+			vim.fn.timer_start(700, function()
+				require("oz.term").Term_init(M.config.oz_term)
+			end)
+		end
+	end
 
 	-- Initialize :Make
 	if M.config.oz_make then
-		require("oz.make").oz_make_init(M.config.oz_make)
+		if start_with_cmd({ "Make", "Make!" }) then
+			require("oz.make").oz_make_init(M.config.oz_make)
+		else -- lazy
+			vim.fn.timer_start(500, function()
+				require("oz.make").oz_make_init(M.config.oz_make)
+			end)
+		end
 	end
 
 	-- Initialize :Grep
 	if M.config.oz_grep then
-		require("oz.grep").oz_grep_init(M.config.oz_grep)
+		if start_with_cmd({ "Grep", "Grep!" }) then
+			require("oz.grep").oz_grep_init(M.config.oz_grep)
+		else -- lazy
+			vim.fn.timer_start(500, function()
+				require("oz.grep").oz_grep_init(M.config.oz_grep)
+			end)
+		end
 	end
 
 	-- Initialize compile-mode integration

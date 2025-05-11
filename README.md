@@ -75,14 +75,15 @@ lazy:
 
          -- Oil integration
          oil = {
-             cur_entry_async = true, -- If false, run in oz_term instead of running asynchronously in the background
-             cur_entry_fullpath = true, -- If false, only the file or directory name will be used (instead of the full path)
-             cur_entry_splitter = "$", -- This character is used to define the pre- and post-entry parts in commands
-
+             entry_exec = {
+                 method = "async", -- |async, term|
+                 use_fullpath = true, -- Use the full path of the entry
+                 lead_prefix = ":", -- char use to specify any lead args/cmds
+             },
              mappings = {
                  term = "<global>", -- Execute a shell command using oz_term | by default uses global keys(<leader>av)
                  compile = "<global>", -- Execute a shell command using compile-mode | by default uses global keys(<leader>ac)
-                 cur_entry_cmd = "<C-g>", -- Execute a command on the entry (file or directory) under the cursor
+                 entry_exec = "<C-g>", -- Execute a command on the entry (file or directory) under the cursor
                  show_keybinds = "g?", -- Override the existing `g?` mapping
              },
          },
