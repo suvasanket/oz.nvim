@@ -28,7 +28,9 @@ end
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function(code)
 		if code == 0 then
-			refresh()
+			vim.schedule(function()
+				refresh()
+			end)
 		end
 	end)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })

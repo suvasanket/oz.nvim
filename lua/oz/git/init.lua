@@ -91,8 +91,9 @@ local function special_cmd_exec(args_tbl, args_str)
 		})
 
 	-- Man cmd
-	elseif vim.tbl_contains(args_tbl, "--help") then
-		vim.cmd("Man git-" .. cmd)
+	elseif cmd == "help" or vim.tbl_contains(args_tbl, "--help") then
+		local cmd_l = cmd == "help" and args_tbl[2] or cmd
+		vim.cmd("Man git-" .. cmd_l)
 		return true
 
 	-- Progress cmds

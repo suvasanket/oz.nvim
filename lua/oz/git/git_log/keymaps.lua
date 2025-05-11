@@ -28,7 +28,9 @@ end
 -- Helper to run Vim command and refresh status buffer on success
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function()
-		refresh()
+		vim.schedule(function()
+			refresh()
+		end)
 	end)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
