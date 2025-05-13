@@ -255,6 +255,10 @@ end
 --- open url
 ---@param url string
 function M.open_url(url)
+	if not url or not (url:match("^https?://") or url:match("^file://")) then
+		M.Notify("Not a valid url.", "warn", "oz_doctor")
+		return
+	end
 	local open_cmd
 	if vim.fn.has("macunix") == 1 then
 		open_cmd = "open"
@@ -268,6 +272,35 @@ function M.open_url(url)
 	if not open_job_id or open_job_id <= 0 then
 		M.Notify("Opening url unsuccessful!", "error", "oz_doctor")
 	end
+end
+
+--- get visual selected string
+---@param tbl_fmt boolean|nil
+---@return string|table
+function M.get_visual_selection(tbl_fmt)
+	-- Get the start and end positions of the visual selection
+	local start_pos = vim.api.nvim_buf_get_mark(0, "<")
+	local end_pos = vim.api.nvim_buf_get_mark(0, ">")
+
+	-- Get the lines in the selected range
+	local lines = vim.api.nvim_buf_get_lines(0, start_pos[1] - 1, end_pos[1], false)
+
+	-- Handle the case where the selection is within a single line
+	if start_pos[1] == end_pos[1] then
+		local line = lines[1]
+		-- Extract the substring based on character positions (1-based in marks)
+		local selected = line:sub(start_pos[2] + 1, end_pos[2])
+		return tbl_fmt and { selected } or selected
+	end
+
+	-- For multi-line selections, adjust the first and last lines
+	lines[1] = lines[1]:sub(start_pos[2] + 1)
+	if #lines > 1 then
+		lines[#lines] = lines[#lines]:sub(1, end_pos[2])
+	end
+
+	-- Return as table if fmt_tbl is true, otherwise as string
+	return tbl_fmt and lines or table.concat(lines, "\n")
 end
 
 return M

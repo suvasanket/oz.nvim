@@ -1,6 +1,7 @@
 local M = {}
 
 local util = require("oz.util")
+local win = require("oz.util.win")
 
 --- cmd parser
 ---@param cmd string
@@ -47,7 +48,7 @@ function M.cmd_contains_grep(cmd)
 	local grep_commands = { "rg", "grep" }
 
 	for _, grep_cmd in ipairs(grep_commands) do
-		local pattern = string.format("%%f[%%w]%s%%f[%%W]", grep_cmd)
+		local pattern = string.format("^%s%%f[%%W]", grep_cmd)
 		if cmd:match(pattern) then
 			return true
 		end
@@ -80,7 +81,35 @@ function M.grep_to_qf(cmd, dir)
 	end
 end
 
--- oz grep
+--- show win
+---@param lines string[]
+local function grep_win(lines)
+	win.open_win("grep_err", {
+		lines = lines,
+		win_type = "bot 7",
+		callback = function(buf_id)
+			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+			vim.opt_local.fillchars:append({ eob = " " })
+			local shell_name = vim.fn.fnamemodify(vim.fn.environ()["SHELL"] or vim.fn.environ()["COMSPEC"], ":t:r")
+
+			if shell_name == "bash" or shell_name == "zsh" then
+				vim.bo.ft = "sh"
+			elseif shell_name == "powershell" then
+				vim.bo.ft = "ps1"
+			else
+				vim.bo.ft = shell_name
+			end
+
+			vim.keymap.set("n", "q", "<cmd>close<cr>", { desc = "close", buffer = buf_id })
+		end,
+	})
+end
+
+--- oz grep
+---@param cmd string
+---@param pattern string|table
+---@param dir string
+---@param opts {flags: string[], formatter: string, title: string}
 function M.oz_grep(cmd, pattern, dir, opts)
 	opts = opts or {}
 	local formatter = opts.formatter
@@ -97,7 +126,8 @@ function M.oz_grep(cmd, pattern, dir, opts)
 		table.insert(args, dir)
 	end
 
-	local output_lines = {}
+	local stdout_lines = {}
+	local stderr_lines = {}
 
 	---@diagnostic disable-next-line: deprecated
 	local grep_shellcmd = { cmd, unpack(args) }
@@ -108,7 +138,7 @@ function M.oz_grep(cmd, pattern, dir, opts)
 			if data then
 				for _, line in ipairs(data) do
 					if line ~= "" then
-						table.insert(output_lines, line)
+						table.insert(stdout_lines, line)
 					end
 				end
 			end
@@ -117,16 +147,15 @@ function M.oz_grep(cmd, pattern, dir, opts)
 			if data then
 				for _, line in ipairs(data) do
 					if line ~= "" then
-						-- FIXME show all the error in a grep err win
-						vim.notify(cmd .. " error: " .. line, vim.log.levels.ERROR)
+						table.insert(stderr_lines, line)
 					end
 				end
 			end
 		end,
 		on_exit = function(_, exit_code, _)
-			if exit_code == 0 or exit_code == 1 then
+			if exit_code == 0 then
 				vim.fn.setqflist({}, " ", {
-					lines = output_lines,
+					lines = stdout_lines,
 					efm = formatter,
 					title = opts.title or pattern,
 				})
@@ -134,59 +163,27 @@ function M.oz_grep(cmd, pattern, dir, opts)
 					vim.cmd("cfirst")
 				elseif #vim.fn.getqflist() > 0 then
 					vim.cmd("cw")
-				else
-					vim.notify("No matches found", vim.log.levels.INFO)
 				end
 			else
-				vim.notify(cmd .. " exited with code: " .. exit_code, vim.log.levels.ERROR)
+				if #stderr_lines > 0 then
+					grep_win(stderr_lines)
+				elseif #stderr_lines > 0 then
+					grep_win(stdout_lines)
+				else
+					util.Notify("No matches found", "warn", "oz_grep")
+				end
 			end
 		end,
 	})
 end
 
--- parse the arg_string
-local function parse_usercmd_argstring(argstring)
-	local args = {}
-	local i = 1
-	local len = #argstring
-
-	while i <= len do
-		while i <= len and argstring:sub(i, i):match("%s") do
-			i = i + 1
-		end
-		if i > len then
-			break
-		end
-		if argstring:sub(i, i) == '"' or argstring:sub(i, i) == "'" then
-			local quote = argstring:sub(i, i)
-			local start = i + 1
-			i = i + 1
-			while i <= len and argstring:sub(i, i) ~= quote do
-				i = i + 1
-			end
-
-			if i <= len then
-				table.insert(args, argstring:sub(start, i - 1))
-				i = i + 1
-			else
-				table.insert(args, argstring:sub(start))
-			end
-		else
-			local start = i
-			while i <= len and not argstring:sub(i, i):match("%s") do
-				i = i + 1
-			end
-
-			table.insert(args, argstring:sub(start, i - 1))
-		end
-	end
-
-	return args
-end
-
 -- parse :Grep args
-local function parse_Grep_args(argstring)
-	local args = parse_usercmd_argstring(argstring)
+---@param args table
+---@return string
+---@return any
+---@return nil
+local function parse_args(args)
+	-- local args = parse_usercmd_argstring(argstring)
 
 	local flags = ""
 	local idx = 1
@@ -210,13 +207,37 @@ local function parse_Grep_args(argstring)
 	return pattern, flags, target_dir
 end
 
+--- escape pattern
+---@param str any
+---@return string
+local function escape_pattern(str)
+	-- Escape regex special characters using a pattern that matches any of them
+	local special_chars = "[%.%*%+%?%(%)%[%]%{%}%^%$\\|]"
+	local escaped = str:gsub(special_chars, "\\%0")
+
+	-- Escape double quotes for shell compatibility
+	escaped = escaped:gsub('"', '\\"')
+
+	-- Escape other shell-sensitive characters (e.g., !, `)
+	escaped = escaped:gsub("!", "\\!")
+	escaped = escaped:gsub("`", "\\`")
+
+	return escaped
+end
+
 -- :Grep init
 function M.oz_grep_init(config)
 	-- Grep usercmd
 	vim.api.nvim_create_user_command("Grep", function(opts)
-		print(vim.inspect(opts))
+		local pattern, flags, target_dir
+		if opts.range ~= 0 then
+			pattern = escape_pattern(util.get_visual_selection())
+			target_dir = opts.fargs[1] -- if taking from range then use the first arg as target_dir
+		else
+			pattern, flags, target_dir = parse_args(opts.fargs)
+		end
+
 		-- parse the usercmd args.
-		local pattern, flags, target_dir = parse_Grep_args(opts.args)
 		local project_root = util.GetProjectRoot()
 
 		if opts.bang then
