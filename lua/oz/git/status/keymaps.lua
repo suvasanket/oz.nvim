@@ -26,12 +26,10 @@ end
 
 -- Helper to run Vim command and refresh status buffer on success
 local function run_n_refresh(cmd)
-	git.after_exec_complete(function(code)
-		if code == 0 then
-			vim.schedule(function()
-				refresh()
-			end)
-		end
+	git.after_exec_complete(function()
+		vim.schedule(function()
+			refresh(true)
+		end)
 	end)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
@@ -241,18 +239,6 @@ local function handle_goto_log_context()
 	end
 end
 
-local function handle_goto_unstaged()
-	g_util.goto_str("Changes not staged for commit:")
-end
-
-local function handle_goto_staged()
-	g_util.goto_str("Changes to be committed:")
-end
-
-local function handle_goto_untracked()
-	g_util.goto_str("Untracked files:")
-end
-
 local function handle_goto_gitignore()
 	local path = s_util.get_file_under_cursor(true)
 	if #path > 0 then
@@ -290,7 +276,7 @@ local function handle_diff_file_changes()
 		end
 	else
 		if util.usercmd_exist("DiffviewOpen") then
-			vim.cmd("DiffviewOpen")
+			vim.cmd("DiffviewOpen -uno")
 		else
 			--FIXME: add check if tabclosed then auto remove its buffers then it will continue otherwise remains in bg.
 			vim.cmd("Git difftool -y --cached")
@@ -707,7 +693,7 @@ local function handle_show_help()
 			["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "c" },
 			["Diff mappings"] = { "dd", "dc", "dm", "db" },
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
-			["Goto mappings"] = { "gI", "gu", "gs", "gU", "gl", "gL", "g<Space>", "g?" }, -- Added gL
+			["Goto mappings"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g<Space>", "g?" }, -- Added gL
 			["Remote mappings"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
 			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
 			["Conflict resolution mappings"] = { "xo", "xc", "xp" },
@@ -815,10 +801,19 @@ function M.keymaps_init(buf)
 	map("n", "gL", handle_goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch. <*>" })
 	-- :Git
 	map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
-	-- sections
-	map("n", "gu", handle_goto_unstaged, { buffer = buf_id, desc = "goto unstaged changes section." })
-	map("n", "gs", handle_goto_staged, { buffer = buf_id, desc = "goto staged for commit section." })
-	map("n", "gU", handle_goto_untracked, { buffer = buf_id, desc = "goto untracked files section." })
+	-- goto sections
+	map("n", "gu", function()
+		g_util.goto_str("Changes not staged for commit:")
+	end, { buffer = buf_id, desc = "goto unstaged changes section." })
+	map("n", "gs", function()
+		g_util.goto_str("Changes to be committed:")
+	end, { buffer = buf_id, desc = "goto staged for commit section." })
+	map("n", "gU", function()
+		g_util.goto_str("Untracked files:")
+	end, { buffer = buf_id, desc = "goto untracked files section." })
+	map("n", "gz", function()
+		g_util.goto_str("Stash list:")
+	end, { buffer = buf_id, desc = "goto stashlist section." })
 	-- Add to gitignore
 	map({ "n", "x" }, "gI", handle_goto_gitignore, { buffer = buf_id, desc = "Add file or dir to .gitigore. <*>" })
 
@@ -979,6 +974,7 @@ function M.keymaps_init(buf)
 	map_help_key("b", "Branch mappings")
 	map_help_key("m", "Merge mappings")
 	map_help_key("r", "Rebase mappings")
+	map_help_key("x", "Conflict resolution mappings")
 	map_help_key("U", "Reset mappings")
 	-- map_help_key("g", "[g] mappings")
 end -- End of M.keymaps_init

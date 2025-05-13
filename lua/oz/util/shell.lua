@@ -22,9 +22,10 @@ end
 ---Run shellcmd
 ---@param cmd string|table
 ---@param cwd string|nil
+---@param opts {trim_off: boolean}|nil
 ---@return boolean
----@return table
-function M.run_command(cmd, cwd)
+---@return string[]
+function M.run_command(cmd, cwd, opts)
 	local stdout_lines = {}
 	local stderr_lines = {}
 	local exit_code = -1
@@ -62,9 +63,14 @@ function M.run_command(cmd, cwd)
 	local final_code = (result and result[1] == -1) and exit_code or (result and result[1]) or -1
 
 	if final_code == 0 then
-		return true, trim_empty_strings(stdout_lines)
+		if opts and opts.trim_off then
+			return true, stdout_lines
+		else
+			return true, trim_empty_strings(stdout_lines)
+		end
 	else
 		return false, trim_empty_strings(stderr_lines)
+		-- return false, stderr_lines
 	end
 end
 

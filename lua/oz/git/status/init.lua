@@ -4,8 +4,6 @@ local g_util = require("oz.git.util")
 local shell = require("oz.util.shell")
 local win = require("oz.util.win")
 
-local run_cmd = shell.run_command
-
 M.status_win = nil
 M.status_buf = nil
 
@@ -82,8 +80,8 @@ local function generate_status_content()
 	local status_tbl = {}
 	local stash_tbl = {}
 	local git_root = g_util.get_project_root()
-	local status_ok, git_status_output = run_cmd({ "git", "status" }, git_root)
-	local stash_ok, git_stash_output = run_cmd({ "git", "stash", "list" }, git_root)
+	local status_ok, git_status_output = shell.run_command({ "git", "status" }, git_root)
+	local stash_ok, git_stash_output = shell.run_command({ "git", "stash", "list" }, git_root)
 
 	if status_ok and #git_status_output > 0 then
 		for _, line in ipairs(git_status_output) do
@@ -150,7 +148,6 @@ function M.refresh_status_buf(passive)
 
 			-- retoggle any user toggeled headings
 			local toggled_headings = get_toggled_headings(s_util.toggled_headings, s_util.headings_table)
-			-- print(vim.inspect(s_util.toggled_headings))
 			for _, item in ipairs(toggled_headings) do
 				s_util.toggle_section(item)
 			end
@@ -158,6 +155,7 @@ function M.refresh_status_buf(passive)
 			pcall(vim.api.nvim_win_set_cursor, 0, pos)
 		end)
 	end
+	vim.cmd("checktime")
 end
 
 -- Initialize status
@@ -165,7 +163,7 @@ function M.GitStatus()
 	local s_util = require("oz.git.status.util")
 
 	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
-	local _, branch = run_cmd({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, M.state.cwd)
+	local _, branch = shell.run_command({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, M.state.cwd)
 	M.state.current_branch = branch[1]
 
 	local lines = generate_status_content()

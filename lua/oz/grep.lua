@@ -117,6 +117,7 @@ function M.oz_grep(cmd, pattern, dir, opts)
 			if data then
 				for _, line in ipairs(data) do
 					if line ~= "" then
+						-- FIXME show all the error in a grep err win
 						vim.notify(cmd .. " error: " .. line, vim.log.levels.ERROR)
 					end
 				end
@@ -212,12 +213,13 @@ end
 -- :Grep init
 function M.oz_grep_init(config)
 	-- Grep usercmd
-	vim.api.nvim_create_user_command("Grep", function(args)
+	vim.api.nvim_create_user_command("Grep", function(opts)
+		print(vim.inspect(opts))
 		-- parse the usercmd args.
-		local pattern, flags, target_dir = parse_Grep_args(args.args)
+		local pattern, flags, target_dir = parse_Grep_args(opts.args)
 		local project_root = util.GetProjectRoot()
 
-		if args.bang then
+		if opts.bang then
 			target_dir = vim.fn.getcwd()
 		elseif not target_dir then
 			target_dir = (vim.bo.ft == "oil" and require("oil").get_current_dir()) or (project_root or vim.fn.getcwd())
@@ -258,10 +260,12 @@ function M.oz_grep_init(config)
 			formatter = grep_fm,
 		})
 	end, {
-		nargs = "+",
+		-- nargs = "+",
+		nargs = "*",
 		complete = "file",
 		bang = true,
-		desc = "async grep.",
+		range = true,
+		desc = "async oz_grep.",
 	})
 
 	-- override grep

@@ -29,7 +29,7 @@ end
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function()
 		vim.schedule(function()
-			refresh()
+			refresh(true)
 		end)
 	end)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })

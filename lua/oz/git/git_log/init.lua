@@ -134,6 +134,7 @@ function M.refresh_commit_log(passive)
 		M.commit_log({ from = M.comming_from })
 		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
+    vim.cmd("checktime")
 end
 
 function M.commit_log(opts, args)

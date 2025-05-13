@@ -59,19 +59,6 @@ local function find_line_number(line_content)
 	return nil
 end
 
-local function get_toggled_headings(tbl1, tbl2)
-	local result = {}
-	for _, f_key in pairs(tbl1) do
-		for s_key, _ in pairs(tbl2) do
-			if string.find(f_key, s_key:match("^(.-) ")) then
-				util.tbl_insert(result, s_key)
-			end
-		end
-	end
-
-	return result
-end
-
 function M.toggle_section(arg_heading)
 	local buf = require("oz.git.status").status_buf
 	local current_line = arg_heading or vim.api.nvim_get_current_line()
@@ -112,7 +99,10 @@ function M.toggle_section(arg_heading)
 	vim.api.nvim_buf_set_option(buf, "modifiable", false)
 end
 
-function M.get_file_under_cursor(original)
+---get the file/dir under cursor
+---@param fmt_origin boolean|nil
+---@return table
+function M.get_file_under_cursor(fmt_origin)
 	local entries = {}
 	local lines = {}
 	-- local cwd = require("oz.git.status").state.cwd or vim.fn.getcwd()
@@ -125,7 +115,7 @@ function M.get_file_under_cursor(original)
 		local start_line = vim.fn.line("v")
 		local end_line = vim.fn.line(".")
 		lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-		vim.api.nvim_input("<Esc>")
+		-- vim.api.nvim_input("<Esc>")
 	end
 
 	for _, line in ipairs(lines) do
@@ -141,13 +131,13 @@ function M.get_file_under_cursor(original)
 		end
 
 		if vim.fn.filereadable(absolute_file_path) == 1 then -- file
-			if original then
+			if fmt_origin then
 				table.insert(entries, file)
 			else
 				table.insert(entries, absolute_file_path)
 			end
 		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then -- dir
-			if original then
+			if fmt_origin then
 				table.insert(entries, dir)
 			else
 				table.insert(entries, absolute_dir_path)

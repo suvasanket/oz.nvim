@@ -162,12 +162,12 @@ end
 --- string present in tbl
 ---@param str string
 ---@param string_table table
----@return boolean
+---@return any
 function M.str_in_tbl(str, string_table)
 	str = vim.trim(str)
 
 	if str == "" then
-		return false
+		return nil
 	end
 
 	for _, item in ipairs(string_table) do
@@ -177,7 +177,7 @@ function M.str_in_tbl(str, string_table)
 		end
 	end
 
-	return false
+	return nil
 end
 
 ---remove item from tbl
