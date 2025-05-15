@@ -66,12 +66,19 @@ end
 
 --- echo print
 ---@param str string
----@param hl string
+---@param hl string|nil
 function M.echoprint(str, hl)
 	if not hl then
 		hl = "MoreMsg"
 	end
 	vim.api.nvim_echo({ { str, hl } }, true, {})
+end
+
+--- echo inactive
+---@param str string
+function M.inactive_echo(str)
+	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+	vim.api.nvim_echo({ { str, "ozInactivePrompt" } }, false, {})
 end
 
 --- jobstart wrapper
@@ -101,20 +108,26 @@ function M.ShellCmd(cmd, on_success, on_error)
 end
 
 --- input
----@param msg string
----@param def string|nil
+---@param prompt string
+---@param text string|nil
+---@param complete string|nil
 ---@return string|nil
-function M.UserInput(msg, def)
-	local ok, input = pcall(vim.fn.input, msg, def or "")
+function M.UserInput(prompt, text, complete)
+	local ok, input
+	if complete then
+		ok, input = pcall(vim.fn.input, prompt, text or "", complete)
+	else
+		ok, input = pcall(vim.fn.input, prompt, text or "")
+	end
 	if ok then
 		return input
 	end
 end
 
-function M.inactive_input(str, def)
+function M.inactive_input(str, def, complete)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.cmd("echohl ozInactivePrompt")
-	local input = M.UserInput(str, def)
+	local input = M.UserInput(str, def, complete)
 	vim.cmd("echohl None")
 	return input
 end

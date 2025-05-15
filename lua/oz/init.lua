@@ -14,8 +14,8 @@ local defaults = {
 	oz_git = {
 		remote_operation_exec_method = "background", -- |background,term|
 		mappings = {
-			toggle_pick = "<Space>",
-			unpick_all = "<C-Space>",
+			toggle_pick = "<C-p>",
+			unpick_all = "<C-S-p>",
 		},
 	},
 
@@ -88,10 +88,6 @@ local function start_with_cmd(cmds)
 		end
 	end
 	return false
-end
-
-function PrintTimeSinceStart()
-	print(string.format("Time since start: %.3f ms", vim.loop.hrtime() / 1e9))
 end
 
 -- Setup function
@@ -171,7 +167,9 @@ function M.setup(opts)
 
 	-- Initialize cache_efm
 	if M.config.efm.cache_efm then
-		require("oz.qf").cache_efm()
+		vim.fn.timer_start(800, function()
+			require("oz.qf").cache_efm()
+		end)
 	end
 end
 

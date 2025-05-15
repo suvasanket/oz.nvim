@@ -89,7 +89,7 @@ local function generate_status_content()
 				table.insert(status_tbl, line)
 			end
 		end
-		if not status_tbl[2]:match("Your branch") then
+		if not status_tbl[2]:match("Your branch") and status_tbl[2] ~= "" then
 			table.insert(status_tbl, 2, "")
 		end
 	end

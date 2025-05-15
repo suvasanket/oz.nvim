@@ -133,7 +133,7 @@ local function term_cmd_init()
 				end
 			end
 		end
-	end, { nargs = "*", bang = true, desc = "oz_term" })
+	end, { nargs = "*", bang = true, desc = "oz_term", complete = "shellcmd" })
 
 	-- TermToggle - usercmd
 	vim.api.nvim_create_user_command("TermToggle", function()

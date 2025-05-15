@@ -50,27 +50,27 @@ local function getprojectCMD(project_path, file, ft)
 end
 
 local function setftCMD(file, ft, cmd)
-    if file:match("%.") then
-        file = vim.fn.fnamemodify(file, ":r")
-    end
-    if cmd:find(file) then
-        cmd = cmd:gsub(file, "{filename}")
-    end
+	if file:match("%.") then
+		file = vim.fn.fnamemodify(file, ":r")
+	end
+	if cmd:find(file) then
+		cmd = cmd:gsub(file, "{filename}")
+	end
 
-    cache.set_data(ft, cmd, "ft")
+	cache.set_data(ft, cmd, "ft")
 end
 
 local function getftCMD(file, ft)
-    if file:match("%.") then
-        file = vim.fn.fnamemodify(file, ":r")
-    end
+	if file:match("%.") then
+		file = vim.fn.fnamemodify(file, ":r")
+	end
 
-    local output = cache.get_data(ft, "ft")
+	local output = cache.get_data(ft, "ft")
 
-    if output and output:find("{filename}") then
-        output = output:gsub("{filename}", file)
-    end
-    return output
+	if output and output:find("{filename}") then
+		output = output:gsub("{filename}", file)
+	end
+	return output
 end
 
 -- detect any shebang in the file
@@ -138,7 +138,7 @@ function M.cmd_func(type, func)
 			-- p: 4
 			cmd = M.predict_compiler(current_file, ft)
 		end
-		local input = util.inactive_input(":" .. type .. " ", cmd)
+		local input = util.inactive_input(":" .. type .. " ", cmd, "shellcmd")
 
 		if input and input ~= "" then
 			-- custom function, used for AKTUAL execution
@@ -149,20 +149,20 @@ function M.cmd_func(type, func)
 			end
 
 			-- check if its a valid cmd or not
-			if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
-				if cmd ~= input and project_path then
+			-- if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
+			if cmd ~= input and project_path then
+				setprojectCMD(project_path, current_file, ft, input)
+			end
+			if input:find(current_file) then
+				if project_path then
 					setprojectCMD(project_path, current_file, ft, input)
-				end
-				if input:find(current_file) then
-					if project_path then
-						setprojectCMD(project_path, current_file, ft, input)
-					else
-						setftCMD(current_file, ft, input)
-					end
+				else
+					setftCMD(current_file, ft, input)
 				end
 			end
+			-- end
 		elseif input == "" then
-			util.Notify("oz: oz_term requires at least one command to start.", "warn", "oz")
+			util.Notify("Term requires at least one command to start.", "warn", "oz_term")
 		end
 	else
 		vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)

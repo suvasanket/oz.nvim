@@ -8,6 +8,7 @@ local win = require("oz.util.win")
 local json_name = "makeprg"
 
 M.previous_makeprg = vim.o.makeprg
+local automake_id
 
 local function get_build_command(project_root)
 	if not project_root or project_root == "" then
@@ -249,7 +250,46 @@ function M.oz_make_init(config)
 		else
 			M.Make_func(arg.args, util.GetProjectRoot()) -- run make in project root
 		end
-	end, { nargs = "*", desc = "oz: async make", bang = true })
+	end, { nargs = "*", desc = "[oz_make]make", bang = true })
+
+	-- Automake cmd
+	vim.api.nvim_create_user_command("AutoMake", function(opts)
+		local args = opts.fargs
+		local pattern, make_cmd = nil, "Make"
+
+		if args[1] == "file" then
+			pattern = vim.fn.expand("%:p")
+		elseif args[1] == "filetype" then
+			pattern = string.format("*.%s", vim.bo.filetype)
+		elseif args[1] == "addarg" then
+			make_cmd = "Make " .. (util.UserInput("Args:") or "")
+		elseif args[1] == "disable" and automake_id then
+			util.inactive_echo("AutoMake Stopped")
+			vim.api.nvim_del_autocmd(automake_id)
+			automake_id = nil
+		end
+
+		if pattern then
+			if automake_id then
+				vim.api.nvim_del_autocmd(automake_id)
+				automake_id = nil
+			else
+				util.inactive_echo("Started watching: " .. pattern)
+				automake_id = vim.api.nvim_create_autocmd("BufWritePost", {
+					pattern = pattern,
+					callback = function()
+						vim.cmd(make_cmd)
+					end,
+				})
+			end
+		end
+	end, {
+		desc = "[oz_make]automake",
+		nargs = "?",
+		complete = function()
+			return { "filetype", "file", "addarg", "disable" }
+		end,
+	})
 
 	-- override make
 	if config.override_make then
