@@ -248,6 +248,7 @@ end
 
 local function handle_diff_file_history()
 	local cur_file = s_util.get_file_under_cursor()
+	local stash = s_util.get_stash_under_cursor()
 	if #cur_file > 0 then
 		if util.usercmd_exist("DiffviewFileHistory") then
 			vim.cmd("DiffviewFileHistory " .. cur_file[1])
@@ -256,6 +257,12 @@ local function handle_diff_file_history()
 			vim.fn.timer_start(700, function()
 				git.cleanup_git_jobs({ cmd = "difftool" })
 			end)
+		end
+	elseif #stash > 0 then
+		if util.usercmd_exist("DiffviewFileHistory") then
+			vim.cmd(("DiffviewFileHistory -g --range=stash@{%s}"):format(tostring(stash.index)))
+		else
+			util.Notify("following operation require diffview.nvim", "error", "oz_git")
 		end
 	end
 end
@@ -819,8 +826,8 @@ function M.keymaps_init(buf)
 
 	-- [d]iff mode
 	map("n", "dd", handle_diff_file_changes, { buffer = buf_id, desc = "Diff file changes. <*>" })
+	map("n", "dc", handle_diff_file_history, { buffer = buf_id, desc = "Diff file history or stash. <*>" })
 	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then -- only diffview keymaps
-		map("n", "dc", handle_diff_file_history, { buffer = buf_id, desc = "Diff file history. <*>" })
 		map("n", "dm", handle_diff_remote, { buffer = buf_id, desc = "Diff between local and remote branch. <*>" })
 		map("n", "db", handle_diff_branch, { buffer = buf_id, desc = "Diff between branches. <*>" })
 	end

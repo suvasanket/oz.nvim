@@ -217,6 +217,8 @@ function M.toggle_diff()
 	end
 end
 
+--- get stash under cursor
+---@return {index: integer, branch: string, name: string}
 function M.get_stash_under_cursor()
 	local line_content = vim.api.nvim_get_current_line()
 	local pattern = "^%s*stash@{(%d+)}:%s*On%s+(.-):%s*(.+)$"
