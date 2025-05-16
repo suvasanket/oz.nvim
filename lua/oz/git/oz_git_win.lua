@@ -263,7 +263,7 @@ function M.open_oz_git_win(lines, cmd)
 				oz_git_win_hl()
 			end)
 			vim.fn.timer_start(100, function()
-				ft_mappings(buf_id)
+				ft_mappings(M.oz_git_buf)
 			end)
 		end,
 	})

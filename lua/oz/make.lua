@@ -4,6 +4,7 @@ local arg_parser = require("oz.util.parse_args")
 local qf = require("oz.qf")
 local cache = require("oz.caching")
 local win = require("oz.util.win")
+local progress = require("oz.util.progress")
 
 local json_name = "makeprg"
 
@@ -148,6 +149,11 @@ function M.Make_func(arg_str, dir)
 
 	local output = {}
 
+	-- progress stuff
+	local pro_title = table.concat(cmd_tbl, "")
+	local u_id = util.generate_unique_id()
+	progress.start_progress(u_id, { title = pro_title, fidget_lsp = "oz_make" })
+
 	-- Start the job
 	local ok, job_id = pcall(vim.fn.jobstart, cmd_tbl, {
 		cwd = dir,
@@ -169,6 +175,13 @@ function M.Make_func(arg_str, dir)
 			end
 		end,
 		on_exit = function(_, exit_code, _)
+			-- progress stuff
+			progress.stop_progress(u_id, {
+				exit_code = exit_code,
+				title = pro_title,
+				message = { "Build completed successfully", "Error occured while building" },
+			})
+
 			qf.capture_lines_to_qf(output, vim.bo.ft, true)
 
 			if #vim.fn.getqflist() == 1 then
@@ -178,26 +191,19 @@ function M.Make_func(arg_str, dir)
 				util.echoprint("Issue found: resolve then continue", "healthWarning")
 			else
 				vim.cmd("cw")
-				if exit_code == 0 then
-					util.echoprint("Make completed successfully", "healthSuccess")
-				else
+				if exit_code ~= 0 then
 					util.Notify("Consult :help efm, then set error format.", "warn", "oz_make")
 					if #output > 0 then
 						make_err_win(output)
-					else
-						util.echoprint("Make filed!", "healthError")
 					end
 				end
 			end
 		end,
 	})
 
-	if not ok then
+	if not ok or job_id <= 0 then
 		util.Notify("Cannot execute make cmd", "error", "oz_make")
 		return
-	end
-	if job_id <= 0 then
-		util.echoprint("Failed to start Make", "healthError")
 	end
 end
 
