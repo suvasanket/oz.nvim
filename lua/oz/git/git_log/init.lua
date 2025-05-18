@@ -120,7 +120,11 @@ local function get_commit_log_lines(level, args)
 
 	log = add_cherrypick_icon(log)
 
-	return log
+	if ok then
+		return log
+	else
+		return {}
+	end
 end
 
 function M.refresh_commit_log(passive)
@@ -134,7 +138,7 @@ function M.refresh_commit_log(passive)
 		M.commit_log({ from = M.comming_from })
 		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
-    vim.cmd("checktime")
+	vim.cmd("checktime")
 end
 
 function M.commit_log(opts, args)
@@ -152,14 +156,14 @@ function M.commit_log(opts, args)
 	-- open log
 	win.open_win("log", {
 		lines = commit_log_lines,
-        win_type = "bot",
+		win_type = "bot",
 		callback = function(buf_id, win_id)
 			M.log_buf = buf_id
 			M.log_win = win_id
 
 			-- opts
-            vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
-            vim.opt_local.fillchars:append({ eob = ' ' })
+			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+			vim.opt_local.fillchars:append({ eob = " " })
 
 			-- async component
 			vim.fn.timer_start(10, function()

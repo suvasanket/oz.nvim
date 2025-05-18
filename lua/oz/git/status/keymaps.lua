@@ -228,13 +228,13 @@ end
 local function handle_goto_log_context()
 	local branch = s_util.get_branch_under_cursor()
 	local file = s_util.get_file_under_cursor(true)
-	vim.cmd("close") -- Close status window
+	vim.cmd("close")
 	if branch then
 		require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { branch })
 	elseif #file > 0 then
+		--FIXME file log not working
 		require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { "--", unpack(file) })
 	else
-		-- Fallback if neither branch nor file found? Or just call the standard log?
 		require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
 	end
 end
@@ -647,18 +647,18 @@ end
 
 local function handle_merge_branch(flag)
 	local branch_under_cursor = s_util.get_branch_under_cursor()
-	local key = "git_user_merge_flags"
-	local json = "oz_git"
+	local key, json, input = "git_user_merge_flags", "oz_git", nil
+	flag = not flag and caching.get_data(key, json) or flag
+
 	if branch_under_cursor then
-		local input
 		if flag then
 			input = util.inactive_input(":Git merge", " " .. flag .. " " .. branch_under_cursor)
 		else
 			input = util.inactive_input(":Git merge", " " .. branch_under_cursor)
 		end
 		if input then
-			run_n_refresh("Git merge" .. input)
-			input = input:gsub(flag, "")
+			-- run_n_refresh("Git merge" .. input)
+			print("Git merge" .. input)
 			local flags_to_cache = util.extract_flags(input)
 			caching.set_data(key, table.concat(flags_to_cache, " "), json)
 		end
@@ -694,10 +694,11 @@ end
 
 local function handle_show_help()
 	local user_mappings = require("oz.git").user_config.mappings -- Get mappings at time of call
+	--FIXME user config mappings not showing
 	show_map.show_maps({
 		group = {
 			["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-			["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "c" },
+			["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "cw" },
 			["Diff mappings"] = { "dd", "dc", "dm", "db" },
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
 			["Goto mappings"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g<Space>", "g?" }, -- Added gL
@@ -797,7 +798,9 @@ function M.keymaps_init(buf)
 		"c<space>",
 		":Git commit ",
 		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git commit." }
-	) -- Direct command string mapping
+	)
+	-- commit wip
+	map("n", "cw", ":Gcw", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Gcw" })
 
 	-- open current entry / switch branch
 	map("n", "<cr>", handle_enter_key, { buffer = buf_id, desc = "open entry under cursor / switch branches. <*>" })
