@@ -177,13 +177,53 @@ function M.oz_grep(cmd, pattern, dir, opts)
 	})
 end
 
+-- parse the arg_string
+local function parse_usercmd_argstring(argstring)
+	local args = {}
+	local i = 1
+	local len = #argstring
+
+	while i <= len do
+		while i <= len and argstring:sub(i, i):match("%s") do
+			i = i + 1
+		end
+		if i > len then
+			break
+		end
+		if argstring:sub(i, i) == '"' or argstring:sub(i, i) == "'" then
+			local quote = argstring:sub(i, i)
+			local start = i + 1
+			i = i + 1
+			while i <= len and argstring:sub(i, i) ~= quote do
+				i = i + 1
+			end
+
+			if i <= len then
+				table.insert(args, argstring:sub(start, i - 1))
+				i = i + 1
+			else
+				table.insert(args, argstring:sub(start))
+			end
+		else
+			local start = i
+			while i <= len and not argstring:sub(i, i):match("%s") do
+				i = i + 1
+			end
+
+			table.insert(args, argstring:sub(start, i - 1))
+		end
+	end
+
+	return args
+end
+
 -- parse :Grep args
 ---@param args table
 ---@return string
 ---@return any
 ---@return nil
 local function parse_args(args)
-	-- local args = parse_usercmd_argstring(argstring)
+	args = type(args) == "string" and parse_usercmd_argstring(args) or args
 
 	local flags = ""
 	local idx = 1
@@ -207,7 +247,7 @@ local function parse_args(args)
 	return pattern, flags, target_dir
 end
 
---- escape pattern
+--- escape pattern NOTE: yeah i know about -F
 ---@param str any
 ---@return string
 local function escape_pattern(str)
@@ -234,7 +274,7 @@ function M.oz_grep_init(config)
 			pattern = escape_pattern(util.get_visual_selection())
 			target_dir = opts.fargs[1] -- if taking from range then use the first arg as target_dir
 		else
-			pattern, flags, target_dir = parse_args(opts.fargs)
+			pattern, flags, target_dir = parse_args(opts.args) -- NOTE: opts.fargs won't work
 		end
 
 		-- parse the usercmd args.
@@ -264,10 +304,10 @@ function M.oz_grep_init(config)
 		local grep_flags = { "-nrH", "--color=never" }
 		local rg_flags = { "--vimgrep", "--color=never", "--no-heading" }
 		if opt_exe == "rg" then
-			opt_flags = vim.tbl_deep_extend("keep", rg_flags, opt_flags)
+			opt_flags = vim.tbl_deep_extend("force", rg_flags, opt_flags)
 			grep_fm = "%f:%l:%c:%m"
 		elseif opt_exe == "grep" then
-			opt_flags = vim.tbl_deep_extend("keep", grep_flags, opt_flags)
+			opt_flags = vim.tbl_deep_extend("force", grep_flags, opt_flags)
 			grep_fm = "%f:%l:%m"
 		end
 
