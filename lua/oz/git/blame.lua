@@ -3,7 +3,7 @@ local shell = require("oz.util.shell")
 local win = require("oz.util.win")
 local util = require("oz.util")
 
-local source_buf_autocmd_id, target_buf_autocmd_id, blame_buf
+local source_buf_autocmd_id, target_buf_autocmd_id, blame_buf, t_buf_write_autocmd_id
 
 ---update cursor between two buffer
 ---@param buf1 integer
@@ -80,15 +80,25 @@ local function blame_buf_maps(buf)
 	end, { buffer = buf, desc = "Show commit for current line." })
 end
 
-local function autocmd_func(buf)
+local function autocmd_func(b_buf, t_file)
 	-- if blame buf removed
 	vim.api.nvim_create_autocmd({ "BufHidden", "BufDelete" }, {
-		buffer = buf,
+		buffer = b_buf,
 		callback = function()
 			vim.api.nvim_del_autocmd(source_buf_autocmd_id)
 			vim.api.nvim_del_autocmd(target_buf_autocmd_id)
+			vim.api.nvim_del_autocmd(t_buf_write_autocmd_id)
 
 			blame_buf = nil
+		end,
+		once = true,
+	})
+
+	t_buf_write_autocmd_id = vim.api.nvim_create_autocmd("BufWritePost", {
+		-- buffer = vim.fn.bufnr(t_file),
+        pattern = t_file,
+		callback = function()
+			M.open_blame_win(t_file)
 		end,
 	})
 end
@@ -105,22 +115,12 @@ local function format_blame_lines(lines)
 	return formated
 end
 
----init
----@param file string|nil
-function M.git_blame_init(file)
-	-- if blame buffer open then close
-	if blame_buf then
-		vim.api.nvim_buf_delete(blame_buf, { force = true })
-		blame_buf = nil
-		return
-	end
-
-	local cur_file = file or vim.fn.expand("%")
-	local file_buf = vim.fn.bufnr(cur_file)
+function M.open_blame_win(file)
+	local file_buf = vim.fn.bufnr(file)
 	-- local file_win = vim.fn.bufwinid(file_buf)
 	local file_cursor_pos = vim.api.nvim_win_get_cursor(0)
 
-	local ok, output = shell.run_command({ "git", "blame", cur_file })
+	local ok, output = shell.run_command({ "git", "blame", file })
 	if ok and #output > 0 then
 		output = format_blame_lines(output)
 
@@ -152,7 +152,22 @@ function M.git_blame_init(file)
 			sync_cursor(file_buf, blame_buf)
 		end
 
-		autocmd_func(blame_buf)
+		autocmd_func(blame_buf, file)
+	end
+end
+
+--- init
+---@param file string|nil
+function M.git_blame_init(file)
+	file = file or vim.fn.expand("%")
+
+	-- if blame buffer open then close
+	if blame_buf then
+		vim.api.nvim_buf_delete(blame_buf, { force = true })
+		blame_buf = nil
+		return
+	else
+		M.open_blame_win(file)
 	end
 end
 

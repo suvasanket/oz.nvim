@@ -152,6 +152,14 @@ local function handle_gread(opts)
 	end
 end
 
+local function handle_blame(args)
+	if args.args ~= "" then
+		require("oz.git.blame").git_blame_init(args.args)
+	else
+		require("oz.git.blame").git_blame_init(vim.fn.expand("%"))
+	end
+end
+
 --------------
 
 --- user_cmd init
@@ -188,6 +196,11 @@ function M.init()
 	g_util.User_cmd({ "GBrowse" }, function(opts)
 		handle_browse(opts)
 	end, { nargs = "?", complete = "file", desc = "oz_git: browse file in the remote repo." })
+
+	--
+	g_util.User_cmd({ "GBlame" }, function(opts)
+		handle_blame(opts)
+	end, { nargs = "?", complete = "file", desc = "oz_git: open the blame buffer." })
 
 	-- Gcw
 	g_util.User_cmd({ "Gcw", "GitCommitWip" }, function(opts)

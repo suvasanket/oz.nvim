@@ -76,11 +76,6 @@ local function special_cmd_exec(args_tbl, args_str)
 		end
 		return true
 
-	-- git blame
-	elseif cmd == "blame" then
-		require("oz.git.blame").git_blame_init()
-		return true
-
 	-- interactive cmds
 	elseif util.str_in_tbl(args_str, interactive_cmd) then
 		g_util.run_term_cmd({
