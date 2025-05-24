@@ -21,9 +21,17 @@ local function update_spinner()
 end
 
 -- Start progress increment timer
-local function start_spinner_updates()
+local function start_spinner_updates(unique_id)
 	if progress_update_timer then
 		return
+	end
+
+	-- WTF: for some shit reason i can't access M.progress_tbl items by passing index
+	local fidget_handle
+	for k, v in pairs(M.progress_tbl) do
+		if k == unique_id then
+			fidget_handle = v
+		end
 	end
 
 	-- Reset progress percentage
@@ -46,9 +54,9 @@ local function start_spinner_updates()
 			progress_percentage = progress_percentage + progress_increment_value
 
 			-- Update fidget progress
-			if fidget and M.fidget_handle then
+			if fidget and fidget_handle then
 				vim.schedule(function()
-					M.fidget_handle:report({
+					fidget_handle:report({
 						percentage = progress_percentage,
 						message = "in progress...",
 					})
@@ -93,7 +101,7 @@ function M.start_progress(unique_id, opts)
 	end
 
 	-- Start progress updates
-	start_spinner_updates()
+	start_spinner_updates(unique_id)
 end
 
 -- Stop spinner

@@ -1,5 +1,5 @@
 # Oz.nvim
-A Neovim plugin collection to turbocharge your everyday shell-related workflow.
+A Neovim plugin collection to turbocharge everyday shell-related workflow.
 
 ## Requirement
 - Neovim >= 0.9.4

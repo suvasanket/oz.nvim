@@ -81,13 +81,13 @@ local function handle_unstage()
 		util.ShellCmd({ "git", "restore", "--staged", unpack(entries) }, function()
 			refresh()
 		end, function()
-			util.Notify("Cannot unstage currently selected.", "error", "oz_git")
+			util.Notify("Cannot unstage current entry.", "error", "oz_git")
 		end)
 	elseif current_line:find("Changes to be committed:") then
 		util.ShellCmd({ "git", "reset" }, function()
 			refresh()
 		end, function()
-			util.Notify("Cannot unstage currently selected.", "error", "oz_git")
+			util.Notify("Cannot unstage current entry.", "error", "oz_git")
 		end)
 	end
 end
