@@ -589,10 +589,16 @@ local function handle_branch_delete()
 			util.Notify("Cannot delete the current branch.", "error", "oz_git")
 			return
 		end
-		local ans = util.prompt("Delete branch '" .. branch .. "'?", "&Yes\n&No", 2)
+		local ans = util.prompt("Delete branch '" .. branch .. "'?", "&Local\n&Remote\n&Both\n&Nevermind", 4)
 		if ans == 1 then
-			-- Use -d for safe delete, maybe offer -D?
 			run_n_refresh("Git branch -d " .. branch)
+		elseif ans == 2 then
+			local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", branch))
+			run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
+        elseif ans == 3 then
+            run_n_refresh("Git branch -d " .. branch)
+            local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", branch))
+            run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		end
 	else
 		util.Notify("Cursor not on a deletable branch.", "warn", "oz_git")
