@@ -78,6 +78,7 @@ end
 ---@param str string
 function M.inactive_echo(str)
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
+	vim.api.nvim_echo({ { "" } }, false, {})
 	vim.api.nvim_echo({ { str, "ozInactivePrompt" } }, false, {})
 end
 
@@ -311,15 +312,15 @@ function M.get_visual_selection(tbl_fmt)
 end
 
 function M.generate_unique_id()
-    math.randomseed(os.time())
-    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local len = 5
-    local str = ""
-    for i = 1, len do
-        local r = math.random(#chars)
-        str = str .. chars:sub(r,r)
-    end
-    return str
+	math.randomseed(os.time())
+	local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	local len = 5
+	local str = ""
+	for i = 1, len do
+		local r = math.random(#chars)
+		str = str .. chars:sub(r, r)
+	end
+	return str
 end
 
 return M

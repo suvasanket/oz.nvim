@@ -44,6 +44,7 @@ local function handle_glog(opts)
 	end
 end
 
+-- TODO feat: instead of only one commit ability to add muliple
 local function handle_gcw(opts)
 	if g_util.if_in_git() then
 		local arg, num, command = opts.fargs[1], nil, nil

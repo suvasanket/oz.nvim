@@ -31,8 +31,7 @@ local function run_n_refresh(cmd)
 			refresh(true)
 		end)
 	end)
-	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
-	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
+	util.inactive_echo(":" .. cmd)
 	vim.cmd(cmd)
 end
 
@@ -595,10 +594,10 @@ local function handle_branch_delete()
 		elseif ans == 2 then
 			local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", branch))
 			run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
-        elseif ans == 3 then
-            run_n_refresh("Git branch -d " .. branch)
-            local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", branch))
-            run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
+		elseif ans == 3 then
+			run_n_refresh("Git branch -d " .. branch)
+			local cur_remote = shellout_str(string.format("git config --get branch.%s.remote", branch))
+			run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		end
 	else
 		util.Notify("Cursor not on a deletable branch.", "warn", "oz_git")
