@@ -189,6 +189,8 @@ local function handle_enter_key_helper(line)
 		vim.cmd("Git stash list --stat")
 	elseif line:match("^On branch") then -- remote branch detail
 		vim.cmd("Git show-branch -a")
+	elseif line:match("^HEAD detached at") then
+        g_util.set_cmdline("Git checkout ")
 	end
 end
 
@@ -214,7 +216,7 @@ local function handle_enter_key()
 			open_in_ozgitwin(out, nil)
 		end, true)
 		vim.cmd(("Git stash show stash@{%s}"):format(stash.index))
-	else
+	else -- fallback with current line content action.
 		handle_enter_key_helper(vim.api.nvim_get_current_line())
 	end
 end
@@ -662,8 +664,7 @@ local function handle_merge_branch(flag)
 			input = util.inactive_input(":Git merge", " " .. branch_under_cursor)
 		end
 		if input then
-			-- run_n_refresh("Git merge" .. input)
-			print("Git merge" .. input)
+			run_n_refresh("Git merge" .. input)
 			local flags_to_cache = util.extract_flags(input)
 			caching.set_data(key, table.concat(flags_to_cache, " "), json)
 		end
@@ -680,7 +681,7 @@ end
 local function handle_reset(arg)
 	local files = s_util.get_file_under_cursor(true)
 	local branch = s_util.get_branch_under_cursor()
-	local args = nil
+	local args = arg .. " HEAD~1"
 	if #files > 0 then
 		if arg then
 			args = ("%s %s"):format(arg, table.concat(files, " "))
@@ -694,7 +695,7 @@ local function handle_reset(arg)
 			args = branch
 		end
 	end
-	g_util.set_cmdline(("Git reset %s"):format(args))
+	g_util.set_cmdline(("Git reset %s"):format(args or arg))
 end
 
 local function handle_show_help()

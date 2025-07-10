@@ -14,8 +14,8 @@ local defaults = {
 	oz_git = {
 		remote_operation_exec_method = "background", -- |background,term|
 		mappings = {
-			toggle_pick = "<C-p>",
-			unpick_all = "<C-S-p>",
+			toggle_pick = "<C-P>",
+			unpick_all = "<C-S-P>",
 		},
 	},
 

@@ -80,23 +80,24 @@ local function generate_status_content()
 	local status_tbl = {}
 	local stash_tbl = {}
 	local git_root = g_util.get_project_root()
-	local status_ok, git_status_output = shell.run_command({ "git", "status" }, git_root)
-	local stash_ok, git_stash_output = shell.run_command({ "git", "stash", "list" }, git_root)
+	local status_ok, git_status_content = shell.run_command({ "git", "status" }, git_root)
+	local stash_ok, git_stash_content = shell.run_command({ "git", "stash", "list" }, git_root)
 
-	if status_ok and #git_status_output > 0 then
-		for _, line in ipairs(git_status_output) do
-			if not line:match('%(use "git .-.%)') then
+	if status_ok and #git_status_content > 0 then
+        -- go through each line
+		for _, line in ipairs(git_status_content) do
+			if not line:match('%(use "git .-.%)') then -- remove all suggestions.
 				table.insert(status_tbl, line)
 			end
 		end
-		if not status_tbl[2]:match("Your branch") and status_tbl[2] ~= "" then
+		if not status_tbl[2]:match("Your branch") and status_tbl[2] ~= "" then -- branch subtext
 			table.insert(status_tbl, 2, "")
 		end
 	end
 
-	if stash_ok and #git_stash_output > 0 then
+	if stash_ok and #git_stash_content > 0 then
 		table.insert(stash_tbl, "Stash list:")
-		for _, substr in ipairs(git_stash_output) do
+		for _, substr in ipairs(git_stash_content) do
 			if substr ~= "" and not substr:match('%(use "git .-.%)') then
 				table.insert(stash_tbl, "\t" .. substr)
 			end

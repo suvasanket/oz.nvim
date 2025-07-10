@@ -26,6 +26,7 @@ local function map_help_key(key, title)
 end
 
 -- Helper to run Vim command and refresh status buffer on success
+---@param cmd string
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function()
 		vim.schedule(function()
@@ -54,6 +55,28 @@ local function cmd_upon_current_commit(callback)
 end
 
 -- Handle functions --
+----------------------
+local function handle_cherrypick()
+	local input
+	if #grab_hashs > 0 then
+		input = " " .. table.concat(grab_hashs, " ")
+		clear_all_picked()
+	else
+		local hash = get_selected_hash()
+		if #hash == 1 then
+			input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1])
+		elseif #hash == 2 then
+			input = util.inactive_input(":Git cherry-pick", " -x " .. table.concat(hash, " "))
+		elseif #hash > 2 then
+			input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1] .. ".." .. hash[#hash])
+		end
+	end
+	if input then
+		run_n_refresh("Git cherry-pick" .. input)
+		-- print("Git cherry-pick" .. input)
+	end
+end
+
 local function handle_reset(arg)
 	local current_hash = get_selected_hash()
 	if #current_hash > 0 then
@@ -80,7 +103,9 @@ local function handle_revert()
 			str = ("%s..%s"):format(commits[1], commits[#commits])
 		end
 	end
-	g_util.set_cmdline("Git revert| " .. str)
+	if str then
+		g_util.set_cmdline("Git revert| " .. str)
+	end
 end
 
 -----------------
@@ -278,27 +303,16 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "Show current commit under cursor. <*>" })
 
+	-- check out to a commit
+	map("n", "<C-CR>", function()
+		local hash = get_selected_hash()
+		if #hash > 0 then
+			run_n_refresh("Git checkout -q " .. hash[1])
+		end
+	end, { buffer = buf, desc = "Checkout to the commit under cursor. <*>" })
+
 	-- Cherry-pick mappings
-	map({ "n", "x" }, "pp", function()
-		local input
-		if #grab_hashs > 0 then
-			input = " " .. table.concat(grab_hashs, " ")
-			clear_all_picked()
-		else
-			local hash = get_selected_hash()
-			if #hash == 1 then
-				input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1])
-			elseif #hash == 2 then
-				input = util.inactive_input(":Git cherry-pick", " -x " .. table.concat(hash, " "))
-			elseif #hash > 2 then
-				input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1] .. ".." .. hash[#hash])
-			end
-		end
-		if input then
-			run_n_refresh("Git cherry-pick" .. input)
-			-- print("Git cherry-pick" .. input)
-		end
-	end, { buffer = buf, desc = "Cherry-pick commit under cursor. <*>" })
+	map({ "n", "x" }, "pp", handle_cherrypick, { buffer = buf, desc = "Cherry-pick commit under cursor. <*>" })
 
 	map("n", "pa", function()
 		run_n_refresh("Git cherry-pick --abort")
@@ -401,7 +415,7 @@ function M.keymaps_init(buf)
 				["Cherry-pick mappings"] = { "pp", "pa", "pk", "pl", "pq" },
 				["Reset mappings"] = { "UU", "Us", "Uh", "Um" },
 				["Revert mappings"] = { "uu", "ul", "uk", "ua", "uq", "ui", "ue" },
-				["Nav mappings"] = { "+", "-", "<CR>", "<C-O>" },
+				["Nav mappings"] = { "+", "-", "<CR>", "<C-O>", "<C-CR>" },
 			},
 			subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 			no_empty = true,

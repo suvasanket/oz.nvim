@@ -187,7 +187,7 @@ function M.show_maps(args)
 	local row = vim.o.lines - height - 4
 	local col = vim.o.columns
 
-	local title = args.title or "Show keymaps"
+	local title = args.title or "All keymaps"
 	local win_opts = {
 		relative = "editor",
 		width = width,

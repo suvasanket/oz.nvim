@@ -59,7 +59,7 @@ function M.run_git_with_progress(command, args, output_callback)
 				require("oz.git").refresh_buf()
 			end)
 
-            -- show output if failed operation
+			-- show output if failed operation
 			if exit_code ~= 0 and output_callback then
 				output_callback(all_output)
 			end

@@ -16,6 +16,8 @@ local user_set_args = nil
 local shellout_tbl = shell.shellout_tbl
 local run_cmd = shell.run_command
 
+-- get selected or current SHA under cursor
+---@return table
 function M.get_selected_hash()
 	local lines = {}
 	local entries = {}
@@ -37,6 +39,9 @@ function M.get_selected_hash()
 		end
 	end
 
+	if vim.api.nvim_get_mode().mode == "n" then
+		return { entries[1] }
+	end
 	return entries
 end
 
@@ -68,13 +73,13 @@ local function log_buf_hl()
     ]])
 end
 
-local function add_cherrypick_icon(log)
+local function add_cherrypick_icon(content)
 	local picked_hashes = shellout_tbl("git rev-parse --verify --quiet --short CHERRY_PICK_HEAD", M.state.cwd)
 	if #picked_hashes == 0 then
-		return log
+		return content
 	else
 		local logg = {}
-		for _, line in ipairs(log) do
+		for _, line in ipairs(content) do
 			local picked_hash = util.str_in_tbl(line, picked_hashes)
 			if picked_hash then
 				line = line:gsub(picked_hash, picked_hash .. " 🍒")
@@ -85,8 +90,8 @@ local function add_cherrypick_icon(log)
 	end
 end
 
-local function get_commit_log_lines(level, args)
-	local log, fmt_flags, ok
+local function generate_content(level, args)
+	local content, fmt_flags, ok
 	if level == 2 then
 		fmt_flags = {
 			"--graph",
@@ -111,17 +116,17 @@ local function get_commit_log_lines(level, args)
 	end
 	if args and #args > 0 then
 		user_set_args = args
-		ok, log = run_cmd({ "git", "log", unpack(args), unpack(fmt_flags) }, M.state.cwd)
+		ok, content = run_cmd({ "git", "log", unpack(args), unpack(fmt_flags) }, M.state.cwd)
 	elseif user_set_args and user_set_args ~= "" then
-		ok, log = run_cmd({ "git", "log", unpack(user_set_args), unpack(fmt_flags) }, M.state.cwd)
+		ok, content = run_cmd({ "git", "log", unpack(user_set_args), unpack(fmt_flags) }, M.state.cwd)
 	else
-		ok, log = run_cmd({ "git", "log", unpack(fmt_flags) }, M.state.cwd)
+		ok, content = run_cmd({ "git", "log", "--all", unpack(fmt_flags) }, M.state.cwd) -- default show all.
 	end
 
-	log = add_cherrypick_icon(log)
+	content = add_cherrypick_icon(content)
 
 	if ok then
-		return log
+		return content
 	else
 		return {}
 	end
@@ -129,7 +134,7 @@ end
 
 function M.refresh_commit_log(passive)
 	if passive then
-		local lines = get_commit_log_lines()
+		local lines = generate_content()
 		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", true)
 		vim.api.nvim_buf_set_lines(M.log_buf, 0, -1, false, lines)
 		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", false)
@@ -141,6 +146,9 @@ function M.refresh_commit_log(passive)
 	vim.cmd("checktime")
 end
 
+-- commit log
+---@param opts table|nil
+---@param args table|nil
 function M.commit_log(opts, args)
 	local level
 	if opts then
@@ -151,7 +159,7 @@ function M.commit_log(opts, args)
 	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
 
 	vim.cmd("lcd " .. (vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd())) -- change cwd to project
-	commit_log_lines = get_commit_log_lines(level, args)
+	commit_log_lines = generate_content(level, args)
 
 	-- open log
 	win.open_win("log", {
