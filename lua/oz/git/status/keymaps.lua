@@ -190,7 +190,7 @@ local function handle_enter_key_helper(line)
 	elseif line:match("^On branch") then -- remote branch detail
 		vim.cmd("Git show-branch -a")
 	elseif line:match("^HEAD detached at") then
-        g_util.set_cmdline("Git checkout ")
+		g_util.set_cmdline("Git checkout ")
 	end
 end
 
@@ -532,12 +532,18 @@ local function handle_push()
 
 	if cur_remote_branch_ref == "" then
 		local remote = shellout_str("git remote")
-		refined_args = "-u " .. remote .. " " .. current_branch
+		if remote ~= "" then
+			refined_args = ("-u %s %s"):format(remote, current_branch)
+		else
+			util.Notify("press 'Ma' to add a remote first", "warn", "oz_git")
+		end
 	else
 		refined_args = string.format("%s %s", cur_remote, branch)
 	end
 
-	g_util.set_cmdline("Git push " .. refined_args)
+	if refined_args then
+		g_util.set_cmdline("Git push " .. refined_args)
+	end
 end
 
 local function handle_pull()
@@ -553,7 +559,7 @@ local function handle_pull()
 
 	if cur_remote == "" or cur_remote_branch_ref == "" then
 		util.Notify(
-			"Upstream not configured for branch '" .. current_branch .. "'. Use 'bu' to set upstream.",
+			"Upstream not configured for branch '" .. current_branch .. "'. press 'bu' to set upstream.",
 			"warn",
 			"oz_git"
 		)
