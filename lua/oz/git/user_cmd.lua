@@ -191,7 +191,7 @@ function M.init()
 	-- Gw
 	g_util.User_cmd({ "Gw", "Gwrite" }, function(opts)
 		handle_gwrite(opts)
-	end, { nargs = "*", complete = "file", desc = "oz_git: add/stage/rename current file." })
+	end, { nargs = "?", complete = "file", desc = "oz_git: add/stage/rename current file." })
 
 	-- :GBrowse
 	g_util.User_cmd({ "GBrowse" }, function(opts)

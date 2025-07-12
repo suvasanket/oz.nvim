@@ -73,7 +73,7 @@ local function oil_buf_mappings(config, g_mappings)
 					and split_input(input, get_cur_entry(), config.entry_exec.lead_prefix)
 				or split_input(input, get_cur_entry(true), config.entry_exec.lead_prefix)
 
-			if config.entry_exec.method == "async" then
+			if config.entry_exec.method == "background" then
 				util.ShellCmd(cmd, function()
 					util.echoprint("oz(oil): cmd executed successfully!", "MoreMsg")
 					vim.defer_fn(function()

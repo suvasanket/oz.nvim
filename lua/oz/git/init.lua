@@ -93,7 +93,7 @@ local function special_cmd_exec(args_tbl, args_str)
 
 	-- Progress cmds
 	elseif vim.tbl_contains(remote_cmds, cmd) then
-		if M.user_config and M.user_config.remote_operation_exec_method == "background" then -- user config
+		if M.user_config and M.user_config.remote_opt_exec == "background" then -- user config
 			local command = table.remove(args_tbl, 1)
 
 			require("oz.git.progress_cmd").run_git_with_progress(command, args_tbl, function(lines)
@@ -104,7 +104,7 @@ local function special_cmd_exec(args_tbl, args_str)
 					g_util.set_cmdline(suggestion)
 				end
 			end)
-		elseif M.user_config and M.user_config.remote_operation_exec_method == "term" then
+		elseif M.user_config and M.user_config.remote_opt_exec == "term" then
 			vim.cmd("hor term git " .. table.concat(args_tbl, " "))
 			vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
 			vim.cmd("resize 9")

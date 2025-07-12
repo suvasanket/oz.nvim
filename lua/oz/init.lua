@@ -12,7 +12,7 @@ local defaults = {
 
 	-- Git
 	oz_git = {
-		remote_operation_exec_method = "background", -- |background,term|
+        remote_opt_exec = "background", -- |background,term|
 		mappings = {
 			toggle_pick = "<C-P>",
 			unpick_all = "<C-S-P>",
@@ -54,14 +54,14 @@ local defaults = {
 		-- oil integration
 		oil = {
 			entry_exec = {
-				method = "async", -- |async, term|
+				method = "term", -- |background, term|
 				use_fullpath = true, -- false: only file or dir name will be used
 				lead_prefix = ":", -- this char will be used to define the pre and post of the entry
 			},
 			mappings = {
 				term = "<global>",
 				compile = "<global>",
-				entry_exec = "<C-g>",
+				entry_exec = "<C-G>",
 				show_keybinds = "g?", -- override existing g?
 			},
 		},
