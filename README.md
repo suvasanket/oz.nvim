@@ -1,6 +1,8 @@
 # Oz.nvim
 A Neovim plugin collection to turbocharge everyday shell-related workflow.
 
+[oz_git.webm](https://github.com/user-attachments/assets/58229a8d-04a0-43a9-806d-8f175162f1b0)
+
 ## Requirement
 - Neovim >= 0.9.4
 - [neovim-remote](https://github.com/mhinz/neovim-remote) (optional for oz\_git)
