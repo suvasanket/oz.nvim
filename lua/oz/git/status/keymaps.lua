@@ -187,9 +187,9 @@ local function handle_enter_key_helper(line)
 			open_in_ozgitwin(out, nil)
 		end, true)
 		vim.cmd("Git stash list --stat")
-	elseif line:match("^On branch") then -- remote branch detail
+	elseif line:match("^On branch") then -- branch detail
 		vim.cmd("Git show-branch -a")
-	elseif line:match("^HEAD detached at") then
+	elseif line:match("^HEAD detached at") then -- detached head
 		g_util.set_cmdline("Git checkout ")
 	end
 end
@@ -837,7 +837,7 @@ function M.keymaps_init(buf)
 		g_util.goto_str("Stash list:")
 	end, { buffer = buf_id, desc = "goto stashlist section." })
 	-- Add to gitignore
-	map({ "n", "x" }, "gI", handle_goto_gitignore, { buffer = buf_id, desc = "Add file or dir to .gitigore. <*>" })
+	map({ "n", "x" }, "gI", handle_goto_gitignore, { buffer = buf_id, desc = "Add file or dir to .gitignore. <*>" })
 
 	-- [d]iff mode
 	map("n", "dd", handle_diff_file_changes, { buffer = buf_id, desc = "Diff file changes. <*>" })

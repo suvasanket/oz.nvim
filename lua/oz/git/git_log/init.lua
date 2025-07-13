@@ -71,6 +71,11 @@ local function log_buf_hl()
     syntax match PathSeparator /\w\+\/\w\+/
     highlight PathSeparator guifg=#99BC85 guibg=NONE gui=italic
     ]])
+
+    vim.cmd([[
+    syntax match Comment /\*\w\+/ containedin=ALL
+    syntax match Comment /\zs\*\w\+\ze.\{-}\*\w\+/ skipwhite
+    ]])
 end
 
 local function add_cherrypick_icon(content)
@@ -97,21 +102,21 @@ local function generate_content(level, args)
 			"--graph",
 			"--abbrev-commit",
 			"--decorate",
-			"--format=format:%h - %aD [%ar]%d%n          %s - %an",
+			"--format=format:%h - %aD [%ar]%d%n          %s *%an",
 		}
 	elseif level == 3 then
 		fmt_flags = {
 			"--graph",
 			"--abbrev-commit",
 			"--decorate",
-			"--format=format:%h - %aD [%ar] [committed: %cD] %d%n          %s%n          - %an <%ae> [committer: %cn <%ce>]",
+			"--format=format:%h - %aD [%ar] [committed: %cD] %d%n          %s%n          *%an <%ae> [committer: %cn <%ce>]",
 		}
 	else
 		fmt_flags = {
 			"--graph",
 			"--abbrev-commit",
 			"--decorate",
-			"--format=format:%h - [%ar] %s - %an%d",
+			"--format=format:%h - [%ar] %s *%an%d",
 		}
 	end
 	if args and #args > 0 then

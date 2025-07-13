@@ -94,7 +94,12 @@ function M.run_in_termbang(cmd, dir)
 		tmux_cmd = tmux_cmd:gsub("{cmd}", cmd):gsub("{path}", dir)
 		vim.fn.system(tmux_cmd)
 	else
-		vim.cmd("tab term " .. "cd " .. dir .. " && " .. cmd)
+        local cur = vim.api.nvim_get_current_tabpage()
+        if dir then
+            cmd = string.format("cd %s && %s", dir, cmd)
+        end
+        vim.cmd(string.format("tabnew | terminal %s", cmd))
+        vim.api.nvim_set_current_tabpage(cur)
 	end
 	vim.notify("Executing '" .. cmd .. "' ..")
 end

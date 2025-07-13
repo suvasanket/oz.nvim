@@ -218,7 +218,7 @@ local function oz_git_win_hl()
         syntax match @error /^\<error:\>\|\<fatal:\>/
         syntax match Title /HEAD@{[0-9]\+}/
         syntax match @comment.todo /Note/
-        syntax match @comment /^\s\+.*$/
+        syntax match @comment /^\s\+[^*].*$/
         syntax match DiagnosticUnderlineOk /\v(https?|ftp|file):\/\/\S+/
     ]])
 
