@@ -1,7 +1,15 @@
 # Oz.nvim
 A Neovim plugin collection to turbocharge everyday shell-related workflow.
 
-[oz_git.webm](https://github.com/user-attachments/assets/58229a8d-04a0-43a9-806d-8f175162f1b0)
+[oz_git showcase](https://github.com/user-attachments/assets/58229a8d-04a0-43a9-806d-8f175162f1b0)
+<details>
+<summary>More Showcases</summary>
+
+[oz_make showcase](https://github.com/user-attachments/assets/9315ac70-f5df-4077-bb87-eaa0bbc31a33)
+
+[oz_grep showcase](https://github.com/user-attachments/assets/ac08fe0b-7228-4da6-b94c-1fda492cedde)
+
+</details>
 
 ## Requirement
 - Neovim >= 0.9.4
