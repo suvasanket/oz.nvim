@@ -35,8 +35,10 @@ local function sync_cursor(source_buf, target_buf)
 	source_buf_autocmd_id = vim.api.nvim_create_autocmd("CursorMoved", {
 		buffer = source_buf,
 		callback = function()
-			if vim.api.nvim_buf_is_valid(source_buf) then
-				M.update_cursor(source_buf, target_buf)
+			if vim.api.nvim_buf_is_valid(source_buf) then -- TODO error at l:20 when unmodified changes(temp fix)
+				if not vim.api.nvim_buf_get_option(source_buf, "modified") then
+					M.update_cursor(source_buf, target_buf)
+				end
 			else
 				vim.api.nvim_del_autocmd(source_buf_autocmd_id)
 				vim.api.nvim_del_autocmd(target_buf_autocmd_id)
@@ -96,7 +98,7 @@ local function autocmd_func(b_buf, t_file)
 
 	t_buf_write_autocmd_id = vim.api.nvim_create_autocmd("BufWritePost", {
 		-- buffer = vim.fn.bufnr(t_file),
-        pattern = t_file,
+		pattern = t_file,
 		callback = function()
 			M.open_blame_win(t_file)
 		end,
