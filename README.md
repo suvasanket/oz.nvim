@@ -13,7 +13,7 @@ A Neovim plugin collection to turbocharge everyday shell-related workflow.
 
 ## Requirement
 - Neovim >= 0.9.4
-- [neovim-remote](https://github.com/mhinz/neovim-remote) (optional for oz\_git)
+- [neovim-remote](https://github.com/mhinz/neovim-remote) (temporary requirement for oz\_git)
 - [diffview.nvim](https://github.com/sindrets/diffview.nvim?tab=readme-ov-file) (optional for oz\_git)
 - [nvim-notify](https://github.com/rcarriga/nvim-notify) or any notifier plugin (optional)
 
