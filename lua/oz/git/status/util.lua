@@ -120,14 +120,15 @@ function M.get_file_under_cursor(fmt_origin)
 
 	for _, line in ipairs(lines) do
 		local file = line:match("%S+$")
-		local dir = line:match("(%S+/)")
+		local dir = line:match("(%S+/)%s*$")
 
 		local tbl = { "deleted:", "renamed:", "copied:" }
 		local absolute_dir_path, absolute_file_path
-		if file then
-			absolute_file_path = root .. "/" .. file
-		elseif dir then
+
+		if dir then
 			absolute_dir_path = root .. "/" .. dir
+		elseif file then
+			absolute_file_path = root .. "/" .. file
 		end
 
 		if vim.fn.filereadable(absolute_file_path) == 1 then -- file
