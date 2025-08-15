@@ -5,18 +5,23 @@ local p = require("oz.caching")
 local oil = require("oil")
 local json_name = "oilcmd"
 
-local function get_cur_entry(short)
-	local cursor_entry = oil.get_cursor_entry()
+local function escape_spaces(s)
+	return (s:gsub(" ", "\\ "))
+end
 
-	local entry = cursor_entry.parsed_name or cursor_entry.name
+local function get_cur_entry(short)
+	local cursor = oil.get_cursor_entry()
+	local name = cursor.parsed_name or cursor.name
+
 	if short then
-		return entry
+		return escape_spaces(name)
 	end
+
 	local cwd = oil.get_current_dir()
-	if cursor_entry.type == "directory" then
-		return cwd .. entry .. "/"
-	end
-	return cwd .. entry
+	local suffix = cursor.type == "directory" and "/" or ""
+	local full = table.concat({ cwd, name, suffix }, "")
+
+	return escape_spaces(full)
 end
 
 -- get the splitted cmd for cur entry execution
