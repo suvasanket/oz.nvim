@@ -106,7 +106,7 @@ function M.setup(opts)
 		if start_with_cmd({ "G", "Git" }) then
 			require("oz.git").oz_git_usercmd_init(M.config.oz_git)
 		else -- lazy
-			vim.fn.timer_start(400, function()
+			vim.fn.timer_start(10, function()
 				require("oz.git").oz_git_usercmd_init(M.config.oz_git)
 			end)
 		end
@@ -117,7 +117,7 @@ function M.setup(opts)
 		if start_with_cmd({ "Term", "Term!" }) then
 			require("oz.term").Term_init(M.config.oz_term)
 		else -- lazy
-			vim.fn.timer_start(700, function()
+			vim.fn.timer_start(20, function()
 				require("oz.term").Term_init(M.config.oz_term)
 			end)
 		end
@@ -128,7 +128,7 @@ function M.setup(opts)
 		if start_with_cmd({ "Make", "Make!" }) then
 			require("oz.make").oz_make_init(M.config.oz_make)
 		else -- lazy
-			vim.fn.timer_start(500, function()
+			vim.fn.timer_start(100, function()
 				require("oz.make").oz_make_init(M.config.oz_make)
 			end)
 		end
@@ -139,7 +139,7 @@ function M.setup(opts)
 		if start_with_cmd({ "Grep", "Grep!" }) then
 			require("oz.grep").oz_grep_init(M.config.oz_grep)
 		else -- lazy
-			vim.fn.timer_start(500, function()
+			vim.fn.timer_start(50, function()
 				require("oz.grep").oz_grep_init(M.config.oz_grep)
 			end)
 		end

@@ -19,7 +19,7 @@ end
 --- get project root
 ---@param markers string[]|nil
 ---@param path_or_bufnr string|integer|nil
----@return nil
+---@return nil|string
 function M.GetProjectRoot(markers, path_or_bufnr)
 	if markers then
 		return vim.fs.root(path_or_bufnr or 0, markers) or nil

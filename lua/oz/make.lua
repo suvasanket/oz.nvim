@@ -11,6 +11,37 @@ local json_name = "makeprg"
 M.previous_makeprg = vim.o.makeprg
 local automake_id
 
+--- check if its just wranings
+---@param needle string
+---@return boolean
+local function all_contains(needle)
+	local MAX_LEN = 50
+	if not needle or needle == "" then
+		return false
+	end
+
+	local qfl = vim.fn.getqflist()
+	if #qfl > MAX_LEN or #qfl < 1 then
+		return false
+	end
+
+	local nl = needle:lower()
+	for i = 1, #qfl do
+		local item = qfl[i]
+		local text = item.text or item.filename or tostring(item) -- fallback
+		if not text or text == "" then
+			return false
+		end
+		if not (type(text) == "string" and text:lower():find(nl, 1, true)) then
+			return false
+		end
+	end
+	return true
+end
+
+--- get build command
+---@param project_root string|nil
+---@return nil|string
 local function get_build_command(project_root)
 	if not project_root or project_root == "" then
 		return nil
@@ -184,11 +215,13 @@ function M.Make_func(arg_str, dir)
 
 			qf.capture_lines_to_qf(output, vim.bo.ft, true)
 
-			if #vim.fn.getqflist() == 1 then
+			if all_contains("warning") or all_contains("warn") then
+				util.echoprint("Warning found: do :copen to see", "healthWarning")
+			elseif #vim.fn.getqflist() == 1 then
 				vim.cmd("cfirst")
 			elseif #vim.fn.getqflist() > 0 then
 				vim.cmd("cw | cfirst")
-				util.echoprint("Issue found: resolve then continue", "healthWarning")
+				util.echoprint("Issue found: resolve then continue", "healthError")
 			else
 				vim.cmd("cw")
 				if exit_code ~= 0 then
