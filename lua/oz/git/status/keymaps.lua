@@ -710,19 +710,19 @@ local function handle_show_help()
 	show_map.show_maps({
 		group = {
 			["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-			["Commit mappings"] = { "cc", "ca", "ce", "c<Space>", "cw" },
-			["Diff mappings"] = { "dd", "dc", "dm", "db" },
+			["Commit mappings[c]"] = { "cc", "ca", "ce", "c<Space>", "cw" },
+			["Diff mappings[d]"] = { "dd", "dc", "dm", "db" },
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
-			["Goto mappings"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g<Space>", "g?" }, -- Added gL
-			["Remote mappings"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
+			["Goto mappings[g]"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g<Space>", "g?" }, -- Added gL
+			["Remote mappings[M]"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
 			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
-			["Conflict resolution mappings"] = { "xo", "xc", "xp" },
-			["Stash mappings"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
-			["Branch mappings"] = { "bn", "bd", "bu", "bU" },
+			["Conflict resolution mappings[x]"] = { "xo", "xc", "xp" },
+			["Stash mappings[z]"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
+			["Branch mappings[b]"] = { "bn", "bd", "bu", "bU" },
 			["Push/Pull mappings"] = { "p", "P" },
-			["Merge mappings"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
-			["Rebase mappings"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" },
-			["Reset mappings"] = { "UU", "Uu", "Us", "Ux", "Uh", "Um" },
+			["Merge mappings[m]"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
+			["Rebase mappings[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" },
+			["Reset mappings[U]"] = { "UU", "Uu", "Us", "Ux", "Uh", "Um" },
 		},
 		no_empty = true,
 		subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
