@@ -15,15 +15,11 @@ local state = status.state
 local buf_id = nil
 
 local open_in_ozgitwin = require("oz.git.oz_git_win").open_oz_git_win
-local run_cmd = shell.run_command
+local get_shellout = shell.run_command
 local shellout_str = shell.shellout_str
 local shellout_tbl = shell.shellout_tbl
 
 -- map helper
-local map = function(...)
-	util.Map(...)
-end
-
 -- Helper to run Vim command and refresh status buffer on success
 local function run_n_refresh(cmd)
 	git.after_exec_complete(function()
@@ -31,8 +27,8 @@ local function run_n_refresh(cmd)
 			refresh(true)
 		end)
 	end)
-	util.inactive_echo(":" .. cmd)
 	vim.cmd(cmd)
+    util.inactive_echo(":" .. cmd)
 end
 
 -- ==================================
@@ -176,6 +172,16 @@ end
 local function handle_commit_amend()
 	run_n_refresh("Git commit --amend -q")
 end
+local function handle_commit_undo()
+	local ok, commit_ahead = get_shellout("git rev-list --count @{u}..HEAD")
+	local commit_ahead_n = ok and tonumber(commit_ahead[1]) or nil
+
+	if commit_ahead_n == 0 then
+		util.Notify("Commit already pushed, you should 'revert'.", "warn", "oz_git")
+    else
+        run_n_refresh("Git reset --soft HEAD~1")
+	end
+end
 
 -- helper: handle enter
 local function handle_enter_key_helper(line)
@@ -295,7 +301,7 @@ end
 local function handle_diff_remote()
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
 
-	local ok, cur_remote_branch_ref = run_cmd(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local ok, cur_remote_branch_ref = get_shellout(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 	if ok then
 		vim.cmd(("DiffviewOpen %s...%s"):format(cur_remote_branch_ref[1], current_branch))
 	end
@@ -408,7 +414,7 @@ end
 
 -- helper: get remotes
 local function get_remotes()
-	local ok, remotes = run_cmd({ "git", "remote" }, state.cwd)
+	local ok, remotes = get_shellout({ "git", "remote" }, state.cwd)
 	if ok and #remotes ~= 0 then
 		state.remotes = remotes
 		return remotes
@@ -731,7 +737,7 @@ end
 
 -- Helper to map specific help keys
 local function map_help_key(key, title)
-	map({ "n", "x" }, key, function()
+	util.Map({ "n", "x" }, key, function()
 		show_map.show_maps({ key = key, title = title })
 	end, { buffer = buf_id })
 end
@@ -743,16 +749,16 @@ function M.keymaps_init(buf)
 	buf_id = buf
 
 	-- quit
-	map("n", "q", handle_quit, { buffer = buf_id, desc = "Close git status buffer." })
+	util.Map("n", "q", handle_quit, { buffer = buf_id, desc = "Close git status buffer." })
 
 	-- tab (toggle)
-	map("n", "<tab>", handle_tab, { buffer = buf_id, desc = "Toggle headings / inline file diff. <*>" })
+	util.Map("n", "<tab>", handle_tab, { buffer = buf_id, desc = "Toggle headings / inline file diff. <*>" })
 
 	-- refresh
-	map("n", "<C-r>", refresh, { buffer = buf_id, desc = "Refresh status buffer." })
+	util.Map("n", "<C-r>", refresh, { buffer = buf_id, desc = "Refresh status buffer." })
 
 	-- stage
-	map(
+	util.Map(
 		{ "n", "x" },
 		"s",
 		handle_stage,
@@ -760,7 +766,7 @@ function M.keymaps_init(buf)
 	)
 
 	-- unstage
-	map(
+	util.Map(
 		{ "n", "x" },
 		"u",
 		handle_unstage,
@@ -768,7 +774,7 @@ function M.keymaps_init(buf)
 	)
 
 	-- discard
-	map(
+	util.Map(
 		{ "n", "x" },
 		"X",
 		handle_discard,
@@ -776,22 +782,22 @@ function M.keymaps_init(buf)
 	)
 
 	-- untrack
-	map({ "n", "x" }, "K", handle_untrack, { buffer = buf_id, desc = "Untrack file or selected files. <*>" })
+	util.Map({ "n", "x" }, "K", handle_untrack, { buffer = buf_id, desc = "Untrack file or selected files. <*>" })
 
 	-- rename
-	map("n", "grn", handle_rename, { buffer = buf_id, desc = "Rename file or branch under cursor. <*>" })
+	util.Map("n", "grn", handle_rename, { buffer = buf_id, desc = "Rename file or branch under cursor. <*>" })
 
 	-- [z]Stash mappings --TODO add stash branch
 	-- stash apply
-	map("n", "za", handle_stash_apply, { buffer = buf_id, desc = "Apply stash under cursor. <*>" })
+	util.Map("n", "za", handle_stash_apply, { buffer = buf_id, desc = "Apply stash under cursor. <*>" })
 	-- stash pop
-	map("n", "zp", handle_stash_pop, { buffer = buf_id, desc = "Pop stash under cursor. <*>" })
+	util.Map("n", "zp", handle_stash_pop, { buffer = buf_id, desc = "Pop stash under cursor. <*>" })
 	-- stash drop
-	map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor. <*>" })
+	util.Map("n", "zd", handle_stash_drop, { buffer = buf_id, desc = "Drop stash under cursor. <*>" })
 	-- :Git stash
-	map("n", "z<space>", ":Git stash ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git stash." })
+	util.Map("n", "z<space>", ":Git stash ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git stash." })
 	-- stash save
-	map("n", "zz", function()
+	util.Map("n", "zz", function()
 		local input = util.inactive_input(":Git stash", " save ")
 		if input then
 			run_n_refresh("Git stash" .. input)
@@ -799,52 +805,54 @@ function M.keymaps_init(buf)
 	end, { buffer = buf_id, desc = "Stash save optionally add a message." })
 
 	-- commit map
-	map("n", "cc", handle_commit, { buffer = buf_id, desc = "Create a commit" })
+	util.Map("n", "cc", handle_commit, { buffer = buf_id, desc = "Create a commit" })
 	-- commit ammend --no edit
-	map("n", "ce", handle_commit_amend_no_edit, { buffer = buf_id, desc = "Ammend all changes without edit." })
+	util.Map("n", "ce", handle_commit_amend_no_edit, { buffer = buf_id, desc = "Ammend all changes without edit." })
 	-- commit amend
-	map("n", "ca", handle_commit_amend, { buffer = buf_id, desc = "Ammend previous commit." })
+	util.Map("n", "ca", handle_commit_amend, { buffer = buf_id, desc = "Ammend previous commit." })
+	-- commit undo
+	util.Map("n", "cu", handle_commit_undo, { buffer = buf_id, desc = "Undo last commit." })
 	-- G commit cmdline
-	map(
+	util.Map(
 		"n",
 		"c<space>",
 		":Git commit ",
 		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git commit." }
 	)
 	-- commit wip
-	map("n", "cw", ":Gcw", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Gcw" })
+	util.Map("n", "cw", ":Gcw", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Gcw" })
 
 	-- open current entry / switch branch
-	map("n", "<cr>", handle_enter_key, { buffer = buf_id, desc = "open entry under cursor / switch branches. <*>" })
+	util.Map("n", "<cr>", handle_enter_key, { buffer = buf_id, desc = "open entry under cursor / switch branches. <*>" })
 
 	-- [g]oto mode
 	-- log
-	map("n", "gl", handle_goto_log, { buffer = buf_id, desc = "goto commit logs." })
-	map("n", "gL", handle_goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch. <*>" })
+	util.Map("n", "gl", handle_goto_log, { buffer = buf_id, desc = "goto commit logs." })
+	util.Map("n", "gL", handle_goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch. <*>" })
 	-- :Git
-	map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
+	util.Map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
 	-- goto sections
-	map("n", "gu", function()
+	util.Map("n", "gu", function()
 		g_util.goto_str("Changes not staged for commit:")
 	end, { buffer = buf_id, desc = "goto unstaged changes section." })
-	map("n", "gs", function()
+	util.Map("n", "gs", function()
 		g_util.goto_str("Changes to be committed:")
 	end, { buffer = buf_id, desc = "goto staged for commit section." })
-	map("n", "gU", function()
+	util.Map("n", "gU", function()
 		g_util.goto_str("Untracked files:")
 	end, { buffer = buf_id, desc = "goto untracked files section." })
-	map("n", "gz", function()
+	util.Map("n", "gz", function()
 		g_util.goto_str("Stash list:")
 	end, { buffer = buf_id, desc = "goto stashlist section." })
 	-- Add to gitignore
-	map({ "n", "x" }, "gI", handle_goto_gitignore, { buffer = buf_id, desc = "Add file or dir to .gitignore. <*>" })
+	util.Map({ "n", "x" }, "gI", handle_goto_gitignore, { buffer = buf_id, desc = "Add file or dir to .gitignore. <*>" })
 
 	-- [d]iff mode
-	map("n", "dd", handle_diff_file_changes, { buffer = buf_id, desc = "Diff file changes. <*>" })
-	map("n", "dc", handle_diff_file_history, { buffer = buf_id, desc = "Diff file history or stash. <*>" })
+	util.Map("n", "dd", handle_diff_file_changes, { buffer = buf_id, desc = "Diff file changes. <*>" })
+	util.Map("n", "dc", handle_diff_file_history, { buffer = buf_id, desc = "Diff file history or stash. <*>" })
 	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then -- only diffview keymaps
-		map("n", "dm", handle_diff_remote, { buffer = buf_id, desc = "Diff between local and remote branch. <*>" })
-		map("n", "db", handle_diff_branch, { buffer = buf_id, desc = "Diff between branches. <*>" })
+		util.Map("n", "dm", handle_diff_remote, { buffer = buf_id, desc = "Diff between local and remote branch. <*>" })
+		util.Map("n", "db", handle_diff_branch, { buffer = buf_id, desc = "Diff between branches. <*>" })
 	end
 
 	-- Merge/Conflict helper
@@ -864,12 +872,12 @@ function M.keymaps_init(buf)
 			)
 		end
 		-- start resolution
-		map("n", "xo", handle_conflict_start_manual, { buffer = buf_id, desc = "Start manual conflict resolution." })
+		util.Map("n", "xo", handle_conflict_start_manual, { buffer = buf_id, desc = "Start manual conflict resolution." })
 		-- complete (manual)
-		map("n", "xc", handle_conflict_complete, { buffer = buf_id, desc = "Complete manual conflict resolution." })
+		util.Map("n", "xc", handle_conflict_complete, { buffer = buf_id, desc = "Complete manual conflict resolution." })
 		-- diffview resolve
 		if util.usercmd_exist("DiffviewOpen") then
-			map(
+			util.Map(
 				"n",
 				"xp",
 				handle_conflict_diffview,
@@ -880,19 +888,19 @@ function M.keymaps_init(buf)
 
 	-- Pick Mode
 	local user_mappings = require("oz.git").user_config.mappings -- Ensure this is available
-	map(
+	util.Map(
 		"n",
 		user_mappings.toggle_pick,
 		handle_toggle_pick,
 		{ nowait = true, buffer = buf_id, desc = "Pick/unpick file/branch/stash. <*>" }
 	)
-	map(
+	util.Map(
 		"n",
 		{ "a", "i" },
 		handle_edit_picked,
 		{ nowait = true, buffer = buf_id, desc = "Enter cmdline to edit picked." }
 	)
-	map(
+	util.Map(
 		"n",
 		user_mappings.unpick_all,
 		handle_discard_picked,
@@ -900,20 +908,20 @@ function M.keymaps_init(buf)
 	)
 
 	-- Remote mappings
-	map("n", "MM", "<cmd>Git remote -v<cr>", { buffer = buf_id, desc = "Remote list." })
-	map("n", "Ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
-	map("n", "Md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote. <*>" })
-	map("n", "Mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote. <*>" })
+	util.Map("n", "MM", "<cmd>Git remote -v<cr>", { buffer = buf_id, desc = "Remote list." })
+	util.Map("n", "Ma", handle_remote_add_update, { buffer = buf_id, desc = "Add or update remotes." })
+	util.Map("n", "Md", handle_remote_remove, { buffer = buf_id, desc = "Remove remote. <*>" })
+	util.Map("n", "Mr", handle_remote_rename, { buffer = buf_id, desc = "Rename remote. <*>" })
 
 	-- push / pull
-	map("n", "p", handle_pull, { buffer = buf_id, desc = "Git pull or pull from branch under cursor. <*>" })
-	map("n", "P", handle_push, { buffer = buf_id, desc = "Git push or push to branch under cursor. <*>" })
+	util.Map("n", "p", handle_pull, { buffer = buf_id, desc = "Git pull or pull from branch under cursor. <*>" })
+	util.Map("n", "P", handle_push, { buffer = buf_id, desc = "Git push or push to branch under cursor. <*>" })
 
 	-- [B]ranch mappings
-	map("n", "bn", handle_branch_new, { buffer = buf_id, desc = "Create a new branch. <*>" })
-	map("n", "bd", handle_branch_delete, { buffer = buf_id, desc = "Delete branch under cursor. <*>" })
-	map("n", "bu", handle_branch_set_upstream, { buffer = buf_id, desc = "Set upstream for branch under cursor. <*>" })
-	map(
+	util.Map("n", "bn", handle_branch_new, { buffer = buf_id, desc = "Create a new branch. <*>" })
+	util.Map("n", "bd", handle_branch_delete, { buffer = buf_id, desc = "Delete branch under cursor. <*>" })
+	util.Map("n", "bu", handle_branch_set_upstream, { buffer = buf_id, desc = "Set upstream for branch under cursor. <*>" })
+	util.Map(
 		"n",
 		"bU",
 		handle_branch_unset_upstream,
@@ -921,48 +929,48 @@ function M.keymaps_init(buf)
 	)
 
 	-- [M]erge mappings
-	map("n", "mm", handle_merge_branch, { buffer = buf_id, desc = "Start merge with branch under cursor. <*>" })
-	map("n", "ml", function()
+	util.Map("n", "mm", handle_merge_branch, { buffer = buf_id, desc = "Start merge with branch under cursor. <*>" })
+	util.Map("n", "ml", function()
 		run_n_refresh("Git merge --continue")
 	end, { buffer = buf_id, desc = "Merge continue." })
-	map("n", "ma", function()
+	util.Map("n", "ma", function()
 		run_n_refresh("Git merge --abort")
 	end, { buffer = buf_id, desc = "Merge abort." })
-	map("n", "ms", function()
+	util.Map("n", "ms", function()
 		handle_merge_branch("--squash")
 	end, { buffer = buf_id, desc = "Merge with squash." })
-	map("n", "me", function()
+	util.Map("n", "me", function()
 		handle_merge_branch("--no-commit")
 	end, { buffer = buf_id, desc = "Merge with no-commit." })
-	map("n", "mq", function()
+	util.Map("n", "mq", function()
 		handle_merge_branch("--quit")
 	end, { buffer = buf_id, desc = "Merge quit." })
-	map("n", "m<space>", ":Git merge ", { silent = false, buffer = buf_id, desc = "Populate cmdline with Git merge." })
+	util.Map("n", "m<space>", ":Git merge ", { silent = false, buffer = buf_id, desc = "Populate cmdline with Git merge." })
 
 	-- [R]ebase mappings
-	map("n", "rr", handle_rebase_branch, { buffer = buf, desc = "Rebase branch under cursor with provided args. <*>" })
-	map("n", "ri", function()
+	util.Map("n", "rr", handle_rebase_branch, { buffer = buf, desc = "Rebase branch under cursor with provided args. <*>" })
+	util.Map("n", "ri", function()
 		local branch_under_cursor = s_util.get_branch_under_cursor()
 		if branch_under_cursor then
 			run_n_refresh("Git rebase -i " .. branch_under_cursor)
 		end
 	end, { buffer = buf, desc = "Start interactive rebase with branch under cursor. <*>" })
-	map("n", "rl", function()
+	util.Map("n", "rl", function()
 		run_n_refresh("Git rebase --continue")
 	end, { buffer = buf, desc = "Rebase continue." })
-	map("n", "ra", function()
+	util.Map("n", "ra", function()
 		run_n_refresh("Git rebase --abort")
 	end, { buffer = buf, desc = "Rebase abort." })
-	map("n", "rq", function()
+	util.Map("n", "rq", function()
 		run_n_refresh("Git rebase --quit")
 	end, { buffer = buf, desc = "Rebase quit." })
-	map("n", "rk", function()
+	util.Map("n", "rk", function()
 		run_n_refresh("Git rebase --skip")
 	end, { buffer = buf, desc = "Rebase skip." })
-	map("n", "re", function()
+	util.Map("n", "re", function()
 		run_n_refresh("Git rebase --edit-todo")
 	end, { buffer = buf, desc = "Rebase edit todo." })
-	map(
+	util.Map(
 		"n",
 		"r<space>",
 		":Git rebase ",
@@ -970,14 +978,14 @@ function M.keymaps_init(buf)
 	)
 
 	-- [R]eset mappings
-	map({ "n", "x" }, "UU", handle_reset, { buffer = buf, desc = "Reset file/branch. <*>" })
-	map("n", "Us", function()
+	util.Map({ "n", "x" }, "UU", handle_reset, { buffer = buf, desc = "Reset file/branch. <*>" })
+	util.Map("n", "Us", function()
 		handle_reset("--soft")
 	end, { buffer = buf, desc = "Reset soft." })
-	map("n", "Um", function()
+	util.Map("n", "Um", function()
 		handle_reset("--mixed")
 	end, { buffer = buf, desc = "Reset mixed." })
-	map("n", "Uh", function()
+	util.Map("n", "Uh", function()
 		local confirm_ans = util.prompt("Do really really want to Git reset --hard ?", "&Yes\n&No", 2)
 		if confirm_ans == 1 then
 			handle_reset("--hard")
@@ -985,10 +993,10 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = "Reset hard(danger)." })
 
 	-- open reflog
-	map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
+	util.Map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
 
 	-- help
-	map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })
+	util.Map("n", "g?", handle_show_help, { buffer = buf_id, desc = "Show all availble keymaps." })
 	map_help_key("M", "Remote mappings")
 	map_help_key("c", "Commit mappings")
 	map_help_key("z", "Stash mappings")
