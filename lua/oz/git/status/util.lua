@@ -2,7 +2,10 @@ local M = {}
 local util = require("oz.util")
 local shell = require("oz.util.shell")
 local state = require("oz.git.status").state
--- local status = require("oz.git.status")
+local git = require("oz.git")
+local status = require("oz.git.status")
+
+local refresh = status.refresh_status_buf
 
 --
 M.headings_table = {}
@@ -240,6 +243,16 @@ function M.get_stash_under_cursor()
 	else
 		return {}
 	end
+end
+
+function M.run_n_refresh(cmd)
+    git.after_exec_complete(function()
+        vim.schedule(function()
+            refresh(true)
+        end)
+    end)
+    vim.cmd(cmd)
+    util.inactive_echo(":" .. cmd)
 end
 
 return M
