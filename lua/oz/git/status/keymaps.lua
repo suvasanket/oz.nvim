@@ -24,7 +24,7 @@ local function handle_show_help()
 			["Quick actions"] = { "grn", "<Tab>", "<CR>", "I", "<C-R>", "q" }, -- Added refresh, quit, pull
 			["Conflict resolution mappings[x]"] = { "xo", "xc", "xp" },
 			["Stash mappings[z]"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
-			["Branch mappings[b]"] = { "bn", "bd", "bu", "bU" },
+			["Branch mappings[b]"] = { "bn", "bf", "bd", "bu", "bU" },
 			["Push/Pull mappings"] = { "p", "P", "f" },
 			["Merge mappings[m]"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
 			["Rebase mappings[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" },
@@ -263,8 +263,9 @@ function M.keymaps_init(buf)
 		{ buffer = buf_id, desc = "Git push or push to branch under cursor. <*>" }
 	)
 
-	-- [B]ranch mappings
+	-- branch mappings
 	util.Map("n", "bn", handle.branch.new, { buffer = buf_id, desc = "Create a new branch. <*>" })
+	util.Map("n", "bf", handle.branch.new_from, { buffer = buf_id, desc = "New branch from a given branch." })
 	util.Map("n", "bd", handle.branch.delete, { buffer = buf_id, desc = "Delete branch under cursor. <*>" })
 	util.Map(
 		"n",

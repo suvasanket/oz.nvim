@@ -13,6 +13,16 @@ function M.new()
     end
 end
 
+function M.new_from()
+    local branches = shell.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
+    local new_branch = util.UserInput("New Branch Name:")
+    vim.ui.select(branches, { prompt = "From branch:" }, function(choice)
+        if choice then
+            s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
+        end
+    end)
+end
+
 function M.delete()
     local branch = s_util.get_branch_under_cursor()
     if branch then
