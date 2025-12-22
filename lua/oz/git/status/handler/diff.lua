@@ -3,7 +3,6 @@ local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local g_util = require("oz.git.util")
 local git = require("oz.git")
 local shell = require("oz.util.shell")
 
@@ -67,9 +66,9 @@ end
 function M.branch()
     local branch_under_cursor = s_util.get_branch_under_cursor()
     if branch_under_cursor then
-        g_util.set_cmdline(("DiffviewOpen %s|...%s"):format(state.current_branch, branch_under_cursor))
+        util.set_cmdline(("DiffviewOpen %s|...%s"):format(state.current_branch, branch_under_cursor))
     else
-        g_util.set_cmdline(("DiffviewOpen %s|"):format(state.current_branch))
+        util.set_cmdline(("DiffviewOpen %s|"):format(state.current_branch))
     end
 end
 

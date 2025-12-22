@@ -2,7 +2,6 @@ local M = {}
 local util = require("oz.util")
 local status = require("oz.git.status")
 local s_util = require("oz.git.status.util")
-local g_util = require("oz.git.util")
 local git = require("oz.git")
 local wizard = require("oz.git.wizard")
 local caching = require("oz.caching")
@@ -76,7 +75,7 @@ end
 function M.enter_key_helper(line)
     if line:match('"([^"]+)"') then -- populate cmdline with help.
         local quoted_str = line:match('"([^"]+)"'):gsub("git", "Git"):gsub("<[^>]*>", "")
-        g_util.set_cmdline(quoted_str)
+        util.set_cmdline(quoted_str)
     elseif line:match("Stash list:") then -- stash detail
         git.after_exec_complete(function(_, out, _)
             open_in_ozgitwin(out, nil)
@@ -85,7 +84,7 @@ function M.enter_key_helper(line)
     elseif line:match("^On branch") then -- branch detail
         vim.cmd("Git show-branch -a")
     elseif line:match("^HEAD detached at") then -- detached head
-        g_util.set_cmdline("Git checkout ")
+        util.set_cmdline("Git checkout ")
     end
 end
 
@@ -198,7 +197,7 @@ end
 function M.rebase_branch()
     local branch_under_cursor = s_util.get_branch_under_cursor()
     if branch_under_cursor then
-        g_util.set_cmdline("Git rebase| " .. branch_under_cursor)
+        util.set_cmdline("Git rebase| " .. branch_under_cursor)
     end
 end
 
@@ -219,7 +218,7 @@ function M.reset(arg)
             args = branch
         end
     end
-    g_util.set_cmdline(("Git reset %s"):format(args or arg))
+    util.set_cmdline(("Git reset %s"):format(args or arg))
 end
 
 function M.undo_orig_head()

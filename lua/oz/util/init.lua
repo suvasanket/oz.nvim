@@ -323,4 +323,34 @@ function M.generate_unique_id()
 	return str
 end
 
+function M.transient_cmd_complete()
+	local group = vim.api.nvim_create_augroup("CmdwinEventsTransient", { clear = true })
+	local d_wildmode = vim.o.wildmode
+	vim.api.nvim_create_autocmd("CmdlineChanged", {
+		group = group,
+		callback = function()
+			vim.o.wildmode = "noselect:lastused,full"
+			pcall(vim.fn.wildtrigger)
+		end,
+	})
+	vim.api.nvim_create_autocmd("CmdlineLeave", {
+		group = group,
+		once = true,
+		callback = function()
+			vim.o.wildmode = d_wildmode
+			pcall(vim.api.nvim_del_augroup_by_name, "CmdwinEventsTransient")
+		end,
+	})
+end
+
+function M.set_cmdline(str)
+    local cmdline = str:gsub("%|", "")
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(":<C-U>" .. cmdline, true, false, true), "n", false)
+    local cursor_pos = str:find("%|")
+    if cursor_pos then
+        vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
+    end
+    M.transient_cmd_complete()
+end
+
 return M

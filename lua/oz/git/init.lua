@@ -101,7 +101,7 @@ local function special_cmd_exec(args_tbl, args_str)
 				-- git suggestion
 				local suggestion = wizard.get_git_suggestions(lines, args_tbl)
 				if suggestion then
-					g_util.set_cmdline(suggestion)
+					util.set_cmdline(suggestion)
 				end
 			end)
 		elseif M.user_config and M.user_config.remote_opt_exec == "term" then
@@ -266,7 +266,7 @@ function M.run_git_job(args)
 			-- Suggestion.
 			if suggestion then
 				vim.schedule(function()
-					g_util.set_cmdline(suggestion)
+					util.set_cmdline(suggestion)
 				end)
 			end
 		end,

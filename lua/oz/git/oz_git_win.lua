@@ -70,11 +70,11 @@ end
 local function if_grabed_enter()
 	if #grab_hashs ~= 0 then
 		util.tbl_monitor().stop_monitoring(grab_hashs)
-		g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
+		util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 		grab_hashs = {}
 	elseif #grab_files ~= 0 then
 		util.tbl_monitor().stop_monitoring(grab_files)
-		g_util.set_cmdline("Git | " .. table.concat(grab_files, " "))
+		util.set_cmdline("Git | " .. table.concat(grab_files, " "))
 		grab_files = {}
 	else
 		return false

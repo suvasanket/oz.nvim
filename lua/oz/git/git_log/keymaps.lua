@@ -81,9 +81,9 @@ local function handle_reset(arg)
 	local current_hash = get_selected_hash()
 	if #current_hash > 0 then
 		if not arg then
-			g_util.set_cmdline(("Git reset| %s^"):format(current_hash[1]))
+			util.set_cmdline(("Git reset| %s^"):format(current_hash[1]))
 		else
-			g_util.set_cmdline(("Git reset %s %s^"):format(arg, current_hash[1]))
+			util.set_cmdline(("Git reset %s %s^"):format(arg, current_hash[1]))
 		end
 	end
 end
@@ -104,7 +104,7 @@ local function handle_revert()
 		end
 	end
 	if str then
-		g_util.set_cmdline("Git revert| " .. str)
+		util.set_cmdline("Git revert| " .. str)
 	end
 end
 
@@ -196,7 +196,7 @@ function M.keymaps_init(buf)
 	map("n", { "a", "i" }, function()
 		if #grab_hashs ~= 0 then
 			util.tbl_monitor().stop_monitoring(grab_hashs)
-			g_util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
+			util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 			grab_hashs = {}
 		end
 	end, { buffer = buf, desc = "Enter cmdline to edit picked hashes." })
@@ -265,7 +265,7 @@ function M.keymaps_init(buf)
 	map("n", "rr", function()
 		local current_hash = get_selected_hash()
 		if #current_hash == 1 then
-			g_util.set_cmdline("Git rebase| " .. current_hash[1])
+			util.set_cmdline("Git rebase| " .. current_hash[1])
 		end
 	end, { buffer = buf, desc = "Rebase with commit under cursor. <*>" })
 	map("n", "rl", function()
@@ -342,7 +342,7 @@ function M.keymaps_init(buf)
 
 	map("n", "cc", function()
 		cmd_upon_current_commit(function(hash)
-			g_util.set_cmdline("Git commit| " .. hash)
+			util.set_cmdline("Git commit| " .. hash)
 		end)
 	end, { buffer = buf, desc = "Populate cmdline with Git commit followed by current hash. <*>" })
 

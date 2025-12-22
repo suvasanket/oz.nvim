@@ -3,15 +3,6 @@ local original_mappings = {}
 local util = require("oz.util")
 local shell = require("oz.util.shell")
 
-function M.set_cmdline(str)
-	local cmdline = str:gsub("%|", "")
-	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(":<C-U>" .. cmdline, true, false, true), "n", false)
-	local cursor_pos = str:find("%|")
-	if cursor_pos then
-		vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
-	end
-end
-
 function M.if_in_git(path)
 	local ok, output = shell.run_command({ "git", "rev-parse", "--is-inside-work-tree" }, path)
 

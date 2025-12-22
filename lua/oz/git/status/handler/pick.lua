@@ -2,7 +2,6 @@ local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local g_util = require("oz.git.util")
 
 local status_grab_buffer = status.status_grab_buffer
 local buf_id = nil
@@ -55,7 +54,7 @@ end
 function M.edit_picked()
     if #status_grab_buffer > 0 then
         util.tbl_monitor().stop_monitoring(status_grab_buffer)
-        g_util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
+        util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
         status_grab_buffer = {} -- Clear after editing
         status.status_grab_buffer = status_grab_buffer -- Update original reference
     end

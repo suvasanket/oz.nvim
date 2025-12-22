@@ -2,7 +2,6 @@ local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local g_util = require("oz.git.util")
 local shell = require("oz.util.shell")
 
 local state = status.state
@@ -39,10 +38,7 @@ function M.push()
 	end
 
 	if refined_args then
-		g_util.set_cmdline("Git push " .. refined_args .. " ")
-		vim.schedule(function()
-			pcall(vim.fn.wildtrigger)
-		end)
+		util.set_cmdline("Git push " .. refined_args)
 	end
 end
 
@@ -77,10 +73,7 @@ function M.pull()
 		branch = cur_remote_branch .. ":" .. current_branch
 	end
 
-	g_util.set_cmdline(("Git pull %s %s "):format(cur_remote, branch))
-    vim.schedule(function()
-        pcall(vim.fn.wildtrigger)
-    end)
+	util.set_cmdline(("Git pull %s %s"):format(cur_remote, branch))
 end
 
 function M.fetch()
