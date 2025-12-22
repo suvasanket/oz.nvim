@@ -23,11 +23,19 @@ local function filter_table(tbl, str)
 	return result, new_keys
 end
 
+--- get header str fmt
+---@param str string
+local function header_fmt(str)
+	return string.format("█%s█", str)
+end
+
 --- show mappings
----@param args {title: string, no_empty: boolean, key: string, group: table<string, string[]>, subtext: string[]}
+---@param args {title: string, no_empty: boolean, key: string, group: table<string, string[]>, subtext: string[], parent_buf: integer|nil, sub_help_buf: boolean}
 ---@return integer|nil
 ---@return integer|nil
 function M.show_maps(args)
+	-- Capture the starting window immediately for robust focus switching later
+	local start_win = vim.api.nvim_get_current_win()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local modes = { "n", "v", "i", "t" }
 	local sub_keys = {}
@@ -86,7 +94,7 @@ function M.show_maps(args)
 			if #keymaps > 0 then
 				table.insert(keymaps, "")
 			end
-			table.insert(keymaps, " █" .. header_name .. "█")
+			table.insert(keymaps, header_fmt(header_name))
 
 			-- Add each key in this group
 			local sorted_keys = {}
@@ -107,7 +115,7 @@ function M.show_maps(args)
 		-- Add remaining keymaps under "Other Mappings" if any exist
 		if not vim.tbl_isempty(all_keymaps) then
 			table.insert(keymaps, "")
-			table.insert(keymaps, " █Other Mappings█")
+			table.insert(keymaps, header_fmt("unspecified"))
 
 			local sorted_keys = {}
 			for key in pairs(all_keymaps) do
@@ -155,14 +163,14 @@ function M.show_maps(args)
 	key_help_buf = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(key_help_buf, 0, -1, false, keymaps)
 
-	-- highlight
+	-- highlight --
 	vim.api.nvim_buf_call(key_help_buf, function()
 		vim.cmd("syntax clear")
 		vim.cmd("highlight BoldKey gui=bold guifg=#99BC85 cterm=bold")
 		vim.cmd('syntax match BoldKey /"\\(.*\\)"/ contains=NONE')
 		vim.cmd([[
-            syntax match Comment /\[.*\]/
-            syntax match @keyword /<.*>/
+        syntax match Comment /\[.*\]/
+        syntax match @keyword /<.*>/
         ]])
 		if has_headers then
 			vim.cmd("highlight HeaderName gui=bold guifg=#DFD3C3 guibg=#2F2F2F cterm=bold")
@@ -187,26 +195,110 @@ function M.show_maps(args)
 	local row = vim.o.lines - height - 4
 	local col = vim.o.columns
 
-	local title = args.title or "All keymaps"
-	local win_opts = {
-		relative = "editor",
-		width = width,
-		height = height,
-		row = row,
-		col = col,
-		style = "minimal",
-		border = "single",
-		title = " " .. title .. " ",
-		title_pos = "left",
-	}
+	local title_str = args.title or "All keymaps"
+	local footer_str = args.sub_help_buf and "ctrl-c/esc cancel" or "<C-f> find heading"
+
+	-- win options --
+	local win_opts = {}
+
+	if args.sub_help_buf then
+		win_opts = {
+			relative = "editor",
+			width = width,
+			height = height,
+			row = row,
+			col = col,
+			style = "minimal",
+			border = "rounded",
+			title = " " .. title_str .. " ",
+			title_pos = "left",
+			footer = " " .. footer_str .. " ",
+			footer_pos = "right",
+		}
+	else
+		-- Split configuration
+		win_opts = {
+			split = "below",
+			win = 0, -- Split relative to current window
+			height = height,
+			style = "minimal", -- This implicitly handles number, relativenumber, cursorline, etc.
+		}
+	end
+
 	key_help_win = vim.api.nvim_open_win(key_help_buf, true, win_opts)
 	vim.api.nvim_buf_set_option(key_help_buf, "modifiable", false)
-	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "q", "<cmd>close<CR>", { noremap = true, silent = true })
-	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "<C-c>", "<cmd>close<CR>", { noremap = true, silent = true })
-	vim.api.nvim_buf_set_keymap(key_help_buf, "n", "<Esc>", "<cmd>close<CR>", { noremap = true, silent = true })
+	vim.api.nvim_buf_set_option(key_help_buf, "buftype", "nofile")
 
+	-- If not floating, ensure "bare" options are strictly enforced on the split window
+	if not args.sub_help_buf then
+		local set_opt = vim.api.nvim_win_set_option
+		set_opt(key_help_win, "wrap", false)
+		set_opt(key_help_win, "foldcolumn", "0")
+		-- These are technically covered by style="minimal", but explicitly setting them
+		-- ensures no plugins (like line number togglers) override the minimal style on Enter.
+		set_opt(key_help_win, "signcolumn", "no")
+		set_opt(key_help_win, "number", false)
+		set_opt(key_help_win, "relativenumber", false)
+	end
+
+	--- keymaps ---
+	local function close_and_return()
+		pcall(vim.api.nvim_win_close, 0, true)
+
+		if args.parent_buf and vim.api.nvim_buf_is_valid(args.parent_buf) then
+			-- Optimization: check if start_win is valid and matches parent_buf first
+			if
+				start_win
+				and vim.api.nvim_win_is_valid(start_win)
+				and vim.api.nvim_win_get_buf(start_win) == args.parent_buf
+			then
+				vim.api.nvim_set_current_win(start_win)
+			else
+				-- Fallback lookup
+				local parent_wins = vim.fn.win_findbuf(args.parent_buf)
+				if #parent_wins > 0 then
+					vim.api.nvim_set_current_win(parent_wins[1])
+				else
+					vim.api.nvim_set_current_buf(args.parent_buf)
+				end
+			end
+		end
+	end
+
+	vim.keymap.set("n", "q", close_and_return, { buffer = key_help_buf, noremap = true, silent = true })
+	vim.keymap.set("n", "<C-c>", close_and_return, { buffer = key_help_buf, noremap = true, silent = true })
+	vim.keymap.set("n", "<esc>", close_and_return, { buffer = key_help_buf, noremap = true, silent = true })
+
+	if not args.sub_help_buf then
+		vim.keymap.set("n", "<C-f>", function()
+			local keys = vim.tbl_keys(args.group)
+			vim.ui.select(keys, {
+				prompt = "select heading",
+				format_item = function(key)
+					return key
+				end,
+			}, function(choice)
+				if not choice then
+					return
+				end
+
+				local pattern = header_fmt(choice)
+				local pos = vim.fn.searchpos("\\V" .. pattern, "w")
+
+				if pos[1] ~= 0 then
+					vim.api.nvim_win_set_cursor(0, { pos[1], pos[2] - 1 })
+				end
+			end)
+		end, { buffer = key_help_buf, noremap = true, silent = true })
+	end
+
+	-- --
 	if #sub_keys > 0 then
-		pcall(vim.cmd.wincmd, "p")
+		-- Refactored efficiency: Directly focus the original window using API
+		if vim.api.nvim_win_is_valid(start_win) then
+			vim.api.nvim_set_current_win(start_win)
+		end
+
 		vim.fn.timer_start(10, function()
 			local ok, char = pcall(vim.fn.getchar)
 			if ok then

@@ -21,14 +21,14 @@ local function handle_show_help()
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
 			["Goto mappings[g]"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g<Space>", "g?" }, -- Added gL
 			["Remote mappings[M]"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
-			["Quick actions"] = { "grn", "<Tab>", "<CR>" }, -- Added refresh, quit, pull
+			["Quick actions"] = { "grn", "<Tab>", "<CR>", "I", "<C-R>", "q" }, -- Added refresh, quit, pull
 			["Conflict resolution mappings[x]"] = { "xo", "xc", "xp" },
 			["Stash mappings[z]"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
 			["Branch mappings[b]"] = { "bn", "bd", "bu", "bU" },
-			["Push/Pull mappings"] = { "p", "P" },
+			["Push/Pull mappings"] = { "p", "P", "f" },
 			["Merge mappings[m]"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
 			["Rebase mappings[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" },
-			["Reset mappings[U]"] = { "UU", "Uu", "Us", "Ux", "Uh", "Um" },
+			["Reset mappings[U]"] = { "UU", "Up", "Uu", "Us", "Ux", "Uh", "Um" },
 		},
 		no_empty = true,
 		subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
@@ -38,7 +38,7 @@ end
 -- Helper to map specific help keys
 local function map_help_key(key, title)
 	util.Map({ "n", "x" }, key, function()
-		show_map.show_maps({ key = key, title = title })
+		show_map.show_maps({ key = key, title = title, sub_help_buf = true })
 	end, { buffer = buf_id })
 end
 
@@ -138,7 +138,12 @@ function M.keymaps_init(buf)
 	-- [g]oto mode
 	-- log
 	util.Map("n", "gl", handle.other.goto_log, { buffer = buf_id, desc = "goto commit logs." })
-	util.Map("n", "gL", handle.other.goto_log_context, { buffer = buf_id, desc = "goto commit logs for file/branch. <*>" })
+	util.Map(
+		"n",
+		"gL",
+		handle.other.goto_log_context,
+		{ buffer = buf_id, desc = "goto commit logs for file/branch. <*>" }
+	)
 	-- :Git
 	util.Map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
 	-- goto sections
@@ -251,6 +256,12 @@ function M.keymaps_init(buf)
 		handle.push_pull.push,
 		{ buffer = buf_id, desc = "Git push or push to branch under cursor. <*>" }
 	)
+	util.Map(
+		"n",
+		"f",
+		handle.push_pull.fetch,
+		{ buffer = buf_id, desc = "Git push or push to branch under cursor. <*>" }
+	)
 
 	-- [B]ranch mappings
 	util.Map("n", "bn", handle.branch.new, { buffer = buf_id, desc = "Create a new branch. <*>" })
@@ -269,7 +280,12 @@ function M.keymaps_init(buf)
 	)
 
 	-- [M]erge mappings
-	util.Map("n", "mm", handle.other.merge_branch, { buffer = buf_id, desc = "Start merge with branch under cursor. <*>" })
+	util.Map(
+		"n",
+		"mm",
+		handle.other.merge_branch,
+		{ buffer = buf_id, desc = "Start merge with branch under cursor. <*>" }
+	)
 	util.Map("n", "ml", function()
 		s_util.run_n_refresh("Git merge --continue")
 	end, { buffer = buf_id, desc = "Merge continue." })
@@ -329,6 +345,7 @@ function M.keymaps_init(buf)
 
 	-- [R]eset mappings
 	util.Map({ "n", "x" }, "UU", handle.other.reset, { buffer = buf, desc = "Reset file/branch. <*>" })
+	util.Map("n", "Up", handle.other.undo_orig_head, { buffer = buf, desc = "Reset origin head." })
 	util.Map("n", "Us", function()
 		handle.other.reset("--soft")
 	end, { buffer = buf, desc = "Reset soft." })

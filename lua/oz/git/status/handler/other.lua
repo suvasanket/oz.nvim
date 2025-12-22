@@ -222,4 +222,8 @@ function M.reset(arg)
     g_util.set_cmdline(("Git reset %s"):format(args or arg))
 end
 
+function M.undo_orig_head()
+    s_util.run_n_refresh("Git reset ORIG_HEAD")
+end
+
 return M

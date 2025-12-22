@@ -21,7 +21,7 @@ local buf_id = nil
 ---@param title string
 local function map_help_key(key, title)
 	map({ "n", "x" }, key, function()
-		show_maps.show_maps({ key = key, title = title })
+		show_maps.show_maps({ key = key, title = title, sub_help_buf = true })
 	end, { buffer = buf_id })
 end
 
