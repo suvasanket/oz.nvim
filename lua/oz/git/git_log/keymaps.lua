@@ -14,7 +14,6 @@ local user_mappings = require("oz.git").user_config.mappings
 local refresh = require("oz.git.git_log").refresh_commit_log
 local map = util.Map
 local buf_id = nil
--- TODO remove any inactive input
 
 --- Helper to map specific help keys
 ---@param key string
@@ -154,7 +153,9 @@ function M.keymaps_init(buf)
 	end, { buffer = buf, desc = "Add args to log command." })
 
 	-- :Git
-	map("n", "g<space>", ":Git ", { silent = false, buffer = buf, desc = "Open :Git " })
+	map("n", "-", function()
+		util.set_cmdline("Git ")
+	end, { silent = false, buffer = buf, desc = "Open :Git " })
 	map("n", "gs", function()
 		vim.cmd("close")
 		vim.cmd("Git")
@@ -408,14 +409,14 @@ function M.keymaps_init(buf)
 		show_maps.show_maps({
 			group = {
 				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-				["Goto mappings[g]"] = { "g:", "g<Space>", "g?", "gs" },
+				["Goto mappings[g]"] = { "g:", "g?", "gs" },
 				["Diff mappings[d]"] = { "dd", "dc", "dp" },
 				["Rebase mappings[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "ro", "re" },
 				["Commit mappings[c]"] = { "cs", "cf", "cc", "ce", "ca" },
 				["Cherry-pick mappings[p]"] = { "pp", "pa", "pk", "pl", "pq" },
 				["Reset mappings[U]"] = { "UU", "Us", "Uh", "Um" },
 				["Revert mappings[u]"] = { "uu", "ul", "uk", "ua", "uq", "ui", "ue" },
-				["Nav mappings"] = { "+", "-", "<CR>", "<C-O>", "<C-CR>" },
+				["Nav mappings"] = { "+", "_", "-", "<CR>", "<C-O>", "<C-CR>" },
 			},
 			subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 			no_empty = true,

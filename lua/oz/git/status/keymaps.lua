@@ -19,12 +19,12 @@ local function handle_show_help()
 			["Commit mappings[c]"] = { "cc", "ca", "ce", "c<Space>", "cw", "cu" },
 			["Diff mappings[d]"] = { "dd", "dc", "dm", "db" },
 			["Tracking related mappings"] = { "s", "u", "K", "X" },
-			["Goto mappings[g]"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g<Space>", "g?" }, -- Added gL
-			["Remote mappings[M]"] = { "Ma", "Md", "Mr", "MM" }, -- Added mP
-			["Quick actions"] = { "grn", "<Tab>", "<CR>", "I", "<C-R>", "q" }, -- Added refresh, quit, pull
+			["Goto mappings[g]"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "g?" },
+			["Remote mappings[M]"] = { "Ma", "Md", "Mr", "MM" },
+			["Quick actions"] = { "-", "grn", "<Tab>", "<CR>", "I", "<C-R>", "q" },
 			["Conflict resolution mappings[x]"] = { "xo", "xc", "xp" },
 			["Stash mappings[z]"] = { "zz", "za", "zp", "zd", "z<Space>", "z" },
-			["Branch mappings[b]"] = { "bn", "bf", "bd", "bu", "bU" },
+			["Branch mappings[b]"] = { "bb", "bn", "bf", "bd", "bu", "bU" },
 			["Push/Pull mappings"] = { "p", "P", "f" },
 			["Merge mappings[m]"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" },
 			["Rebase mappings[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" },
@@ -95,12 +95,9 @@ function M.keymaps_init(buf)
 	-- stash drop
 	util.Map("n", "zd", handle.other.stash_drop, { buffer = buf_id, desc = "Drop stash under cursor. <*>" })
 	-- :Git stash
-	util.Map(
-		"n",
-		"z<space>",
-		":Git stash ",
-		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git stash." }
-	)
+	util.Map("n", "z<space>", function()
+		util.set_cmdline("Git stash ")
+	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git stash." })
 	-- stash save
 	util.Map("n", "zz", function()
 		local input = util.inactive_input(":Git stash", " save ")
@@ -118,12 +115,9 @@ function M.keymaps_init(buf)
 	-- commit undo
 	util.Map("n", "cu", handle.commit.undo, { buffer = buf_id, desc = "Undo last commit." })
 	-- G commit cmdline
-	util.Map(
-		"n",
-		"c<space>",
-		":Git commit ",
-		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git commit." }
-	)
+	util.Map("n", "c<space>", function()
+		util.set_cmdline("Git commit ")
+	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git commit." })
 	-- commit wip
 	util.Map("n", "cw", ":Gcw", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Gcw" })
 
@@ -145,7 +139,9 @@ function M.keymaps_init(buf)
 		{ buffer = buf_id, desc = "goto commit logs for file/branch. <*>" }
 	)
 	-- :Git
-	util.Map("n", "g<space>", ":Git ", { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
+	util.Map("n", "-", function()
+		util.set_cmdline("Git ")
+	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
 	-- goto sections
 	util.Map("n", "gu", function()
 		g_util.goto_str("Changes not staged for commit:")
@@ -265,6 +261,7 @@ function M.keymaps_init(buf)
 
 	-- branch mappings
 	util.Map("n", "bn", handle.branch.new, { buffer = buf_id, desc = "Create a new branch. <*>" })
+	util.Map("n", "bb", handle.branch.switch, { buffer = buf_id, desc = "Populate cmdline with switch." })
 	util.Map("n", "bf", handle.branch.new_from, { buffer = buf_id, desc = "New branch from a given branch." })
 	util.Map("n", "bd", handle.branch.delete, { buffer = buf_id, desc = "Delete branch under cursor. <*>" })
 	util.Map(
@@ -302,12 +299,9 @@ function M.keymaps_init(buf)
 	util.Map("n", "mq", function()
 		handle.other.merge_branch("--quit")
 	end, { buffer = buf_id, desc = "Merge quit." })
-	util.Map(
-		"n",
-		"m<space>",
-		":Git merge ",
-		{ silent = false, buffer = buf_id, desc = "Populate cmdline with Git merge." }
-	)
+	util.Map("n", "m<space>", function()
+		util.set_cmdline("Git merge ")
+	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with Git merge." })
 
 	-- [R]ebase mappings
 	util.Map(
@@ -337,12 +331,9 @@ function M.keymaps_init(buf)
 	util.Map("n", "re", function()
 		s_util.run_n_refresh("Git rebase --edit-todo")
 	end, { buffer = buf, desc = "Rebase edit todo." })
-	util.Map(
-		"n",
-		"r<space>",
-		":Git rebase ",
-		{ silent = false, buffer = buf_id, desc = "Populate cmdline with :Git rebase." }
-	)
+	util.Map("n", "r<space>", function()
+		util.set_cmdline("Git rebase ")
+	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git rebase." })
 
 	-- [R]eset mappings
 	util.Map({ "n", "x" }, "UU", handle.other.reset, { buffer = buf, desc = "Reset file/branch. <*>" })

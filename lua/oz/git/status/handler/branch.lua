@@ -4,6 +4,10 @@ local s_util = require("oz.git.status.util")
 local status = require("oz.git.status")
 local shell = require("oz.util.shell")
 
+function M.switch()
+    util.set_cmdline("Git switch ")
+end
+
 function M.new()
     local b_name = util.inactive_input(":Git branch ")
     if b_name and vim.trim(b_name) ~= "" then
