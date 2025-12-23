@@ -4,7 +4,7 @@ local status = require("oz.git.status")
 local util = require("oz.util")
 local git = require("oz.git")
 
-local refresh = status.refresh_status_buf
+local refresh = status.refresh_buf
 local state = status.state
 
 -- helper: get remotes

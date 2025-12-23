@@ -6,7 +6,7 @@ local git = require("oz.git")
 local wizard = require("oz.git.wizard")
 local caching = require("oz.caching")
 
-local refresh = status.refresh_status_buf
+local refresh = status.refresh_buf
 
 local open_in_ozgitwin = require("oz.git.oz_git_win").open_oz_git_win
 
@@ -117,7 +117,7 @@ end
 
 function M.goto_log()
     vim.cmd("close") -- Close status window before opening log
-    require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
+    require("oz.git.log").commit_log({ level = 1, from = "Git" })
 end
 
 function M.goto_log_context()
@@ -125,12 +125,12 @@ function M.goto_log_context()
     local file = s_util.get_file_under_cursor(true)
     vim.cmd("close")
     if branch then
-        require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { branch })
+        require("oz.git.log").commit_log({ level = 1, from = "Git" }, { branch })
     elseif #file > 0 then
         --FIXME file log not working
-        require("oz.git.git_log").commit_log({ level = 1, from = "Git" }, { "--", unpack(file) })
+        require("oz.git.log").commit_log({ level = 1, from = "Git" }, { "--", unpack(file) })
     else
-        require("oz.git.git_log").commit_log({ level = 1, from = "Git" })
+        require("oz.git.log").commit_log({ level = 1, from = "Git" })
     end
 end
 

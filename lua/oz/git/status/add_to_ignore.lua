@@ -41,7 +41,7 @@ local function open_git_ignore(paths, gitignore_path)
 	vim.api.nvim_create_autocmd("BufWinLeave", {
 		buffer = current_buffer,
 		callback = function()
-			require("oz.git.status").refresh_status_buf(true)
+			require("oz.git.status").refresh_buf(true)
 		end,
 		once = true,
 	})

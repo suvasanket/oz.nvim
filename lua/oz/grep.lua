@@ -84,8 +84,8 @@ end
 --- show win
 ---@param lines string[]
 local function grep_win(lines)
-	win.open_win("grep_err", {
-		lines = lines,
+	win.create_win("grep_err", {
+		content = lines,
 		win_type = "bot 7",
 		callback = function(buf_id)
 			vim.cmd([[setlocal signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])

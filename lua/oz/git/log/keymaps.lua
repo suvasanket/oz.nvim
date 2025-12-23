@@ -2,15 +2,16 @@ local M = {}
 local util = require("oz.util")
 local show_maps = require("oz.util.help_keymaps")
 local git = require("oz.git")
+local log = require("oz.git.log")
 
-local log_level = require("oz.git.git_log").log_level
-local comming_from = require("oz.git.git_log").comming_from
-local get_selected_hash = require("oz.git.git_log").get_selected_hash
-local grab_hashs = require("oz.git.git_log").grab_hashs
-local commit_log = require("oz.git.git_log").commit_log
+local log_level = log.log_level
+local comming_from = log.comming_from
+local get_selected_hash = log.get_selected_hash
+local grab_hashs = log.grab_hashs
+local commit_log = log.commit_log
 
 local user_mappings = require("oz.git").user_config.mappings
-local refresh = require("oz.git.git_log").refresh_commit_log
+local refresh = log.refresh_buf
 local map = util.Map
 local buf_id = nil
 
@@ -21,7 +22,7 @@ local key_grp = {}
 ---@param title string
 local function map_help_key(key, title)
 	map({ "n", "x" }, key, function()
-		show_maps.show_maps({ key = key, title = title, sub_help_buf = true })
+		show_maps.show_maps({ key = key, title = title, float = true })
 	end, { buffer = buf_id })
 end
 
@@ -162,7 +163,7 @@ function M.keymaps_init(buf)
 			run_n_refresh("Git checkout -q " .. hash[1])
 		end
 	end, { buffer = buf, desc = "Checkout to the commit under cursor. <*>" })
-	key_grp["quick actions"] = { "<lt>", ">", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-r>", "q" }
+	key_grp["quick actions"] = { "<lt>", ">", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "q" }
 
 	-- goto mappings
 	map("n", "g:", function()
@@ -176,8 +177,9 @@ function M.keymaps_init(buf)
 		vim.cmd("close")
 		vim.cmd("Git")
 	end, { buffer = buf, desc = "Go to git status buffer." })
-    map_help_key("g", "goto")
-	key_grp["goto[g]"] = { "g:", "g?", "gs" }
+	map("n", "gg", "gg", { buffer = buf, desc = "Goto top of buffer." })
+	map_help_key("g", "goto")
+	key_grp["goto[g]"] = { "g:", "g?", "gs", "gg" }
 
 	-- pick hash
 	map("n", user_mappings.toggle_pick, function()
@@ -416,6 +418,11 @@ function M.keymaps_init(buf)
 			group = key_grp,
 			subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 			no_empty = true,
+			on_open = function()
+				vim.schedule(function()
+					util.inactive_echo("press ctrl-f to search section")
+				end)
+			end,
 		})
 	end, { buffer = buf, desc = "Show all availble keymaps." })
 end

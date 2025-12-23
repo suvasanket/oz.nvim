@@ -249,8 +249,8 @@ function M.open_oz_git_win(lines, cmd)
 	end
 
 	-- open win
-	win.open_win("oz_git", {
-		lines = lines,
+	win.create_win("oz_git", {
+		content = lines,
 		win_type = win_type,
 		reuse = false,
 		callback = function(buf_id, win_id)

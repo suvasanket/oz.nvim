@@ -104,7 +104,7 @@ local function special_cmd_exec(args_tbl, args_str)
 					util.set_cmdline(suggestion)
 				end
 			end)
-		elseif M.user_config and M.user_config.remote_opt_exec == "term" then
+		elseif M.user_config and M.user_config.remote_opt_exec == "term" then -- TODO run in oz_term
 			vim.cmd("hor term git " .. table.concat(args_tbl, " "))
 			vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
 			vim.cmd("resize 9")
@@ -160,14 +160,23 @@ local job_env = {
 }
 
 -- refresh any required buffers.
-function M.refresh_buf()
+---@param active boolean|nil
+function M.refresh_buf(active)
 	local status_win = require("oz.git.status").status_win
-	local log_win = require("oz.git.git_log").log_win
+	local log_win = require("oz.git.log").log_win
 
 	if status_win and vim.api.nvim_win_is_valid(status_win) then
-		require("oz.git.status").refresh_status_buf(true)
+		if active then
+			require("oz.git.status").refresh_buf()
+		else
+			require("oz.git.status").refresh_buf(true)
+		end
 	elseif log_win and vim.api.nvim_win_is_valid(log_win) then
-		require("oz.git.git_log").refresh_commit_log(true)
+		if active then
+			require("oz.git.log").refresh_buf()
+		else
+			require("oz.git.log").refresh_buf(true)
+		end
 	end
 end
 

@@ -132,8 +132,8 @@ end
 
 -- show err in a wind
 local function make_err_win(lines)
-	win.open_win("make_err", {
-		lines = lines,
+	win.create_win("make_err", {
+		content = lines,
 		win_type = "bot 7",
 		callback = function(buf_id)
 			-- opts

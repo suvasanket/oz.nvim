@@ -57,7 +57,10 @@ local function status_buf_hl()
     ]])
 end
 
-local function is_conflict(lines) -- FIXME
+--- check if in conflict
+---@param lines table
+---@return boolean
+local function is_conflict(lines)
 	for _, line in pairs(lines) do
 		if
 			line:match("both modified:")
@@ -76,12 +79,12 @@ local function is_conflict(lines) -- FIXME
 end
 
 -- get neccessry lines for status buffer
-local function generate_status_content()
+local function generate_content()
 	local status_tbl = {}
 	local stash_tbl = {}
-	local git_root = g_util.get_project_root()
-	local status_ok, git_status_content = shell.run_command({ "git", "status" }, git_root)
-	local stash_ok, git_stash_content = shell.run_command({ "git", "stash", "list" }, git_root)
+	local root_path = g_util.get_project_root()
+	local status_ok, git_status_content = shell.run_command({ "git", "status" }, root_path)
+	local stash_ok, git_stash_content = shell.run_command({ "git", "stash", "list" }, root_path)
 
 	if status_ok and #git_status_content > 0 then
         -- go through each line
@@ -124,15 +127,15 @@ end
 
 --- refresh status buffer
 ---@param passive boolean|nil
-function M.refresh_status_buf(passive)
+function M.refresh_buf(passive)
 	local s_util = require("oz.git.status.util")
 	if passive then -- passive refresh
-		local lines = generate_status_content()
+		local content = generate_content()
 		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", true)
-		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, lines)
+		vim.api.nvim_buf_set_lines(M.status_buf, 0, -1, false, content)
 		vim.api.nvim_buf_set_option(M.status_buf, "modifiable", false)
 
-		s_util.get_heading_tbl(lines)
+		s_util.get_heading_tbl(content)
 
 		-- retoggle any user toggeled headings
 		local toggled_headings = get_toggled_headings(s_util.toggled_headings, s_util.headings_table)
@@ -167,11 +170,11 @@ function M.GitStatus()
 	local _, branch = shell.run_command({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, M.state.cwd)
 	M.state.current_branch = branch[1]
 
-	local lines = generate_status_content()
+	local lines = generate_content()
 
 	-- open status
-	win.open_win("status", {
-		lines = lines,
+	win.create_win("status", {
+		content = lines,
 		win_type = "bot",
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id

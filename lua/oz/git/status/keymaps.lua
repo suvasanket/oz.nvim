@@ -7,7 +7,7 @@ local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local handle = require("oz.git.status.handler")
 
-local refresh = status.refresh_status_buf
+local refresh = status.refresh_buf
 local state = status.state
 local buf_id = nil
 
@@ -16,7 +16,7 @@ local key_grp = {}
 -- Helper to map specific help keys
 local function map_help_key(key, title)
 	util.Map({ "n", "x" }, key, function()
-		show_map.show_maps({ key = key, title = title, sub_help_buf = true })
+		show_map.show_maps({ key = key, title = title, float = true })
 	end, { buffer = buf_id })
 end
 
@@ -342,6 +342,11 @@ function M.keymaps_init(buf)
 		show_map.show_maps({
 			group = key_grp,
 			no_empty = true,
+			on_open = function()
+				vim.schedule(function()
+					util.inactive_echo("press ctrl-f to search section")
+				end)
+			end,
 			subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 		})
 	end, { buffer = buf_id, desc = "Show all availble keymaps." })

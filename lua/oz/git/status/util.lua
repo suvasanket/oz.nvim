@@ -5,7 +5,7 @@ local state = require("oz.git.status").state
 local git = require("oz.git")
 local status = require("oz.git.status")
 
-local refresh = status.refresh_status_buf
+local refresh = status.refresh_buf
 
 --
 M.headings_table = {}

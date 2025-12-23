@@ -137,7 +137,7 @@ local function generate_content(level, args)
 	end
 end
 
-function M.refresh_commit_log(passive)
+function M.refresh_buf(passive)
 	if passive then
 		local lines = generate_content()
 		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", true)
@@ -167,8 +167,8 @@ function M.commit_log(opts, args)
 	commit_log_lines = generate_content(level, args)
 
 	-- open log
-	win.open_win("log", {
-		lines = commit_log_lines,
+	win.create_win("log", {
+		content = commit_log_lines,
 		win_type = "bot",
 		callback = function(buf_id, win_id)
 			M.log_buf = buf_id
@@ -183,7 +183,7 @@ function M.commit_log(opts, args)
 				log_buf_hl()
 			end)
 			vim.fn.timer_start(100, function()
-				require("oz.git.git_log.keymaps").keymaps_init(buf_id)
+				require("oz.git.log.keymaps").keymaps_init(buf_id)
 			end)
 		end,
 	})

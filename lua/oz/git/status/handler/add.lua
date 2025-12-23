@@ -3,7 +3,7 @@ local status = require("oz.git.status")
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
 
-local refresh = status.refresh_status_buf
+local refresh = status.refresh_buf
 
 function M.stage()
 	local entries = s_util.get_file_under_cursor()

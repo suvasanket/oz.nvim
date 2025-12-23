@@ -1,6 +1,21 @@
 local M = {}
+
+-- Module-level tracking for singleton behavior
 local key_help_win = nil
 local key_help_buf = nil
+
+--- Internal helper: Close existing window and buffer
+local function close_window()
+	if key_help_win and vim.api.nvim_win_is_valid(key_help_win) then
+		vim.api.nvim_win_close(key_help_win, true)
+	end
+	key_help_win = nil
+
+	if key_help_buf and vim.api.nvim_buf_is_valid(key_help_buf) then
+		vim.api.nvim_buf_delete(key_help_buf, { force = true })
+	end
+	key_help_buf = nil
+end
 
 --- helper: filter keys from user provided 'key'
 ---@param tbl table
@@ -10,9 +25,10 @@ local key_help_buf = nil
 local function filter_table(tbl, str)
 	local result = {}
 	local new_keys = {}
+	local len = #str
 	for key, value in pairs(tbl) do
-		if vim.startswith(key, str) then
-			local new_key = key:sub(#str + 1)
+		if key:sub(1, len) == str then
+			local new_key = key:sub(len + 1)
 			if new_key ~= "" then
 				result[new_key] = value
 				new_key = new_key:gsub("<Space>", " ")
@@ -29,38 +45,53 @@ local function header_fmt(str)
 	return string.format("█%s█", str)
 end
 
+--- Helper to sort keys, format lines, and append to buffer content
+local function append_keys_to_content(content_tbl, map_data_tbl, keys_to_process)
+	local keys = keys_to_process or vim.tbl_keys(map_data_tbl)
+	table.sort(keys)
+
+	for _, key in ipairs(keys) do
+		local data = map_data_tbl[key]
+		if data then
+			table.sort(data.modes)
+			local modes_l = "[" .. table.concat(data.modes, ", ") .. "]"
+			local line = string.format(" %s  %s 󱦰 %s", modes_l, '"' .. key .. '"', data.desc)
+			table.insert(content_tbl, line)
+		end
+	end
+end
+
 --- show mappings
----@param args {title: string, no_empty: boolean, key: string, group: table<string, string[]>, subtext: string[], parent_buf: integer|nil, sub_help_buf: boolean}
+---@param args {title: string, no_empty: boolean, key: string, group: table<string, string[]>, subtext: string[], parent_buf: integer|nil, float: boolean, on_open: function|nil}
 ---@return integer|nil
 ---@return integer|nil
 function M.show_maps(args)
-	-- Capture the starting window immediately for robust focus switching later
+	-- 1. Enforce Singleton: Close any existing instances
+	close_window()
+
 	local start_win = vim.api.nvim_get_current_win()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local modes = { "n", "v", "i", "t" }
 	local sub_keys = {}
 	local all_keymaps = {}
 
-	-- First get all keymaps
+	-- 2. Gather Keymaps Efficiently
 	for _, mode in ipairs(modes) do
 		local maps = vim.api.nvim_buf_get_keymap(bufnr, mode)
 		for _, map in ipairs(maps) do
 			local key = map.lhs:gsub(" ", "<Space>")
 			local desc = map.desc or map.rhs
+
 			if desc then
 				desc = desc:gsub("<Cmd>", ""):gsub("<CR>", "")
-			else
-				if not args.no_empty then -- set a empty description. for default
-					desc = "[No Info]"
+			elseif not args.no_empty then
+				desc = "[No Info]"
+			end
+
+			if desc then
+				if not all_keymaps[key] then
+					all_keymaps[key] = { modes = {}, desc = desc }
 				end
-			end
-			if not all_keymaps[key] and desc then -- don't add any no descriptive keys
-				all_keymaps[key] = {
-					modes = {},
-					desc = desc,
-				}
-			end
-			if all_keymaps[key] then -- check if all_keymaps[key] is not nil
 				table.insert(all_keymaps[key].modes, mode)
 			end
 		end
@@ -70,183 +101,137 @@ function M.show_maps(args)
 		all_keymaps, sub_keys = filter_table(all_keymaps, args.key)
 	end
 
-	local keymaps = {}
+	-- 3. Build Content
+	local buf_content = {}
 	local has_headers = args and args.group and not vim.tbl_isempty(args.group)
 
 	if has_headers then
-		-- Process header groups
-		local grouped_keymaps = {}
 		for header_name, keys in pairs(args.group) do
+			local group_keys_found = {}
 			for _, key in ipairs(keys) do
 				if all_keymaps[key] then
-					if not grouped_keymaps[header_name] then
-						grouped_keymaps[header_name] = {}
-					end
-					grouped_keymaps[header_name][key] = all_keymaps[key]
-					all_keymaps[key] = nil -- Remove from regular keymaps
+					table.insert(group_keys_found, key)
+				end
+			end
+
+			if #group_keys_found > 0 then
+				if #buf_content > 0 then
+					table.insert(buf_content, "")
+				end
+				table.insert(buf_content, header_fmt(header_name))
+				append_keys_to_content(buf_content, all_keymaps, group_keys_found)
+				for _, key in ipairs(group_keys_found) do
+					all_keymaps[key] = nil
 				end
 			end
 		end
 
-		-- Add grouped keymaps with their headers
-		for header_name, keys in pairs(grouped_keymaps) do
-			-- Add header (no newline before first header)
-			if #keymaps > 0 then
-				table.insert(keymaps, "")
-			end
-			table.insert(keymaps, header_fmt(header_name))
-
-			-- Add each key in this group
-			local sorted_keys = {}
-			for key in pairs(keys) do
-				table.insert(sorted_keys, key)
-			end
-			table.sort(sorted_keys)
-
-			for _, key in ipairs(sorted_keys) do
-				local data = keys[key]
-				table.sort(data.modes)
-				local modes_l = "[" .. table.concat(data.modes, ", ") .. "]"
-				local line = string.format(" %s  %s 󱦰 %s", modes_l, '"' .. key .. '"', data.desc)
-				table.insert(keymaps, line)
-			end
-		end
-
-		-- Add remaining keymaps under "Other Mappings" if any exist
 		if not vim.tbl_isempty(all_keymaps) then
-			table.insert(keymaps, "")
-			table.insert(keymaps, header_fmt("unspecified"))
-
-			local sorted_keys = {}
-			for key in pairs(all_keymaps) do
-				table.insert(sorted_keys, key)
-			end
-			table.sort(sorted_keys)
-
-			for _, key in ipairs(sorted_keys) do
-				local data = all_keymaps[key]
-				table.sort(data.modes)
-				local modes_l = "[" .. table.concat(data.modes, ", ") .. "]"
-				local line = string.format(" %s  %s 󱦰 %s", modes_l, '"' .. key .. '"', data.desc)
-				table.insert(keymaps, line)
-			end
+			table.insert(buf_content, "")
+			table.insert(buf_content, header_fmt("unspecified"))
+			append_keys_to_content(buf_content, all_keymaps, nil)
 		end
 	else
-		-- No headers - just add all keymaps sorted
-		local sorted_keys = {}
-		for key in pairs(all_keymaps) do
-			table.insert(sorted_keys, key)
-		end
-		table.sort(sorted_keys)
-
-		for _, key in ipairs(sorted_keys) do
-			local data = all_keymaps[key]
-			table.sort(data.modes)
-			local modes_l = "[" .. table.concat(data.modes, ", ") .. "]"
-			local line = string.format(" %s  %s 󱦰 %s", modes_l, '"' .. key .. '"', data.desc)
-			table.insert(keymaps, line)
-		end
+		append_keys_to_content(buf_content, all_keymaps, nil)
 	end
 
-	-- Add subtext (footer)
 	if args.subtext then
-		table.insert(keymaps, "")
+		table.insert(buf_content, "")
 		for _, i in ipairs(args.subtext) do
-			table.insert(keymaps, " " .. i)
+			table.insert(buf_content, " " .. i)
 		end
 	end
 
-	if #keymaps == 0 then
+	if #buf_content == 0 then
 		return
 	end
 
+	-- 4. Create Buffer
 	key_help_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(key_help_buf, 0, -1, false, keymaps)
+	vim.api.nvim_buf_set_lines(key_help_buf, 0, -1, false, buf_content)
+	vim.bo[key_help_buf].modifiable = false
+	vim.bo[key_help_buf].buftype = "nofile"
 
-	-- highlight --
 	vim.api.nvim_buf_call(key_help_buf, function()
 		vim.cmd("syntax clear")
-		vim.cmd("highlight BoldKey gui=bold guifg=#99BC85 cterm=bold")
+		vim.cmd("highlight default BoldKey gui=bold guifg=#99BC85 cterm=bold")
 		vim.cmd('syntax match BoldKey /"\\(.*\\)"/ contains=NONE')
 		vim.cmd([[
         syntax match Comment /\[.*\]/
         syntax match @keyword /<.*>/
         ]])
 		if has_headers then
-			vim.cmd("highlight HeaderName gui=bold guifg=#DFD3C3 guibg=#2F2F2F cterm=bold")
-			vim.cmd("highlight HeaderBlocks guifg=#2F2F2F ctermfg=green")
+			vim.cmd("highlight default HeaderName gui=bold guifg=#DFD3C3 guibg=#2F2F2F cterm=bold")
+			vim.cmd("highlight default HeaderBlocks guifg=#2F2F2F ctermfg=green")
 			vim.cmd("syntax match HeaderName /█.*█/ contains=HeaderBlocks")
 			vim.cmd("syntax match HeaderBlocks /[██]/ contained")
 		end
 	end)
 
-	-- floating window dimensions and position
+	-- 5. Window Geometry
 	local fixed_width = 60
 	local max_height = 15
-
 	local max_width = 0
-	for _, line in ipairs(keymaps) do
-		max_width = math.max(max_width, vim.fn.strwidth(line))
+
+	if args.float then
+		for _, line in ipairs(buf_content) do
+			local w = vim.fn.strwidth(line)
+			if w > max_width then
+				max_width = w
+			end
+		end
 	end
 
-	local total_lines = vim.api.nvim_buf_line_count(key_help_buf)
-	local height = math.min(total_lines, max_height)
+	local height = math.min(#buf_content, max_height)
 	local width = (max_height > 100) and fixed_width or max_width + 2
 	local row = vim.o.lines - height - 4
-	local col = vim.o.columns
 
-	local title_str = args.title or "All keymaps"
-	local footer_str = args.sub_help_buf and "ctrl-c/esc cancel" or "<C-f> find heading"
-
-	-- win options --
 	local win_opts = {}
-
-	if args.sub_help_buf then
+	if args.float then
 		win_opts = {
 			relative = "editor",
 			width = width,
 			height = height,
 			row = row,
-			col = col,
+			col = vim.o.columns,
 			style = "minimal",
 			border = "rounded",
-			title = " " .. title_str .. " ",
+			title = " " .. (args.title or "All keymaps") .. " ",
 			title_pos = "left",
-			footer = " " .. footer_str .. " ",
+			footer = " " .. (args.float and "ctrl-c/esc cancel" or "<C-f> find heading") .. " ",
 			footer_pos = "right",
 		}
 	else
-		-- Split configuration
 		win_opts = {
 			split = "below",
-			win = 0, -- Split relative to current window
 			height = height,
-			style = "minimal", -- This implicitly handles number, relativenumber, cursorline, etc.
+			style = "minimal",
 		}
 	end
 
+	-- 6. Open Window
 	key_help_win = vim.api.nvim_open_win(key_help_buf, true, win_opts)
-	vim.api.nvim_buf_set_option(key_help_buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(key_help_buf, "buftype", "nofile")
 
-	-- If not floating, ensure "bare" options are strictly enforced on the split window
-	if not args.sub_help_buf then
-		local set_opt = vim.api.nvim_win_set_option
-		set_opt(key_help_win, "wrap", false)
-		set_opt(key_help_win, "foldcolumn", "0")
-		-- These are technically covered by style="minimal", but explicitly setting them
-		-- ensures no plugins (like line number togglers) override the minimal style on Enter.
-		set_opt(key_help_win, "signcolumn", "no")
-		set_opt(key_help_win, "number", false)
-		set_opt(key_help_win, "relativenumber", false)
+	if not args.float then
+		local wo = vim.wo[key_help_win]
+		wo.wrap = false
+		wo.foldcolumn = "0"
+		wo.signcolumn = "no"
+		wo.number = false
+		wo.relativenumber = false
 	end
 
-	--- keymaps ---
-	local function close_and_return()
-		pcall(vim.api.nvim_win_close, 0, true)
+	-- 7. Execute on_open callback
+	if args.on_open and type(args.on_open) == "function" then
+		-- We pass the window and buffer ID to the callback for flexibility
+		pcall(args.on_open, key_help_win, key_help_buf)
+	end
+
+	-- 8. Keymaps & Cleanup Logic
+	local function restore_focus()
+		close_window()
 
 		if args.parent_buf and vim.api.nvim_buf_is_valid(args.parent_buf) then
-			-- Optimization: check if start_win is valid and matches parent_buf first
 			if
 				start_win
 				and vim.api.nvim_win_is_valid(start_win)
@@ -254,69 +239,71 @@ function M.show_maps(args)
 			then
 				vim.api.nvim_set_current_win(start_win)
 			else
-				-- Fallback lookup
-				local parent_wins = vim.fn.win_findbuf(args.parent_buf)
-				if #parent_wins > 0 then
-					vim.api.nvim_set_current_win(parent_wins[1])
-				else
-					vim.api.nvim_set_current_buf(args.parent_buf)
+				local wins = vim.fn.win_findbuf(args.parent_buf)
+				if #wins > 0 then
+					vim.api.nvim_set_current_win(wins[1])
 				end
 			end
 		end
 	end
 
-	vim.keymap.set("n", "q", close_and_return, { buffer = key_help_buf, noremap = true, silent = true })
-	vim.keymap.set("n", "<C-c>", close_and_return, { buffer = key_help_buf, noremap = true, silent = true })
-	vim.keymap.set("n", "<esc>", close_and_return, { buffer = key_help_buf, noremap = true, silent = true })
+	local opts = { buffer = key_help_buf, noremap = true, silent = true }
+	vim.keymap.set("n", "q", restore_focus, opts)
+	vim.keymap.set("n", "<C-c>", restore_focus, opts)
+	vim.keymap.set("n", "<esc>", restore_focus, opts)
 
-	if not args.sub_help_buf then
+	if not args.float then
 		vim.keymap.set("n", "<C-f>", function()
-			local keys = vim.tbl_keys(args.group)
+			local keys = vim.tbl_keys(args.group or {})
+			if #keys == 0 then
+				return
+			end
 			vim.ui.select(keys, {
-				prompt = "select heading",
-				format_item = function(key)
-					return key
+				prompt = "Jump to section",
+				format_item = function(k)
+					return k
 				end,
 			}, function(choice)
-				if not choice then
-					return
-				end
-
-				local pattern = header_fmt(choice)
-				local pos = vim.fn.searchpos("\\V" .. pattern, "w")
-
-				if pos[1] ~= 0 then
-					vim.api.nvim_win_set_cursor(0, { pos[1], pos[2] - 1 })
+				if choice then
+					local pattern = header_fmt(choice)
+					local pos = vim.fn.searchpos("\\V" .. pattern, "w")
+					if pos[1] ~= 0 then
+						vim.api.nvim_win_set_cursor(0, { pos[1], pos[2] - 1 })
+					end
 				end
 			end)
-		end, { buffer = key_help_buf, noremap = true, silent = true })
+		end, opts)
 	end
 
-	-- --
+	-- 9. Recursive Key Detection
 	if #sub_keys > 0 then
-		-- Refactored efficiency: Directly focus the original window using API
 		if vim.api.nvim_win_is_valid(start_win) then
 			vim.api.nvim_set_current_win(start_win)
 		end
 
-		vim.fn.timer_start(10, function()
-			local ok, char = pcall(vim.fn.getchar)
-			if ok then
-				char = vim.fn.nr2char(char)
-				local full_sequence = args.key .. char
-
-				if char then
-					if vim.tbl_contains(sub_keys, char) then
-						vim.api.nvim_feedkeys(full_sequence, "mt", false)
-					end
+		vim.defer_fn(function()
+			local ok, char_code = pcall(vim.fn.getchar)
+			if ok and type(char_code) == "number" then
+				local char = vim.fn.nr2char(char_code)
+				if vim.tbl_contains(sub_keys, char) then
+					close_window()
+					local full_sequence = args.key .. char
+					vim.api.nvim_feedkeys(full_sequence, "m", false)
+				else
+					close_window()
 				end
+			else
+				close_window()
 			end
-			if key_help_win and vim.api.nvim_win_is_valid(key_help_win) then -- close win
-				vim.api.nvim_win_close(key_help_win, true)
-			end
-		end)
+		end, 10)
 	end
+
 	return key_help_win, key_help_buf
+end
+
+-- Export public close function
+function M.close()
+	close_window()
 end
 
 return M

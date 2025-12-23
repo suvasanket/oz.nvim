@@ -128,8 +128,8 @@ function M.open_blame_win(file)
 
 		-- open blame win
 		local win_type = string.format("vert %s", #output[#output])
-		win.open_win("git_blame", {
-			lines = output,
+		win.create_win("git_blame", {
+			content = output,
 			win_type = win_type,
 			callback = function(buf_id, win_id)
 				blame_buf = buf_id

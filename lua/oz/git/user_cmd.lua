@@ -35,9 +35,9 @@ local function handle_glog(opts)
 	if g_util.if_in_git() then
 		if opts.args ~= "" then
 			local args_table = vim.split(opts.args, "%s+")
-			require("oz.git.git_log").commit_log({ level = 1 }, args_table)
+			require("oz.git.log").commit_log({ level = 1 }, args_table)
 		else
-			require("oz.git.git_log").commit_log()
+			require("oz.git.log").commit_log()
 		end
 	else
 		util.Notify("You are not in a git repo.", "warn", "oz_git")
@@ -83,10 +83,10 @@ local function handle_gcw(opts)
 		util.ShellCmd(final_cmd, function()
 			util.Notify(("#%s WIP commit added."):format(tostring(num)), "info", "oz_git")
 			main.refresh_buf() -- refresh status log
+			util.Notify(new_commit, "info", "oz_git")
 		end, function()
 			util.Notify("Cannot create WIP commit.", "error", "oz_git")
 		end)
-		util.inactive_echo(final_cmd)
 	end
 end
 
