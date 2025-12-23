@@ -1,7 +1,6 @@
 local M = {}
 local util = require("oz.util")
 local show_maps = require("oz.util.help_keymaps")
-local g_util = require("oz.git.util")
 local git = require("oz.git")
 
 local log_level = require("oz.git.git_log").log_level
@@ -14,6 +13,8 @@ local user_mappings = require("oz.git").user_config.mappings
 local refresh = require("oz.git.git_log").refresh_commit_log
 local map = util.Map
 local buf_id = nil
+
+local key_grp = {}
 
 --- Helper to map specific help keys
 ---@param key string
@@ -113,27 +114,24 @@ end
 
 function M.keymaps_init(buf)
 	buf_id = buf
-	-- close
+	-- quick actions
 	map("n", "q", function()
 		vim.api.nvim_echo({ { "" } }, false, {})
 		vim.cmd("close")
 	end, { buffer = buf, desc = "Close git log buffer." })
-
-	-- increase log level
-	map("n", "+", function()
+	-- increase
+	map("n", ">", function()
 		vim.cmd("close")
 		log_level = (log_level % 3) + 1
 		commit_log({ level = log_level, from = comming_from })
 	end, { buffer = buf, desc = "Increase log level." })
-
-	-- decrease log level
-	map("n", "-", function()
+	-- decrease
+	map("n", "<", function()
 		vim.cmd("close")
 		local log_levels = { [1] = 3, [2] = 1, [3] = 2 }
 		log_level = log_levels[log_level]
 		commit_log({ level = log_level, from = comming_from })
 	end, { buffer = buf, desc = "Decrease log level." })
-
 	-- back
 	map("n", "<C-o>", function()
 		if comming_from then
@@ -141,9 +139,32 @@ function M.keymaps_init(buf)
 			vim.cmd(comming_from)
 		end
 	end, { buffer = buf, desc = "Go back." })
+	-- :G
+	map("n", "-", function()
+		util.set_cmdline("Git ")
+	end, { silent = false, buffer = buf, desc = "Open :Git " })
+	map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
+	-- refresh
+	map("n", "<C-r>", function()
+		refresh()
+	end, { buffer = buf, desc = "Refresh commit log buffer." })
+	-- show current hash
+	map({ "n", "x" }, "<cr>", function()
+		local hash = get_selected_hash()
+		if #hash > 0 then
+			vim.cmd("Git show " .. table.concat(hash, " "))
+		end
+	end, { buffer = buf, desc = "Show current commit under cursor. <*>" })
+	-- check out to a commit
+	map("n", "<C-CR>", function()
+		local hash = get_selected_hash()
+		if #hash > 0 then
+			run_n_refresh("Git checkout -q " .. hash[1])
+		end
+	end, { buffer = buf, desc = "Checkout to the commit under cursor. <*>" })
+	key_grp["quick actions"] = { "<lt>", ">", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-r>", "q" }
 
-	-- [G}oto mappings
-	-- custom user args
+	-- goto mappings
 	map("n", "g:", function()
 		local input = util.UserInput("args:")
 		if input then
@@ -151,15 +172,12 @@ function M.keymaps_init(buf)
 			commit_log({ level = 1 }, { input })
 		end
 	end, { buffer = buf, desc = "Add args to log command." })
-
-	-- :Git
-	map("n", "-", function()
-		util.set_cmdline("Git ")
-	end, { silent = false, buffer = buf, desc = "Open :Git " })
 	map("n", "gs", function()
 		vim.cmd("close")
 		vim.cmd("Git")
 	end, { buffer = buf, desc = "Go to git status buffer." })
+    map_help_key("g", "goto")
+	key_grp["goto[g]"] = { "g:", "g?", "gs" }
 
 	-- pick hash
 	map("n", user_mappings.toggle_pick, function()
@@ -204,10 +222,10 @@ function M.keymaps_init(buf)
 
 	-- discard picked
 	map("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard any picked hashes." })
+	key_grp["pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
 
-	-- [d]iff mode
-	-- diff hash
-	map("n", "dd", function()
+	-- diff mappings
+	map("n", "vv", function()
 		local cur_hash = get_selected_hash()
 		if #cur_hash > 0 then
 			if util.usercmd_exist("DiffviewOpen") then
@@ -218,7 +236,7 @@ function M.keymaps_init(buf)
 		end
 	end, { buffer = buf, desc = "diff the working tree against the commit under cursor. <*>" })
 
-	map("n", "dc", function()
+	map("n", "vc", function()
 		local cur_hash = get_selected_hash()
 		if #cur_hash > 0 then
 			if util.usercmd_exist("DiffviewOpen") then
@@ -231,7 +249,7 @@ function M.keymaps_init(buf)
 
 	-- diff range
 	local diff_range_hash = {}
-	map({ "n", "x" }, "dp", function() -- TODO add support for picked hash local hash -> picked
+	map({ "n", "x" }, "vp", function() -- TODO add support for picked hash local hash -> picked
 		local hashes = get_selected_hash()
 		if #hashes > 1 then
 			if util.usercmd_exist("DiffviewOpen") then
@@ -252,6 +270,8 @@ function M.keymaps_init(buf)
 			end
 		end
 	end, { buffer = buf, desc = "Diff commits between a range of commits. <*>" })
+	map_help_key("v", "diff")
+	key_grp["diff[v]"] = { "vv", "vd", "vc", "vp" }
 
 	-- Rebase mappings
 	-- inter rebase
@@ -290,27 +310,8 @@ function M.keymaps_init(buf)
 	map("n", "re", function()
 		run_n_refresh("Git rebase --edit-todo")
 	end, { buffer = buf, desc = "Rebase edit todo." })
-
-	-- refresh
-	map("n", "<C-r>", function()
-		refresh()
-	end, { buffer = buf, desc = "Refresh commit log buffer." })
-
-	-- show current hash
-	map({ "n", "x" }, "<cr>", function()
-		local hash = get_selected_hash()
-		if #hash > 0 then
-			vim.cmd("Git show " .. table.concat(hash, " "))
-		end
-	end, { buffer = buf, desc = "Show current commit under cursor. <*>" })
-
-	-- check out to a commit
-	map("n", "<C-CR>", function()
-		local hash = get_selected_hash()
-		if #hash > 0 then
-			run_n_refresh("Git checkout -q " .. hash[1])
-		end
-	end, { buffer = buf, desc = "Checkout to the commit under cursor. <*>" })
+	map_help_key("r", "rebase")
+	key_grp["rebase[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "ro", "re" }
 
 	-- Cherry-pick mappings
 	map({ "n", "x" }, "pp", handle_cherrypick, { buffer = buf, desc = "Cherry-pick commit under cursor. <*>" })
@@ -327,8 +328,10 @@ function M.keymaps_init(buf)
 	map("n", "pk", function()
 		run_n_refresh("Git cherry-pick --skip")
 	end, { buffer = buf, desc = "Cherry-pick skip." })
+	map_help_key("p", "cherry-pick")
+	key_grp["cherry-pick[p]"] = { "pp", "pa", "pk", "pl", "pq" }
 
-	-- [C]ommit mappings
+	-- commit mappings
 	map("n", "cs", function()
 		cmd_upon_current_commit(function(hash)
 			run_n_refresh("Git commit --squash " .. hash)
@@ -358,8 +361,10 @@ function M.keymaps_init(buf)
 			run_n_refresh(("Git commit -c %s -q"):format(hash))
 		end)
 	end, { buffer = buf, desc = "Create commit & edit message from commit under cursor. <*>" })
+	map_help_key("c", "commit")
+	key_grp["commit[c]"] = { "cs", "cf", "cc", "ce", "ca" }
 
-	-- [R]eset mappings
+	-- reset mappings
 	map("n", "UU", handle_reset, { buffer = buf, desc = "Reset commit. <*>" })
 	map("n", "Us", function()
 		handle_reset("--soft")
@@ -373,6 +378,8 @@ function M.keymaps_init(buf)
 			handle_reset("--hard")
 		end
 	end, { buffer = buf, desc = "Reset commit(--hard). <*>" })
+	map_help_key("U", "reset")
+	key_grp["reset[U]"] = { "UU", "Us", "Uh", "Um" }
 
 	-- [R]evert mappings
 	map({ "n", "x" }, "uu", handle_revert, { buffer = buf, desc = "Revert selection or current commit. <*>" })
@@ -400,34 +407,17 @@ function M.keymaps_init(buf)
 	map("n", "ua", function()
 		run_n_refresh("Git revert --abort")
 	end, { buffer = buf, desc = "Revert abort." })
-
-	-- open reflog
-	map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
+	map_help_key("u", "revert")
+	key_grp["revert[u]"] = { "uu", "ul", "uk", "ua", "uq", "ui", "ue" }
 
 	-- help
 	map("n", "g?", function()
 		show_maps.show_maps({
-			group = {
-				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
-				["Goto mappings[g]"] = { "g:", "g?", "gs" },
-				["Diff mappings[d]"] = { "dd", "dc", "dp" },
-				["Rebase mappings[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "ro", "re" },
-				["Commit mappings[c]"] = { "cs", "cf", "cc", "ce", "ca" },
-				["Cherry-pick mappings[p]"] = { "pp", "pa", "pk", "pl", "pq" },
-				["Reset mappings[U]"] = { "UU", "Us", "Uh", "Um" },
-				["Revert mappings[u]"] = { "uu", "ul", "uk", "ua", "uq", "ui", "ue" },
-				["Nav mappings"] = { "+", "_", "-", "<CR>", "<C-O>", "<C-CR>" },
-			},
+			group = key_grp,
 			subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 			no_empty = true,
 		})
 	end, { buffer = buf, desc = "Show all availble keymaps." })
-	map_help_key("d", "Diff mappings")
-	map_help_key("r", "Rebase mappings")
-	map_help_key("c", "Commit mappings")
-	map_help_key("p", "Cherry-pick mappings")
-	map_help_key("U", "Reset mappings")
-	map_help_key("u", "Revert mappings")
 end
 
 return M

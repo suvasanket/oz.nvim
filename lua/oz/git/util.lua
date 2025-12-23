@@ -157,4 +157,19 @@ function M.get_project_root()
 	end
 end
 
+--- get branches
+---@param arg {loc: boolean|nil, rem: boolean|nil, all: boolean|nil}|nil
+---@return table
+function M.get_branch(arg)
+	local ref
+	if arg and arg.loc then
+		ref = "refs/heads"
+	elseif arg and arg.rem then
+		ref = "refs/remotes"
+	else
+		ref = "refs/heads refs/remotes"
+	end
+	return shell.shellout_tbl(string.format("git for-each-ref --format=%%(refname:short) %s", ref))
+end
+
 return M
