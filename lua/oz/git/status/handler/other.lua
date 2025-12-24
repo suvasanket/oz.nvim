@@ -16,8 +16,8 @@ function M.quit()
 end
 
 function M.tab()
-    if not s_util.toggle_diff() then
-        s_util.toggle_section()
+    if s_util.toggle_section() then
+        return
     end
 end
 

@@ -1,258 +1,219 @@
 local M = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
-local state = require("oz.git.status").state
 local git = require("oz.git")
-local status = require("oz.git.status")
 
-local refresh = status.refresh_buf
+-- Render the buffer based on M.state
+function M.render(buf)
+	local status = require("oz.git.status")
+	local state = status.state
+	local order = status.render_order
+	local icons = status.icons
+	local ns_id = vim.api.nvim_create_namespace("oz_git_status_icons")
 
---
-M.headings_table = {}
-M.diff_lines = {}
-M.toggled_headings = {}
-
-local run_cmd = shell.run_command
--- local shellout_str = shell.shellout_str
-
-function M.get_heading_tbl(lines)
-	if #lines <= 0 then
+	if not buf or not vim.api.nvim_buf_is_valid(buf) then
 		return
 	end
-	M.headings_table = {}
-	local current_heading = nil
-	local _, branch_line = run_cmd({ "git", "branch", "-vv" }, state.cwd)
-	local branch_heading = "On branch " .. state.current_branch
 
-	M.headings_table[branch_heading] = {}
-	for _, line in ipairs(branch_line) do
-		if line ~= "" then
-			line = "  " .. line
-			table.insert(M.headings_table[branch_heading], line)
+	local lines = {}
+	local header_meta = {}
+	local info_lines = {}
+
+	for _, section_id in ipairs(order) do
+		local section = state.sections[section_id]
+
+		if section and (#section.content > 0 or section_id == "branch") then
+			-- 1. Header with Icon
+			local icon = section.collapsed and icons.collapsed or icons.expanded
+			local display_header = string.format("%s %s", icon, section.header)
+
+			table.insert(lines, display_header)
+
+			-- Store metadata for highlighting
+			table.insert(header_meta, {
+				line = #lines - 1,
+				icon_len = #icon,
+				id = section_id, -- Store ID to distinguish branch section
+			})
+
+			-- 2. Content
+			if not section.collapsed then
+				for _, line in ipairs(section.content) do
+					table.insert(lines, line)
+				end
+			end
+
+			-- 3. Info Line
+			if section_id == "branch" and state.info_lines and #state.info_lines > 0 then
+				for _, info in ipairs(state.info_lines) do
+					table.insert(lines, "  " .. info)
+					table.insert(info_lines, #lines - 1)
+				end
+			end
+
+			table.insert(lines, "")
 		end
 	end
 
-	for _, line in ipairs(lines) do
-		if
-			line:match("^Changes not staged for commit:")
-			or line:match("^Untracked files:")
-			or line:match("^Changes to be committed:")
-			or line:match("Stash list:")
-		then
-			current_heading = line
-			M.headings_table[current_heading] = {}
-		elseif current_heading and line ~= "" then
-			table.insert(M.headings_table[current_heading], line)
-		elseif line == "" then
-			current_heading = nil
-		end
+	if lines[#lines] == "" then
+		table.remove(lines, #lines)
 	end
 
-	return M.headings_table
-end
-
-local function find_line_number(line_content)
-	local buf = require("oz.git.status").status_buf
-	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	for i, line in ipairs(lines) do
-		if line == line_content then
-			return i
-		end
-	end
-	return nil
-end
-
-function M.toggle_section(arg_heading)
-	local buf = require("oz.git.status").status_buf
-	local current_line = arg_heading or vim.api.nvim_get_current_line()
-	local line_num = find_line_number(current_line)
-	if not line_num then
-		return nil
-	end
-
-	-- Check if the current line is a heading
 	vim.api.nvim_buf_set_option(buf, "modifiable", true)
-	if M.headings_table[current_line] then
-		local next_line = line_num + 1
-		local next_lines = vim.api.nvim_buf_get_lines(buf, next_line - 1, next_line, false)
-		local next_line_content = next_lines[1]
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	vim.api.nvim_buf_set_option(buf, "modifiable", false)
 
-		if not arg_heading then -- adding toggled lines to the M.toggeled_headings
-			local toggled_lines = current_line:match("^(%w+%s+%w+)") -- split out the first two words
-			if vim.list_contains(M.toggled_headings, toggled_lines) then
-				util.remove_from_tbl(M.toggled_headings, toggled_lines)
-			else
-				util.tbl_insert(M.toggled_headings, toggled_lines)
-			end
-		end
+	-- Apply Highlights
+	vim.api.nvim_buf_clear_namespace(buf, ns_id, 0, -1)
 
-		if next_line_content and next_line_content:match("^%s") then
-			-- If the next line is indented, collapse the content
-			while next_line_content and next_line_content:match("^%s") do
-				vim.api.nvim_buf_set_lines(buf, next_line - 1, next_line, false, {})
-				next_lines = vim.api.nvim_buf_get_lines(buf, next_line - 1, next_line, false)
-				next_line_content = next_lines[1]
-			end
+	for _, h in ipairs(header_meta) do
+		-- 1. Highlight Icon (Gray)
+		vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", h.line, 0, h.icon_len)
+
+		if h.id == "branch" then
+			-- 2a. Branch Special Handling
+			-- " Branch: " (Heading Color) | "master" (Branch Color)
+			-- Length of " Branch: " is 1 (space) + 8 ("Branch: ") = 9 chars after icon
+			local split_pos = h.icon_len + 9
+
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusHeading", h.line, h.icon_len, split_pos)
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", h.line, split_pos, -1)
 		else
-			-- If the next line is not indented, expand the content
-			local content = M.headings_table[current_line]
-			vim.api.nvim_buf_set_lines(buf, line_num, line_num, false, content)
+			-- 2b. Standard Header (White/Bold)
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusHeading", h.line, h.icon_len, -1)
 		end
 	end
-	vim.api.nvim_buf_set_option(buf, "modifiable", false)
+
+	for _, line_idx in ipairs(info_lines) do
+		vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", line_idx, 0, -1)
+	end
 end
 
----get the file/dir under cursor
----@param fmt_origin boolean|nil
----@return table
+-- (Keep toggle_section, get_file_under_cursor, etc. exactly as they were)
+function M.toggle_section(arg_heading)
+	local status = require("oz.git.status")
+	local current_line = arg_heading or vim.api.nvim_get_current_line()
+	local icons = status.icons
+	local target_section = nil
+
+	for _, section in pairs(status.state.sections) do
+		local collapsed_str = string.format("%s %s", icons.collapsed, section.header)
+		local expanded_str = string.format("%s %s", icons.expanded, section.header)
+		if current_line == collapsed_str or current_line == expanded_str then
+			target_section = section
+			break
+		end
+	end
+	if target_section then
+		target_section.collapsed = not target_section.collapsed
+		local pos = vim.api.nvim_win_get_cursor(0)
+		M.render(status.status_buf)
+		pcall(vim.api.nvim_win_set_cursor, 0, pos)
+		return true
+	end
+	return false
+end
+
 function M.get_file_under_cursor(fmt_origin)
 	local entries = {}
 	local lines = {}
-	-- local cwd = require("oz.git.status").state.cwd or vim.fn.getcwd()
 	local root = require("oz.git").state.root or util.GetProjectRoot()
-
 	if vim.api.nvim_get_mode().mode == "n" then
-		local line = vim.fn.getline(".")
-		table.insert(lines, line)
+		table.insert(lines, vim.fn.getline("."))
 	else
-		local start_line = vim.fn.line("v")
-		local end_line = vim.fn.line(".")
-		lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-		-- vim.api.nvim_input("<Esc>")
+		local start = vim.fn.line("v")
+		local end_ = vim.fn.line(".")
+		lines = vim.api.nvim_buf_get_lines(0, start - 1, end_, false)
 	end
-
 	for _, line in ipairs(lines) do
-		local file = line:match("%S+$")
-		local dir = line:match("(%S+/)%s*$")
-
-		local tbl = { "deleted:", "renamed:", "copied:" }
-		local absolute_dir_path, absolute_file_path
-
-		if dir then
-			absolute_dir_path = root .. "/" .. dir
-		elseif file then
-			absolute_file_path = root .. "/" .. file
-		end
-
-		if vim.fn.filereadable(absolute_file_path) == 1 then -- file
-			if fmt_origin then
-				table.insert(entries, file)
-			else
-				table.insert(entries, absolute_file_path)
-			end
-		elseif vim.fn.isdirectory(absolute_dir_path) == 1 then -- dir
-			if fmt_origin then
-				table.insert(entries, dir)
-			else
-				table.insert(entries, absolute_dir_path)
-			end
-		else
-			for _, string in pairs(tbl) do
-				if line:find(string) then
-					table.insert(entries, file)
+		local clean_path = line:match(":%s+(.*)$") or line:match("^%s*(.*)$")
+		if
+			clean_path
+			and not line:match("^[v>] ")
+			and not line:match("^Branch:")
+			and not line:match("^%s*Ahead")
+			and not line:match("^%s*%[")
+		then
+			if not line:match("^%s*[*+]?%s+%S+%s+%x+") then
+				local absolute_path = root .. "/" .. clean_path
+				if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
+					table.insert(entries, fmt_origin and clean_path or absolute_path)
 				end
 			end
 		end
 	end
-
 	return entries
 end
 
+--- Get branch name under cursor
 function M.get_branch_under_cursor()
-	local branch_heading = "On branch " .. require("oz.git.status").state.current_branch
-	local tbl = M.headings_table[branch_heading]
-	local current_line = vim.api.nvim_get_current_line()
+    local current_line = vim.api.nvim_get_current_line()
 
-	if vim.tbl_contains(tbl, current_line) then
-		current_line = vim.trim(current_line:gsub("%*", ""))
-		return vim.trim(current_line:match("^%s*(%S+)"))
-	else
-		return nil
-	end
+    local header_branch = current_line:match("^[%v>%s]*Branch:%s+(%S+)")
+    if header_branch then
+        return header_branch
+    end
+
+    if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
+        local branch_name = current_line:match("^%s*[*+]?%s+(%S+)")
+        return branch_name
+    end
+
+    return nil
 end
 
-function M.generate_diff(file)
-	if not file then
-		return nil
-	end
-
-	local _, diff = run_cmd({ "git", "diff", file }, state.cwd)
-	local new_diff = {}
-	local grab = false
-
-	for _, line in ipairs(diff) do
-		if line:match("^@") then
-			grab = true
-		end
-		if grab then
-			table.insert(new_diff, "    " .. line)
-		end
-	end
-
-	return new_diff
-end
-
-function M.toggle_diff()
-	local file = M.get_file_under_cursor() -- Get the file under the cursor
-	if #file > 0 then
-		file = file[1]
-	else
-		return
-	end
-
-	local line_num = vim.fn.line(".") -- Get the current line number
-
-	-- Check if the diff is already shown
-	if M.diff_lines[file] then
-		vim.bo.modifiable = true
-		vim.api.nvim_buf_set_lines(0, line_num, line_num + #M.diff_lines[file], false, {})
-		vim.bo.modifiable = false
-		M.diff_lines[file] = nil -- Clear the stored diff lines
-	else
-		-- If diff is not shown, generate and insert it
-		local diff = M.generate_diff(file)
-		if not diff or #diff == 0 then
-			return
-		end
-		vim.bo.modifiable = true
-		vim.api.nvim_buf_set_lines(0, line_num, line_num, false, diff) -- Insert diff lines
-		vim.bo.modifiable = false
-		M.diff_lines[file] = diff
-	end
-end
-
---- get stash under cursor
----@return {index: integer, branch: string, name: string}
 function M.get_stash_under_cursor()
-	local line_content = vim.api.nvim_get_current_line()
-	local pattern = "^%s*stash@{(%d+)}:%s*On%s+(.-):%s*(.+)$"
-
-	local index_str, branch_name, stash_name = line_content:match(pattern)
-
-	if index_str and branch_name and stash_name then
-		local index_num = tonumber(index_str)
-
-		branch_name = branch_name:match("^%s*(.-)%s*$") or branch_name
-		stash_name = stash_name:match("^%s*(.-)%s*$") or stash_name
-
-		return {
-			index = index_num,
-			branch = branch_name,
-			name = stash_name,
-		}
-	else
-		return {}
+	local line = vim.api.nvim_get_current_line()
+	local index, branch, name = line:match("^%s*stash@{(%d+)}:%s*On%s+(.-):%s*(.+)$")
+	if index then
+		return { index = tonumber(index), branch = vim.trim(branch), name = vim.trim(name) }
 	end
+	return {}
 end
 
 function M.run_n_refresh(cmd)
-    git.after_exec_complete(function()
-        vim.schedule(function()
-            refresh(true)
-        end)
-    end)
-    vim.cmd(cmd)
-    util.inactive_echo(":" .. cmd)
+	git.after_exec_complete(function()
+		vim.schedule(function()
+			require("oz.git.status").refresh_buf()
+		end)
+	end)
+	vim.cmd(cmd)
+	util.inactive_echo(":" .. cmd)
+end
+
+---get section
+---@return string|nil
+function M.get_section_under_cursor()
+	local status = require("oz.git.status")
+	local state = status.state
+	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+	local current_row = 1
+
+	for _, section_id in ipairs(status.render_order) do
+		local section = state.sections[section_id]
+
+		if section and (#section.content > 0 or section_id == "branch") then
+			local start_line = current_row
+			local height = 1 -- Header line
+
+			if not section.collapsed then
+				height = height + #section.content
+			end
+
+			if section_id == "branch" and state.info_lines then
+				height = height + #state.info_lines
+			end
+
+			local end_line = start_line + height - 1
+
+			if cursor_line >= start_line and cursor_line <= end_line then
+				return section_id
+			end
+
+			current_row = end_line + 2
+		end
+	end
+
+	return nil
 end
 
 return M
