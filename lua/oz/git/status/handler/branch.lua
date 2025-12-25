@@ -96,4 +96,26 @@ function M.rename()
 	end
 end
 
+function M.setup_keymaps(buf, key_grp, map_help_key)
+	util.Map("n", "bn", M.new, { buffer = buf, desc = "Create a new branch. <*>" })
+	util.Map("n", "bb", M.switch, { buffer = buf, desc = "Populate cmdline with switch." })
+	util.Map("n", "bf", M.new_from, { buffer = buf, desc = "New branch from a given branch." })
+	util.Map("n", "bd", M.delete, { buffer = buf, desc = "Delete branch under cursor. <*>" })
+	util.Map(
+		"n",
+		"bu",
+		M.set_upstream,
+		{ buffer = buf, desc = "Set upstream for branch under cursor. <*>" }
+	)
+	util.Map(
+		"n",
+		"bU",
+		M.unset_upstream,
+		{ buffer = buf, desc = "Unset upstream for branch under cursor. <*>" }
+	)
+	util.Map("n", "br", M.rename, { buffer = buf, desc = "Rename branch under cursor. <*>" })
+	map_help_key("b", "branch")
+	key_grp["branch[b]"] = { "bb", "bn", "bf", "bd", "bu", "bU", "br" }
+end
+
 return M

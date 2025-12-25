@@ -71,4 +71,19 @@ function M.diff()
 	end)
 end
 
+function M.setup_keymaps(buf, key_grp, map_help_key)
+	util.Map("n", "dh", M.file_history, { buffer = buf, desc = "Diff file history or stash. <*>" })
+	util.Map("n", "df", M.file_changes, { buffer = buf, desc = "Diff file changes. <*>" })
+	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then -- only diffview keymaps
+		util.Map("n", "dv", M.diff, { buffer = buf, desc = "Diff" })
+		util.Map("n", "d<space>", function()
+			util.set_cmdline("DiffviewOpen ")
+		end, { buffer = buf, desc = "Populate cmd line with DiffviewOpen." })
+		util.Map("n", "du", "<cmd>DiffviewOpen -uno<cr>", { buffer = buf, desc = "Diff all unstaged changes." })
+		util.Map("n", "ds", "<cmd>DiffviewOpen --staged<cr>", { buffer = buf, desc = "Diff all staged changes." })
+	end
+	map_help_key("d", "diff")
+	key_grp["diff[d]"] = { "dh", "df", "dv", "d<Space>", "du", "ds" }
+end
+
 return M

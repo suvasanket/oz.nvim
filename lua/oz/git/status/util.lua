@@ -78,40 +78,40 @@ function M.render(buf)
 		vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", line_idx, 0, -1)
 	end
 
-    -- Worktree Specific Highlighting
-    for _, w in ipairs(worktree_meta) do
-        local is_prunable = w.content:match("%(prunable%)")
+	-- Worktree Specific Highlighting
+	for _, w in ipairs(worktree_meta) do
+		local is_prunable = w.content:match("%(prunable%)")
 
-        if is_prunable then
-            vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, 0, -1)
-            local p_start, p_end = w.content:find("prunable")
-            if p_start then
-                vim.api.nvim_buf_add_highlight(buf, ns_id, "healthError", w.line, p_start - 1, p_end)
-            end
-        else
-            -- 1. Name: Start of text until '('
-            local name_start = w.content:find("%S")
-            local b_open = w.content:find("%(", name_start or 0)
+		if is_prunable then
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, 0, -1)
+			local p_start, p_end = w.content:find("prunable")
+			if p_start then
+				vim.api.nvim_buf_add_highlight(buf, ns_id, "healthError", w.line, p_start - 1, p_end)
+			end
+		else
+			-- 1. Name: Start of text until '('
+			local name_start = w.content:find("%S")
+			local b_open = w.content:find("%(", name_start or 0)
 
-            if name_start and b_open then
-                -- Highlight Name (Directory Color)
-                vim.api.nvim_buf_add_highlight(buf, ns_id, "Directory", w.line, name_start - 1, b_open - 1)
+			if name_start and b_open then
+				-- Highlight Name (Directory Color)
+				vim.api.nvim_buf_add_highlight(buf, ns_id, "Directory", w.line, name_start - 1, b_open - 1)
 
-                -- 2. Branch: Inside ()
-                local b_close = w.content:find("%)", b_open)
-                if b_close then
-                    -- Highlight Branch (excluding parens)
-                    vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", w.line, b_open, b_close - 1)
+				-- 2. Branch: Inside ()
+				local b_close = w.content:find("%)", b_open)
+				if b_close then
+					-- Highlight Branch (excluding parens)
+					vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", w.line, b_open, b_close - 1)
 
-                    -- 3. SHA: First hex string after ')'
-                    local sha_start, sha_end = w.content:find("%x+", b_close + 1)
-                    if sha_start then
-                        vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, sha_start - 1, sha_end)
-                    end
-                end
-            end
-        end
-    end
+					-- 3. SHA: First hex string after ')'
+					local sha_start, sha_end = w.content:find("%x+", b_close + 1)
+					if sha_start then
+						vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, sha_start - 1, sha_end)
+					end
+				end
+			end
+		end
+	end
 end
 
 function M.toggle_section(arg_heading)
@@ -207,41 +207,44 @@ function M.get_file_under_cursor(fmt_origin)
 end
 
 function M.get_branch_under_cursor()
-    local current_line = vim.api.nvim_get_current_line()
+	local current_line = vim.api.nvim_get_current_line()
 
-    local header_branch = current_line:match("^[%v".. require("oz.git.status").icons.collapsed .. "%s]*Branch:%s+(%S+)")
-    if header_branch then return header_branch end
-    if current_line:match("%S+%(%S+%)%s+%x+") then
-        return nil
-    end
+	local header_branch =
+		current_line:match("^[%v" .. require("oz.git.status").icons.collapsed .. "%s]*Branch:%s+(%S+)")
+	if header_branch then
+		return header_branch
+	end
+	if current_line:match("%S+%(%S+%)%s+%x+") then
+		return nil
+	end
 
-    if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
-        return current_line:match("^%s*[*+]?%s+(%S+)")
-    end
+	if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
+		return current_line:match("^%s*[*+]?%s+(%S+)")
+	end
 
-    return nil
+	return nil
 end
 
 --- Get worktree details under cursor
 ---@return {path:string, head:string, branch:string}|nil
 function M.get_worktree_under_cursor()
-    local line = vim.api.nvim_get_current_line()
-    -- Format:   name(branch)  sha
+	local line = vim.api.nvim_get_current_line()
+	-- Format:   name(branch)  sha
 
-    -- Parse: name(branch)
-    local name, branch = line:match("^%s*(%S+)%(([^)]+)%)")
+	-- Parse: name(branch)
+	local name, branch = line:match("^%s*(%S+)%(([^)]+)%)")
 
-    -- Parse: sha
-    local sha = line:match("%s+(%x+)%s*")
+	-- Parse: sha
+	local sha = line:match("%s+(%x+)%s*")
 
-    if name and branch and sha then
-        return {
-            path = name, -- Using short name as path/identifier
-            head = sha,
-            branch = branch
-        }
-    end
-    return nil
+	if name and branch and sha then
+		return {
+			path = name, -- Using short name as path/identifier
+			head = sha,
+			branch = branch,
+		}
+	end
+	return nil
 end
 
 function M.get_stash_under_cursor()
@@ -261,6 +264,71 @@ function M.run_n_refresh(cmd)
 	end)
 	vim.cmd(cmd)
 	util.inactive_echo(":" .. cmd)
+end
+
+--- Jump to a section (by ID) or relative direction
+---@param target any Section ID (string) or Direction (number: 1 or -1)
+function M.jump_section(target)
+	local status = require("oz.git.status")
+	local current_line = vim.api.nvim_win_get_cursor(0)[1]
+	local headers = {}
+	local row = 1
+
+	-- 1. Calculate positions of all visible sections
+	for _, id in ipairs(status.render_order) do
+		local section = status.state.sections[id]
+
+		-- Only track sections that are actually rendered
+		if section and (#section.content > 0 or id == "branch") then
+			-- Case A: Jump to Specific ID
+			if type(target) == "string" and id == target then
+				vim.api.nvim_win_set_cursor(0, { row, 0 })
+				return
+			end
+
+			table.insert(headers, row)
+
+			-- Calculate height to find the start of the next section
+			local height = 1 -- Header line
+			if not section.collapsed then
+				height = height + #section.content
+			end
+			if id == "branch" and status.state.info_lines then
+				height = height + #status.state.info_lines
+			end
+			row = row + height + 1 -- Spacer line
+		end
+	end
+
+	-- Case B: Jump Relative (Next/Prev)
+	if type(target) == "number" and #headers > 0 then
+		local dest = nil
+		if target == 1 then -- Next
+			for _, line in ipairs(headers) do
+				if line > current_line then
+					dest = line
+					break
+				end
+			end
+			if not dest then
+				dest = headers[1]
+			end -- Wrap to top
+		elseif target == -1 then -- Prev
+			for i = #headers, 1, -1 do
+				if headers[i] < current_line then
+					dest = headers[i]
+					break
+				end
+			end
+			if not dest then
+				dest = headers[#headers]
+			end -- Wrap to bottom
+		end
+
+		if dest then
+			vim.api.nvim_win_set_cursor(0, { dest, 0 })
+		end
+	end
 end
 
 return M

@@ -69,4 +69,28 @@ function M.discard_picked()
     end
 end
 
+function M.setup_keymaps(buf, key_grp)
+    buf_id = buf
+    local user_mappings = require("oz.git").user_config.mappings -- Ensure this is available
+    util.Map(
+        "n",
+        user_mappings.toggle_pick,
+        M.toggle_pick,
+        { nowait = true, buffer = buf, desc = "Pick/unpick file/branch/stash. <*>" }
+    )
+    util.Map(
+        "n",
+        { "a", "i" },
+        M.edit_picked,
+        { nowait = true, buffer = buf, desc = "Enter cmdline to edit picked." }
+    )
+    util.Map(
+        "n",
+        user_mappings.unpick_all,
+        M.discard_picked,
+        { nowait = true, buffer = buf, desc = "Discard picked entries." }
+    )
+    key_grp["pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
+end
+
 return M

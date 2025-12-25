@@ -148,7 +148,7 @@ function M.refresh_buf(passive)
 		M.commit_log({ from = M.comming_from })
 		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
-	vim.cmd("checktime")
+    pcall(vim.cmd.checktime())
 end
 
 -- commit log

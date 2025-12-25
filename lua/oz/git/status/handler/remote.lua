@@ -102,13 +102,20 @@ function M.rename()
                     util.Notify("Renamed remote '" .. choice .. "' to '" .. new_name .. "'.", nil, "oz_git")
                     refresh() -- Refresh status potentially
                 end, function(err)
-                util.Notify("Failed to rename remote '" .. choice .. "'. " .. (err or ""), "error", "oz_git")
-            end)
-        elseif new_name == choice then
-            util.Notify("New name is the same as the old name.", "info", "oz_git")
+                    util.Notify("Failed to rename remote '" .. choice .. "'. " .. (err or ""), "error", "oz_git")
+                end)
+            end
         end
-    end
-end)
+    end)
+end
+
+function M.setup_keymaps(buf, key_grp, map_help_key)
+    util.Map("n", "MM", "<cmd>Git remote -v<cr>", { buffer = buf, desc = "Remote list." })
+    util.Map("n", "Ma", M.add_update, { buffer = buf, desc = "Add or update remotes." })
+    util.Map("n", "Md", M.remove, { buffer = buf, desc = "Remove remote. <*>" })
+    util.Map("n", "Mr", M.rename, { buffer = buf, desc = "Rename remote. <*>" })
+    map_help_key("M", "remote")
+    key_grp["remote[M]"] = { "Ma", "Md", "Mr", "MM" }
 end
 
 return M

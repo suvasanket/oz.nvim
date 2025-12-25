@@ -8,12 +8,6 @@ function M.quit()
 	vim.cmd("close")
 end
 
-function M.tab()
-	if s_util.toggle_section() then
-		return
-	end
-end
-
 function M.enter_key()
 	-- 1. Header Toggle
 	local section_id = s_util.get_section_under_cursor()
@@ -63,6 +57,23 @@ function M.enter_key()
 		end
 		return
 	end
+end
+
+function M.setup_keymaps(buf, key_grp)
+	util.Map("n", "q", M.quit, { buffer = buf, desc = "Close git status buffer." })
+	util.Map("n", "<Tab>", function()
+		s_util.jump_section(1)
+	end, { buffer = buf, desc = "Jump to next section." })
+	util.Map("n", "<S-Tab>", function()
+		s_util.jump_section(-1)
+	end, { buffer = buf, desc = "Jump to previous section." })
+	util.Map("n", "<C-r>", status.refresh_buf, { buffer = buf, desc = "Refresh status buffer." })
+	util.Map("n", "-", function()
+		util.set_cmdline("Git ")
+	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git." })
+	util.Map("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry under cursor. <*>" })
+	util.Map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
+	key_grp["quick actions"] = { "-", "<Tab>", "<S-Tab>", "<CR>", "I", "<C-R>", "q" }
 end
 
 return M

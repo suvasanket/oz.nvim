@@ -230,7 +230,7 @@ function M.refresh_buf(passive)
 	end
 	s_util.render(M.status_buf)
 	pcall(vim.api.nvim_win_set_cursor, 0, pos)
-	vim.cmd("checktime")
+    pcall(vim.cmd.checktime())
 end
 
 function M.GitStatus()

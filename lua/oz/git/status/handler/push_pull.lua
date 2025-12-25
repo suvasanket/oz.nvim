@@ -80,4 +80,26 @@ function M.fetch()
 	s_util.run_n_refresh("Git fetch")
 end
 
+function M.setup_keymaps(buf, key_grp)
+	util.Map(
+		"n",
+		"p",
+		M.pull,
+		{ buffer = buf, desc = "Git pull or pull from branch under cursor. <*>" }
+	)
+	util.Map(
+		"n",
+		"P",
+		M.push,
+		{ buffer = buf, desc = "Git push or push to branch under cursor. <*>" }
+	)
+	util.Map(
+		"n",
+		"f",
+		M.fetch,
+		{ buffer = buf, desc = "Git push or push to branch under cursor. <*>" }
+	)
+	key_grp["remote action"] = { "p", "P", "f" }
+end
+
 return M

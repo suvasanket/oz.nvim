@@ -76,4 +76,31 @@ function M.rename()
 	end
 end
 
+function M.setup_keymaps(buf, key_grp)
+	util.Map(
+		{ "n", "x" },
+		"s",
+		M.stage,
+		{ buffer = buf, desc = "Stage entry under cursor or selected entries. <*>" }
+	)
+	-- unstage
+	util.Map(
+		{ "n", "x" },
+		"u",
+		M.unstage,
+		{ buffer = buf, desc = "Unstage entry under cursor or selected entries. <*>" }
+	)
+	-- discard
+	util.Map(
+		{ "n", "x" },
+		"X",
+		M.discard,
+		{ buffer = buf, desc = "Discard entry under cursor or selected entries. <*>" }
+	)
+	-- untrack
+	util.Map({ "n", "x" }, "K", M.untrack, { buffer = buf, desc = "Untrack file or selected files. <*>" })
+	util.Map("n", "R", M.rename, { buffer = buf, desc = "Rename the file under cursor. <*>" })
+	key_grp["file"] = { "s", "u", "K", "X", "R" }
+end
+
 return M
