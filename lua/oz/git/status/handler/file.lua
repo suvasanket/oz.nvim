@@ -68,4 +68,12 @@ function M.untrack()
 	end
 end
 
+function M.rename()
+	local file = s_util.get_file_under_cursor(true)[1]
+	local new_name = util.UserInput("New name: ", file)
+	if new_name then
+		s_util.run_n_refresh(string.format("Git mv %s %s", file, new_name))
+	end
+end
+
 return M

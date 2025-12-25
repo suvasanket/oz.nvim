@@ -58,7 +58,7 @@ function M.set_upstream()
 		return
 	end
 
-    local remote_branches = g_util.get_branch({ rem = true })
+	local remote_branches = g_util.get_branch({ rem = true })
 	if #remote_branches == 0 then
 		util.Notify("No remote branches found.", "info", "oz_git")
 		return
@@ -85,6 +85,14 @@ function M.unset_upstream()
 		end
 	else
 		util.Notify("Cursor not on a local branch.", "warn", "oz_git")
+	end
+end
+
+function M.rename()
+	local branch = s_util.get_branch_under_cursor()
+	local new_name = util.UserInput("New name: ", branch)
+	if new_name then
+		s_util.run_n_refresh(string.format("Git branch -m %s %s", branch, new_name))
 	end
 end
 

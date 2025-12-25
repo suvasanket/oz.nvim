@@ -35,12 +35,6 @@ function M.keymaps_init(buf)
 		{ buffer = buf_id, desc = "Toggle headings / inline file diff. <*>" }
 	)
 	util.Map("n", "<C-r>", refresh, { buffer = buf_id, desc = "Refresh status buffer." })
-	util.Map(
-		"n",
-		"grn",
-		handle.quick_action.rename,
-		{ buffer = buf_id, desc = "Rename file or branch under cursor. <*>" }
-	)
 	util.Map("n", "-", function()
 		util.set_cmdline("Git ")
 	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
@@ -51,32 +45,33 @@ function M.keymaps_init(buf)
 		{ buffer = buf_id, desc = "open entry under cursor / switch branches. <*>" }
 	)
 	util.Map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
-	key_grp["quick actions"] = { "-", "grn", "<Tab>", "<CR>", "I", "<C-R>", "q" }
+	key_grp["quick actions"] = { "-", "<Tab>", "<CR>", "I", "<C-R>", "q" }
 
-	-- stage
+	-- file mappings
 	util.Map(
 		{ "n", "x" },
 		"s",
-		handle.add.stage,
+		handle.file.stage,
 		{ buffer = buf_id, desc = "Stage entry under cursor or selected entries. <*>" }
 	)
 	-- unstage
 	util.Map(
 		{ "n", "x" },
 		"u",
-		handle.add.unstage,
+		handle.file.unstage,
 		{ buffer = buf_id, desc = "Unstage entry under cursor or selected entries. <*>" }
 	)
 	-- discard
 	util.Map(
 		{ "n", "x" },
 		"X",
-		handle.add.discard,
+		handle.file.discard,
 		{ buffer = buf_id, desc = "Discard entry under cursor or selected entries. <*>" }
 	)
 	-- untrack
-	util.Map({ "n", "x" }, "K", handle.add.untrack, { buffer = buf_id, desc = "Untrack file or selected files. <*>" })
-	key_grp["tracking"] = { "s", "u", "K", "X" }
+	util.Map({ "n", "x" }, "K", handle.file.untrack, { buffer = buf_id, desc = "Untrack file or selected files. <*>" })
+	util.Map("n", "R", handle.file.rename, { buffer = buf_id, desc = "Rename the file under cursor. <*>" })
+	key_grp["file"] = { "s", "u", "K", "X", "R" }
 
 	-- stash mappings
 	util.Map("n", "za", handle.other.stash_apply, { buffer = buf_id, desc = "Apply stash under cursor. <*>" })
@@ -140,18 +135,18 @@ function M.keymaps_init(buf)
 	key_grp["goto[g]"] = { "gI", "gu", "gs", "gU", "gz", "gl", "gL", "gg", "g?" }
 
 	-- diff mode
-	util.Map("n", "vh", handle.diff.file_history, { buffer = buf_id, desc = "Diff file history or stash. <*>" })
-	util.Map("n", "vf", handle.diff.file_changes, { buffer = buf_id, desc = "Diff file changes. <*>" })
+	util.Map("n", "dh", handle.diff.file_history, { buffer = buf_id, desc = "Diff file history or stash. <*>" })
+	util.Map("n", "df", handle.diff.file_changes, { buffer = buf_id, desc = "Diff file changes. <*>" })
 	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then -- only diffview keymaps
-		util.Map("n", "vv", handle.diff.diff, { buffer = buf_id, desc = "Diff" })
-		util.Map("n", "v<space>", function()
+		util.Map("n", "dv", handle.diff.diff, { buffer = buf_id, desc = "Diff" })
+		util.Map("n", "d<space>", function()
 			util.set_cmdline("DiffviewOpen ")
 		end, { buffer = buf_id, desc = "Populate cmd line with DiffviewOpen." })
-		util.Map("n", "vu", "<cmd>DiffviewOpen -uno<cr>", { buffer = buf_id, desc = "Diff all unstaged changes." })
-		util.Map("n", "vs", "<cmd>DiffviewOpen --staged<cr>", { buffer = buf_id, desc = "Diff all staged changes." })
+		util.Map("n", "du", "<cmd>DiffviewOpen -uno<cr>", { buffer = buf_id, desc = "Diff all unstaged changes." })
+		util.Map("n", "ds", "<cmd>DiffviewOpen --staged<cr>", { buffer = buf_id, desc = "Diff all staged changes." })
 	end
-	map_help_key("v", "diff")
-	key_grp["diff[v]"] = { "vh", "vf", "vv", "v<Space>", "vu", "vs" }
+	map_help_key("d", "diff")
+	key_grp["diff[d]"] = { "dh", "df", "dv", "d<Space>", "du", "ds" }
 
 	-- Merge/Conflict helper
 	if state.in_conflict then
@@ -264,8 +259,9 @@ function M.keymaps_init(buf)
 		handle.branch.unset_upstream,
 		{ buffer = buf_id, desc = "Unset upstream for branch under cursor. <*>" }
 	)
+	util.Map("n", "br", handle.branch.rename, { buffer = buf, desc = "Rename branch under cursor. <*>" })
 	map_help_key("b", "branch")
-	key_grp["branch[b]"] = { "bb", "bn", "bf", "bd", "bu", "bU" }
+	key_grp["branch[b]"] = { "bb", "bn", "bf", "bd", "bu", "bU", "br" }
 
 	-- merge mappings
 	util.Map(

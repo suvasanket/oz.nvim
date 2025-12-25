@@ -23,7 +23,7 @@ local section_template = {
 	branch = { header = "Branch: ", default_collapsed = true },
 	staged = { header = "Staged", default_collapsed = false },
 	unstaged = { header = "Unstaged", default_collapsed = false },
-	untracked = { header = "Untracked", default_collapsed = true },
+	untracked = { header = "Untracked", default_collapsed = false },
 	worktrees = { header = "Worktrees", default_collapsed = false },
 	stash = { header = "Stashes", default_collapsed = false },
 }
@@ -47,7 +47,6 @@ local function format_git_line(code, file)
 		["?"] = "",
 	}
 	local prefix = map[code] or "modified:   "
-	-- Changed \t to "  " for alignment with header text
 	return "  " .. prefix .. file
 end
 
@@ -55,15 +54,11 @@ local function generate_status_info(current_branch, in_conflict)
 	local info = {}
 	local root_path = g_util.get_project_root()
 
-	if in_conflict then
+	if in_conflict then -- conflict
 		table.insert(info, "[!] Merge Conflict Detected")
-	end
-
-	if current_branch == "HEAD" or current_branch:match("HEAD detached") then
+	elseif current_branch == "HEAD" or current_branch:match("HEAD detached") then -- detached head
 		table.insert(info, "[!] HEAD is detached")
-	end
-
-	if current_branch ~= "HEAD" then
+	elseif current_branch ~= "HEAD" then -- ahead/behind
 		local ok, counts = shell.run_command({ "git", "rev-list", "--left-right", "--count", "HEAD...@{u}" }, root_path)
 		if ok and #counts > 0 then
 			local ahead, behind = counts[1]:match("(%d+)%s+(%d+)")
@@ -114,49 +109,43 @@ local function generate_sections()
 	local _, branch_list = shell.run_command({ "git", "branch", "-vv" }, root_path)
 	for _, line in ipairs(branch_list) do
 		if line ~= "" then
-			-- "  " aligns with text after icon
 			table.insert(new_sections.branch.content, "  " .. line)
 		end
 	end
 
-	-- 3. Worktrees Section (Only show if >= 2)
-	local wt_ok, wt_out = shell.run_command({ "git", "worktree", "list", "--porcelain" }, root_path)
+	-- 3. Worktrees Section
+	local wt_ok, wt_out = shell.run_command({ "git", "worktree", "list" }, root_path)
 	if wt_ok then
 		local worktree_items = {}
-		local current_wt = {}
+		for _, line in ipairs(wt_out) do
+			local path, sha, rest = line:match("^(%S+)%s+(%x+)%s+(.*)$")
+			if path then
+				local branch_name = rest:match("%[(.-)%]")
+				local is_prunable = rest:match("prunable")
 
-		-- Helper to finalize a worktree item
-		local function push_wt()
-			if current_wt.path then
+				local status = ""
+				if is_prunable then
+					status = "(prunable)"
+				end
+
+				local short_name = path:match("([^/]+)$") or path
+
 				table.insert(worktree_items, {
-					path = current_wt.path,
-					sha = current_wt.sha or "",
-					branch = current_wt.branch or "detached",
+					name = short_name,
+					sha = sha,
+					branch = branch_name or "detached",
+					status = status,
 				})
 			end
 		end
 
-		for _, line in ipairs(wt_out) do
-			if line:match("^worktree") then
-				push_wt()
-				current_wt = { path = line:sub(10) }
-			elseif line:match("^HEAD") then
-				current_wt.sha = line:sub(6, 12)
-			elseif line:match("^branch") then
-				current_wt.branch = line:match("refs/heads/(.*)")
-			end
-		end
-		push_wt() -- Push last one
-
-		-- Only render if we have more than 1 worktree (main + others)
 		if #worktree_items >= 2 then
 			for _, item in ipairs(worktree_items) do
-				-- Added "  " prefix for alignment
-				local display = string.format("  %s  %s [%s]", item.path, item.sha, item.branch)
+				local display = string.format("  %s(%s) %s %s", item.name, item.branch, item.sha, item.status)
+				display = display:gsub("%s+$", "")
 				table.insert(new_sections.worktrees.content, display)
 			end
 		else
-			-- Ensure content is empty so renderer skips it (or hides header based on logic)
 			new_sections.worktrees.content = {}
 		end
 	end
@@ -179,7 +168,6 @@ local function generate_sections()
 				end
 
 				if x == "?" and y == "?" then
-					-- Changed \t to "  "
 					table.insert(new_sections.untracked.content, "  " .. file)
 				end
 			end
@@ -191,7 +179,6 @@ local function generate_sections()
 	if stash_ok then
 		for _, line in ipairs(stash_out) do
 			if line ~= "" then
-				-- Changed \t to "  "
 				table.insert(new_sections.stash.content, "  " .. line)
 			end
 		end
@@ -219,7 +206,7 @@ local function status_buf_hl()
 	vim.cmd([[
     syntax match ozGitStatusBranchName "\S\+" contained
     highlight default link ozGitStatusBranchName @attribute
-    syntax match @attribute /\*\s\w\+/
+    syntax match @attribute /\*\s\S\+/
     ]])
 
 	-- Stash

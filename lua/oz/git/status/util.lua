@@ -21,8 +21,6 @@ function M.render(buf)
 
 	for _, section_id in ipairs(order) do
 		local section = state.sections[section_id]
-
-		-- Logic: Always show branch section. For others, only show if content > 0.
 		if section and (#section.content > 0 or section_id == "branch") then
 			-- 1. Header
 			local icon = section.collapsed and icons.collapsed or icons.expanded
@@ -80,31 +78,40 @@ function M.render(buf)
 		vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", line_idx, 0, -1)
 	end
 
-	-- Worktree Specific Highlighting
-	-- Format:   /path/to/worktree  sha [branch]
-	for _, w in ipairs(worktree_meta) do
-		local path_part = w.content:match("^(.-)%s+%x+")
-		if path_part then
-			local last_slash_next_idx = path_part:match(".*()/")
-			if last_slash_next_idx then
-				vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, 0, last_slash_next_idx - 1)
-			end
-		end
+    -- Worktree Specific Highlighting
+    for _, w in ipairs(worktree_meta) do
+        local is_prunable = w.content:match("%(prunable%)")
 
-		-- 2. SHA (Gray)
-		local sha_start, sha_end = w.content:find("%s+(%x+)%s+")
-		if sha_start then
-			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, sha_start, sha_end)
-		end
+        if is_prunable then
+            vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, 0, -1)
+            local p_start, p_end = w.content:find("prunable")
+            if p_start then
+                vim.api.nvim_buf_add_highlight(buf, ns_id, "healthError", w.line, p_start - 1, p_end)
+            end
+        else
+            -- 1. Name: Start of text until '('
+            local name_start = w.content:find("%S")
+            local b_open = w.content:find("%(", name_start or 0)
 
-		-- 3. Branch (Color, excluding brackets)
-		local b_open = w.content:find("%[", sha_end or 0)
-		local b_close = w.content:find("%]", b_open or 0)
+            if name_start and b_open then
+                -- Highlight Name (Directory Color)
+                vim.api.nvim_buf_add_highlight(buf, ns_id, "Directory", w.line, name_start - 1, b_open - 1)
 
-		if b_open and b_close then
-			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", w.line, b_open, b_close - 1)
-		end
-	end
+                -- 2. Branch: Inside ()
+                local b_close = w.content:find("%)", b_open)
+                if b_close then
+                    -- Highlight Branch (excluding parens)
+                    vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", w.line, b_open, b_close - 1)
+
+                    -- 3. SHA: First hex string after ')'
+                    local sha_start, sha_end = w.content:find("%x+", b_close + 1)
+                    if sha_start then
+                        vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, sha_start - 1, sha_end)
+                    end
+                end
+            end
+        end
+    end
 end
 
 function M.toggle_section(arg_heading)
@@ -130,40 +137,27 @@ function M.toggle_section(arg_heading)
 	return false
 end
 
---- Get the section ID
----@return string|nil
 function M.get_section_under_cursor()
 	local status = require("oz.git.status")
 	local state = status.state
 	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
 	local current_row = 1
-
 	for _, section_id in ipairs(status.render_order) do
 		local section = state.sections[section_id]
-
-		-- Logic must match M.render exactly regarding row counting
 		if section and (#section.content > 0 or section_id == "branch") then
-			-- Check strict match on header line
 			if cursor_line == current_row then
 				return section_id
 			end
-
-			-- Calculate total height of this block to find start of next block
-			local height = 1 -- Header line
-
+			local height = 1
 			if not section.collapsed then
 				height = height + #section.content
 			end
-
 			if section_id == "branch" and state.info_lines then
 				height = height + #state.info_lines
 			end
-
-			-- Jump to next section (Height + 1 Spacer line)
 			current_row = current_row + height + 1
 		end
 	end
-
 	return nil
 end
 
@@ -171,7 +165,6 @@ function M.get_file_under_cursor(fmt_origin)
 	local entries = {}
 	local lines = {}
 	local root = require("oz.git").state.root or util.GetProjectRoot()
-
 	if vim.api.nvim_get_mode().mode == "n" then
 		table.insert(lines, vim.fn.getline("."))
 	else
@@ -179,21 +172,28 @@ function M.get_file_under_cursor(fmt_origin)
 		local end_ = vim.fn.line(".")
 		lines = vim.api.nvim_buf_get_lines(0, start - 1, end_, false)
 	end
-
 	for _, line in ipairs(lines) do
 		if not line:match("^%s*$") then
 			local clean_path = line:match(":%s+(.*)$") or line:match("^%s*(.*)$")
-
 			if clean_path and clean_path ~= "" then
-				local is_worktree = line:match("^%s*/") or line:match("^%s*[%w_/-]+%s+%x+%s+%[")
+				local is_worktree = line:match("^[v" .. require("oz.git.status").icons.collapsed .. "]")
+					or line:match("^(.*)%s+/%S+")
 				local is_header = line:match("^[v" .. require("oz.git.status").icons.collapsed .. "] ")
 				local is_branch = line:match("^Branch:") or line:match("^%s*[*+]?%s+%S+%s+%x+")
 				local is_stash = line:match("^%s*stash@")
 				local is_info = line:match("^%s*Ahead") or line:match("^%s*%[")
+				-- WT Line format:  [branch] name sha
+				local is_wt_line = line:match("%[.*%]%s+%S+%s+%x+")
 
-				if not is_header and not is_branch and not is_info and not is_worktree and not is_stash then
+				if
+					not is_header
+					and not is_branch
+					and not is_info
+					and not is_worktree
+					and not is_stash
+					and not is_wt_line
+				then
 					local absolute_path = root .. "/" .. clean_path
-
 					if absolute_path ~= root .. "/" then
 						if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
 							table.insert(entries, fmt_origin and clean_path or absolute_path)
@@ -223,12 +223,15 @@ end
 ---@return {path:string, head:string, branch:string}|nil
 function M.get_worktree_under_cursor()
 	local line = vim.api.nvim_get_current_line()
-	-- Format:   /path/to/worktree  sha [branch]
-	local path, sha, branch = line:match("^%s*(%S+)%s+(%x+)%s+%[(.-)%]$")
+	-- Format:  [branch]  name  sha  ...
 
-	if path and sha and branch then
+	local branch_part, name, sha = line:match("^%s*(%S+)%s+(%S+)%s+(%x+)")
+
+	if branch_part and name and sha then
+		local branch = branch_part:match("%[(.-)%]") or "HEAD"
+		-- Note: path here is just the name (e.g. "feature-1")
 		return {
-			path = path,
+			path = name,
 			head = sha,
 			branch = branch,
 		}

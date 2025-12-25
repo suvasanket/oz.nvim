@@ -5,7 +5,7 @@ local modules = {
     "oz.git.status.handler.push_pull",
     "oz.git.status.handler.pick",
     "oz.git.status.handler.diff",
-    "oz.git.status.handler.add",
+    "oz.git.status.handler.file",
     "oz.git.status.handler.other",
     "oz.git.status.handler.merge_rebase",
     "oz.git.status.handler.quick_action",
