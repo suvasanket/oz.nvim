@@ -32,6 +32,7 @@ M.state = {
 	cwd = nil,
 	current_branch = nil,
 	sections = {},
+	worktree_map = {},
 	info_lines = {},
 	in_conflict = false,
 }
@@ -103,7 +104,6 @@ local function generate_sections()
 	local _, branch_res = shell.run_command({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, root_path)
 	local current_branch = branch_res[1] or "HEAD"
 	M.state.current_branch = current_branch
-
 	new_sections.branch.header = "Branch: " .. current_branch
 
 	local _, branch_list = shell.run_command({ "git", "branch", "-vv" }, root_path)
@@ -114,6 +114,7 @@ local function generate_sections()
 	end
 
 	-- 3. Worktrees Section
+	M.state.worktree_map = {} -- Reset Map
 	local wt_ok, wt_out = shell.run_command({ "git", "worktree", "list" }, root_path)
 	if wt_ok then
 		local worktree_items = {}
@@ -123,12 +124,13 @@ local function generate_sections()
 				local branch_name = rest:match("%[(.-)%]")
 				local is_prunable = rest:match("prunable")
 
-				local status = ""
-				if is_prunable then
-					status = "(prunable)"
-				end
+				local status = is_prunable and "(prunable)" or ""
 
+				-- EXTRACT SHORT NAME
 				local short_name = path:match("([^/]+)$") or path
+
+				-- STORE MAPPING (Short Name -> Full Path)
+				M.state.worktree_map[short_name] = path
 
 				table.insert(worktree_items, {
 					name = short_name,
@@ -155,18 +157,13 @@ local function generate_sections()
 	if status_ok then
 		for _, line in ipairs(status_out) do
 			if line ~= "" then
-				local x = line:sub(1, 1)
-				local y = line:sub(2, 2)
-				local file = line:sub(4)
-
+				local x, y, file = line:sub(1, 1), line:sub(2, 2), line:sub(4)
 				if x ~= " " and x ~= "?" then
 					table.insert(new_sections.staged.content, format_git_line(x, file))
 				end
-
 				if y ~= " " and y ~= "?" then
 					table.insert(new_sections.unstaged.content, format_git_line(y, file))
 				end
-
 				if x == "?" and y == "?" then
 					table.insert(new_sections.untracked.content, "  " .. file)
 				end
@@ -189,12 +186,9 @@ end
 
 local function status_buf_hl()
 	vim.cmd("syntax clear")
-
-	-- Define Colors
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.api.nvim_set_hl(0, "ozGitStatusHeading", { fg = "#ffffff", bold = true })
 
-	-- Regex Matches for Content
 	vim.fn.matchadd("healthError", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("healthWarning", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@field", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
@@ -202,18 +196,13 @@ local function status_buf_hl()
 	vim.fn.matchadd("@diff.plus", "^    +.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^    -.*$", 0, -1, { extend = true })
 
-	-- Branch Content Highlights
 	vim.cmd([[
     syntax match ozGitStatusBranchName "\S\+" contained
     highlight default link ozGitStatusBranchName @attribute
     syntax match @attribute /\*\s\S\+/
     ]])
-
-	-- Stash
 	vim.cmd("syntax match ozInactivePrompt /stash@{[0-9]}/")
 	vim.cmd("syntax match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
-
-	-- Misc
 	vim.cmd([[
     syn region @property matchgroup=Delimiter start="\[" end="\]"
     syntax match String /'[^']*'/ containedin=ALL
@@ -233,25 +222,20 @@ end
 function M.refresh_buf(passive)
 	local s_util = require("oz.git.status.util")
 	local pos = vim.api.nvim_win_get_cursor(0)
-
 	if not passive then
 		vim.cmd("lcd " .. M.state.cwd)
 		M.state.sections = generate_sections()
 		M.state.in_conflict = is_conflict(M.state.sections)
 		M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
 	end
-
 	s_util.render(M.status_buf)
-
 	pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	vim.cmd("checktime")
 end
 
 function M.GitStatus()
 	local s_util = require("oz.git.status.util")
-
 	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
-
 	M.state.sections = generate_sections()
 	M.state.in_conflict = is_conflict(M.state.sections)
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
@@ -262,12 +246,9 @@ function M.GitStatus()
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id
 			M.status_win = win_id
-
 			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
 			vim.opt_local.fillchars:append({ eob = " " })
-
 			s_util.render(buf_id)
-
 			vim.fn.timer_start(10, function()
 				status_buf_hl()
 			end)

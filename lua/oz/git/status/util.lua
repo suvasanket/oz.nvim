@@ -207,36 +207,41 @@ function M.get_file_under_cursor(fmt_origin)
 end
 
 function M.get_branch_under_cursor()
-	local current_line = vim.api.nvim_get_current_line()
-	local header_branch =
-		current_line:match("^[%v" .. require("oz.git.status").icons.collapsed .. "%s]*Branch:%s+(%S+)")
-	if header_branch then
-		return header_branch
-	end
-	if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
-		return current_line:match("^%s*[*+]?%s+(%S+)")
-	end
-	return nil
+    local current_line = vim.api.nvim_get_current_line()
+
+    local header_branch = current_line:match("^[%v".. require("oz.git.status").icons.collapsed .. "%s]*Branch:%s+(%S+)")
+    if header_branch then return header_branch end
+    if current_line:match("%S+%(%S+%)%s+%x+") then
+        return nil
+    end
+
+    if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
+        return current_line:match("^%s*[*+]?%s+(%S+)")
+    end
+
+    return nil
 end
 
 --- Get worktree details under cursor
 ---@return {path:string, head:string, branch:string}|nil
 function M.get_worktree_under_cursor()
-	local line = vim.api.nvim_get_current_line()
-	-- Format:  [branch]  name  sha  ...
+    local line = vim.api.nvim_get_current_line()
+    -- Format:   name(branch)  sha
 
-	local branch_part, name, sha = line:match("^%s*(%S+)%s+(%S+)%s+(%x+)")
+    -- Parse: name(branch)
+    local name, branch = line:match("^%s*(%S+)%(([^)]+)%)")
 
-	if branch_part and name and sha then
-		local branch = branch_part:match("%[(.-)%]") or "HEAD"
-		-- Note: path here is just the name (e.g. "feature-1")
-		return {
-			path = name,
-			head = sha,
-			branch = branch,
-		}
-	end
-	return nil
+    -- Parse: sha
+    local sha = line:match("%s+(%x+)%s*")
+
+    if name and branch and sha then
+        return {
+            path = name, -- Using short name as path/identifier
+            head = sha,
+            branch = branch
+        }
+    end
+    return nil
 end
 
 function M.get_stash_under_cursor()
