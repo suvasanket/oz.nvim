@@ -16,29 +16,27 @@ function M.render(buf)
 
 	local lines = {}
 	local header_meta = {}
+	local worktree_meta = {}
 	local info_lines = {}
 
 	for _, section_id in ipairs(order) do
 		local section = state.sections[section_id]
 
+		-- Logic: Always show branch section. For others, only show if content > 0.
 		if section and (#section.content > 0 or section_id == "branch") then
-			-- 1. Header with Icon
+			-- 1. Header
 			local icon = section.collapsed and icons.collapsed or icons.expanded
 			local display_header = string.format("%s %s", icon, section.header)
-
 			table.insert(lines, display_header)
-
-			-- Store metadata for highlighting
-			table.insert(header_meta, {
-				line = #lines - 1,
-				icon_len = #icon,
-				id = section_id, -- Store ID to distinguish branch section
-			})
+			table.insert(header_meta, { line = #lines - 1, icon_len = #icon, id = section_id })
 
 			-- 2. Content
 			if not section.collapsed then
 				for _, line in ipairs(section.content) do
 					table.insert(lines, line)
+					if section_id == "worktrees" then
+						table.insert(worktree_meta, { line = #lines - 1, content = line })
+					end
 				end
 			end
 
@@ -65,36 +63,55 @@ function M.render(buf)
 	-- Apply Highlights
 	vim.api.nvim_buf_clear_namespace(buf, ns_id, 0, -1)
 
+	-- Headers
 	for _, h in ipairs(header_meta) do
-		-- 1. Highlight Icon (Gray)
 		vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", h.line, 0, h.icon_len)
-
 		if h.id == "branch" then
-			-- 2a. Branch Special Handling
-			-- " Branch: " (Heading Color) | "master" (Branch Color)
-			-- Length of " Branch: " is 1 (space) + 8 ("Branch: ") = 9 chars after icon
 			local split_pos = h.icon_len + 9
-
 			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusHeading", h.line, h.icon_len, split_pos)
 			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", h.line, split_pos, -1)
 		else
-			-- 2b. Standard Header (White/Bold)
 			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusHeading", h.line, h.icon_len, -1)
 		end
 	end
 
+	-- Info Lines
 	for _, line_idx in ipairs(info_lines) do
 		vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", line_idx, 0, -1)
 	end
+
+	-- Worktree Specific Highlighting
+	-- Format:   /path/to/worktree  sha [branch]
+	for _, w in ipairs(worktree_meta) do
+		local path_part = w.content:match("^(.-)%s+%x+")
+		if path_part then
+			local last_slash_next_idx = path_part:match(".*()/")
+			if last_slash_next_idx then
+				vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, 0, last_slash_next_idx - 1)
+			end
+		end
+
+		-- 2. SHA (Gray)
+		local sha_start, sha_end = w.content:find("%s+(%x+)%s+")
+		if sha_start then
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", w.line, sha_start, sha_end)
+		end
+
+		-- 3. Branch (Color, excluding brackets)
+		local b_open = w.content:find("%[", sha_end or 0)
+		local b_close = w.content:find("%]", b_open or 0)
+
+		if b_open and b_close then
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", w.line, b_open, b_close - 1)
+		end
+	end
 end
 
--- (Keep toggle_section, get_file_under_cursor, etc. exactly as they were)
 function M.toggle_section(arg_heading)
 	local status = require("oz.git.status")
 	local current_line = arg_heading or vim.api.nvim_get_current_line()
 	local icons = status.icons
 	local target_section = nil
-
 	for _, section in pairs(status.state.sections) do
 		local collapsed_str = string.format("%s %s", icons.collapsed, section.header)
 		local expanded_str = string.format("%s %s", icons.expanded, section.header)
@@ -113,6 +130,32 @@ function M.toggle_section(arg_heading)
 	return false
 end
 
+function M.get_section_under_cursor()
+	local status = require("oz.git.status")
+	local state = status.state
+	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+	local current_row = 1
+	for _, section_id in ipairs(status.render_order) do
+		local section = state.sections[section_id]
+		if section and (#section.content > 0 or section_id == "branch") then
+			local start_line = current_row
+			local height = 1
+			if not section.collapsed then
+				height = height + #section.content
+			end
+			if section_id == "branch" and state.info_lines then
+				height = height + #state.info_lines
+			end
+			local end_line = start_line + height - 1
+			if cursor_line >= start_line and cursor_line <= end_line then
+				return section_id
+			end
+			current_row = end_line + 2
+		end
+	end
+	return nil
+end
+
 function M.get_file_under_cursor(fmt_origin)
 	local entries = {}
 	local lines = {}
@@ -126,12 +169,14 @@ function M.get_file_under_cursor(fmt_origin)
 	end
 	for _, line in ipairs(lines) do
 		local clean_path = line:match(":%s+(.*)$") or line:match("^%s*(.*)$")
+		local is_worktree = line:match("^%s*/") or line:match("^%s*[%w_/-]+%s+%x+%s+%[")
 		if
 			clean_path
-			and not line:match("^[v>] ")
+			and not line:match("^[v" .. require("oz.git.status").icons.collapsed .. "] ")
 			and not line:match("^Branch:")
 			and not line:match("^%s*Ahead")
 			and not line:match("^%s*%[")
+			and not is_worktree
 		then
 			if not line:match("^%s*[*+]?%s+%S+%s+%x+") then
 				local absolute_path = root .. "/" .. clean_path
@@ -144,21 +189,34 @@ function M.get_file_under_cursor(fmt_origin)
 	return entries
 end
 
---- Get branch name under cursor
 function M.get_branch_under_cursor()
-    local current_line = vim.api.nvim_get_current_line()
+	local current_line = vim.api.nvim_get_current_line()
+	local header_branch =
+		current_line:match("^[%v" .. require("oz.git.status").icons.collapsed .. "%s]*Branch:%s+(%S+)")
+	if header_branch then
+		return header_branch
+	end
+	if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
+		return current_line:match("^%s*[*+]?%s+(%S+)")
+	end
+	return nil
+end
 
-    local header_branch = current_line:match("^[%v>%s]*Branch:%s+(%S+)")
-    if header_branch then
-        return header_branch
-    end
+--- Get worktree details under cursor
+---@return {path:string, head:string, branch:string}|nil
+function M.get_worktree_under_cursor()
+	local line = vim.api.nvim_get_current_line()
+	-- Format:   /path/to/worktree  sha [branch]
+	local path, sha, branch = line:match("^%s*(%S+)%s+(%x+)%s+%[(.-)%]$")
 
-    if current_line:match("^%s*[*+]?%s+%S+%s+%x+") then
-        local branch_name = current_line:match("^%s*[*+]?%s+(%S+)")
-        return branch_name
-    end
-
-    return nil
+	if path and sha and branch then
+		return {
+			path = path,
+			head = sha,
+			branch = branch,
+		}
+	end
+	return nil
 end
 
 function M.get_stash_under_cursor()
@@ -178,42 +236,6 @@ function M.run_n_refresh(cmd)
 	end)
 	vim.cmd(cmd)
 	util.inactive_echo(":" .. cmd)
-end
-
----get section
----@return string|nil
-function M.get_section_under_cursor()
-	local status = require("oz.git.status")
-	local state = status.state
-	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
-	local current_row = 1
-
-	for _, section_id in ipairs(status.render_order) do
-		local section = state.sections[section_id]
-
-		if section and (#section.content > 0 or section_id == "branch") then
-			local start_line = current_row
-			local height = 1 -- Header line
-
-			if not section.collapsed then
-				height = height + #section.content
-			end
-
-			if section_id == "branch" and state.info_lines then
-				height = height + #state.info_lines
-			end
-
-			local end_line = start_line + height - 1
-
-			if cursor_line >= start_line and cursor_line <= end_line then
-				return section_id
-			end
-
-			current_row = end_line + 2
-		end
-	end
-
-	return nil
 end
 
 return M

@@ -16,7 +16,7 @@ M.icons = {
 }
 
 -- The Order in which sections are rendered
-M.render_order = { "branch", "staged", "unstaged", "untracked", "stash" }
+M.render_order = { "branch", "staged", "unstaged", "untracked", "worktrees", "stash" }
 
 -- Template Configuration
 local section_template = {
@@ -24,6 +24,7 @@ local section_template = {
 	staged = { header = "Staged changes", default_collapsed = false },
 	unstaged = { header = "Unstaged changes", default_collapsed = false },
 	untracked = { header = "Untracked", default_collapsed = true },
+	worktrees = { header = "Worktrees", default_collapsed = false },
 	stash = { header = "Stashes", default_collapsed = false },
 }
 
@@ -46,10 +47,10 @@ local function format_git_line(code, file)
 		["?"] = "",
 	}
 	local prefix = map[code] or "modified:   "
-	return "\t" .. prefix .. file
+	-- Changed \t to "  " for alignment with header text
+	return "  " .. prefix .. file
 end
 
--- Generate the "Quick Bit" Info Line
 local function generate_status_info(current_branch, in_conflict)
 	local info = {}
 	local root_path = g_util.get_project_root()
@@ -113,11 +114,54 @@ local function generate_sections()
 	local _, branch_list = shell.run_command({ "git", "branch", "-vv" }, root_path)
 	for _, line in ipairs(branch_list) do
 		if line ~= "" then
+			-- "  " aligns with text after icon
 			table.insert(new_sections.branch.content, "  " .. line)
 		end
 	end
 
-	-- 3. Git Status --porcelain
+	-- 3. Worktrees Section (Only show if >= 2)
+	local wt_ok, wt_out = shell.run_command({ "git", "worktree", "list", "--porcelain" }, root_path)
+	if wt_ok then
+		local worktree_items = {}
+		local current_wt = {}
+
+		-- Helper to finalize a worktree item
+		local function push_wt()
+			if current_wt.path then
+				table.insert(worktree_items, {
+					path = current_wt.path,
+					sha = current_wt.sha or "",
+					branch = current_wt.branch or "detached",
+				})
+			end
+		end
+
+		for _, line in ipairs(wt_out) do
+			if line:match("^worktree") then
+				push_wt()
+				current_wt = { path = line:sub(10) }
+			elseif line:match("^HEAD") then
+				current_wt.sha = line:sub(6, 12)
+			elseif line:match("^branch") then
+				current_wt.branch = line:match("refs/heads/(.*)")
+			end
+		end
+		push_wt() -- Push last one
+
+		-- Only render if we have more than 1 worktree (main + others)
+		if #worktree_items >= 2 then
+			for _, item in ipairs(worktree_items) do
+				-- Added "  " prefix for alignment
+				local display = string.format("  %s  %s [%s]", item.path, item.sha, item.branch)
+				table.insert(new_sections.worktrees.content, display)
+			end
+		else
+			-- Ensure content is empty so renderer skips it (or hides header based on logic)
+			new_sections.worktrees.content = {}
+		end
+	end
+
+	-- 4. Git Status --porcelain
 	local status_ok, status_out = shell.run_command({ "git", "status", "--porcelain" }, root_path)
 	if status_ok then
 		for _, line in ipairs(status_out) do
@@ -135,18 +179,20 @@ local function generate_sections()
 				end
 
 				if x == "?" and y == "?" then
-					table.insert(new_sections.untracked.content, "\t" .. file)
+					-- Changed \t to "  "
+					table.insert(new_sections.untracked.content, "  " .. file)
 				end
 			end
 		end
 	end
 
-	-- 4. Git Stash
+	-- 5. Git Stash
 	local stash_ok, stash_out = shell.run_command({ "git", "stash", "list" }, root_path)
 	if stash_ok then
 		for _, line in ipairs(stash_out) do
 			if line ~= "" then
-				table.insert(new_sections.stash.content, "\t" .. line)
+				-- Changed \t to "  "
+				table.insert(new_sections.stash.content, "  " .. line)
 			end
 		end
 	end
@@ -159,7 +205,7 @@ local function status_buf_hl()
 
 	-- Define Colors
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
-	vim.api.nvim_set_hl(0, "ozGitStatusHeading", { fg = "#ffffff", bold = true }) -- Re-defined here just in case
+	vim.api.nvim_set_hl(0, "ozGitStatusHeading", { fg = "#ffffff", bold = true })
 
 	-- Regex Matches for Content
 	vim.fn.matchadd("healthError", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
@@ -168,9 +214,6 @@ local function status_buf_hl()
 	vim.fn.matchadd("healthSuccess", "^\\s\\+new file:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.plus", "^    +.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^    -.*$", 0, -1, { extend = true })
-
-	-- Note: Headers are now highlighted by util.lua using extmarks,
-	-- so we don't need fragile syntax matches for them here.
 
 	-- Branch Content Highlights
 	vim.cmd([[

@@ -37,12 +37,12 @@ function M.delete()
 		end
 		local ans = util.prompt("Delete branch '" .. branch .. "'?", "&Local\n&Remote\n&Both\n&Nevermind", 4)
 		if ans == 1 then
-			s_util.run_n_refresh("Git branch -d " .. branch)
+			s_util.run_n_refresh("Git branch -D " .. branch)
 		elseif ans == 2 then
 			local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", branch))
 			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		elseif ans == 3 then
-			s_util.run_n_refresh("Git branch -d " .. branch)
+			s_util.run_n_refresh("Git branch -D " .. branch)
 			local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", branch))
 			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		end
