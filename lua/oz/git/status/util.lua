@@ -130,29 +130,40 @@ function M.toggle_section(arg_heading)
 	return false
 end
 
+--- Get the section ID
+---@return string|nil
 function M.get_section_under_cursor()
 	local status = require("oz.git.status")
 	local state = status.state
 	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
 	local current_row = 1
+
 	for _, section_id in ipairs(status.render_order) do
 		local section = state.sections[section_id]
+
+		-- Logic must match M.render exactly regarding row counting
 		if section and (#section.content > 0 or section_id == "branch") then
-			local start_line = current_row
-			local height = 1
+			-- Check strict match on header line
+			if cursor_line == current_row then
+				return section_id
+			end
+
+			-- Calculate total height of this block to find start of next block
+			local height = 1 -- Header line
+
 			if not section.collapsed then
 				height = height + #section.content
 			end
+
 			if section_id == "branch" and state.info_lines then
 				height = height + #state.info_lines
 			end
-			local end_line = start_line + height - 1
-			if cursor_line >= start_line and cursor_line <= end_line then
-				return section_id
-			end
-			current_row = end_line + 2
+
+			-- Jump to next section (Height + 1 Spacer line)
+			current_row = current_row + height + 1
 		end
 	end
+
 	return nil
 end
 
@@ -160,6 +171,7 @@ function M.get_file_under_cursor(fmt_origin)
 	local entries = {}
 	local lines = {}
 	local root = require("oz.git").state.root or util.GetProjectRoot()
+
 	if vim.api.nvim_get_mode().mode == "n" then
 		table.insert(lines, vim.fn.getline("."))
 	else
@@ -167,21 +179,26 @@ function M.get_file_under_cursor(fmt_origin)
 		local end_ = vim.fn.line(".")
 		lines = vim.api.nvim_buf_get_lines(0, start - 1, end_, false)
 	end
+
 	for _, line in ipairs(lines) do
-		local clean_path = line:match(":%s+(.*)$") or line:match("^%s*(.*)$")
-		local is_worktree = line:match("^%s*/") or line:match("^%s*[%w_/-]+%s+%x+%s+%[")
-		if
-			clean_path
-			and not line:match("^[v" .. require("oz.git.status").icons.collapsed .. "] ")
-			and not line:match("^Branch:")
-			and not line:match("^%s*Ahead")
-			and not line:match("^%s*%[")
-			and not is_worktree
-		then
-			if not line:match("^%s*[*+]?%s+%S+%s+%x+") then
-				local absolute_path = root .. "/" .. clean_path
-				if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
-					table.insert(entries, fmt_origin and clean_path or absolute_path)
+		if not line:match("^%s*$") then
+			local clean_path = line:match(":%s+(.*)$") or line:match("^%s*(.*)$")
+
+			if clean_path and clean_path ~= "" then
+				local is_worktree = line:match("^%s*/") or line:match("^%s*[%w_/-]+%s+%x+%s+%[")
+				local is_header = line:match("^[v" .. require("oz.git.status").icons.collapsed .. "] ")
+				local is_branch = line:match("^Branch:") or line:match("^%s*[*+]?%s+%S+%s+%x+")
+				local is_stash = line:match("^%s*stash@")
+				local is_info = line:match("^%s*Ahead") or line:match("^%s*%[")
+
+				if not is_header and not is_branch and not is_info and not is_worktree and not is_stash then
+					local absolute_path = root .. "/" .. clean_path
+
+					if absolute_path ~= root .. "/" then
+						if vim.fn.filereadable(absolute_path) == 1 or vim.fn.isdirectory(absolute_path) == 1 then
+							table.insert(entries, fmt_origin and clean_path or absolute_path)
+						end
+					end
 				end
 			end
 		end

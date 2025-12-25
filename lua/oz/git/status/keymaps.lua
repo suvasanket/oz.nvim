@@ -27,17 +27,27 @@ function M.keymaps_init(buf)
 	buf_id = buf
 
 	-- quick actions
-	util.Map("n", "q", handle.other.quit, { buffer = buf_id, desc = "Close git status buffer." })
-	util.Map("n", "<tab>", handle.other.tab, { buffer = buf_id, desc = "Toggle headings / inline file diff. <*>" })
+	util.Map("n", "q", handle.quick_action.quit, { buffer = buf_id, desc = "Close git status buffer." })
+	util.Map(
+		"n",
+		"<tab>",
+		handle.quick_action.tab,
+		{ buffer = buf_id, desc = "Toggle headings / inline file diff. <*>" }
+	)
 	util.Map("n", "<C-r>", refresh, { buffer = buf_id, desc = "Refresh status buffer." })
-	util.Map("n", "grn", handle.other.rename, { buffer = buf_id, desc = "Rename file or branch under cursor. <*>" })
+	util.Map(
+		"n",
+		"grn",
+		handle.quick_action.rename,
+		{ buffer = buf_id, desc = "Rename file or branch under cursor. <*>" }
+	)
 	util.Map("n", "-", function()
 		util.set_cmdline("Git ")
 	end, { silent = false, buffer = buf_id, desc = "Populate cmdline with :Git." })
 	util.Map(
 		"n",
 		"<cr>",
-		handle.other.enter_key,
+		handle.quick_action.enter_key,
 		{ buffer = buf_id, desc = "open entry under cursor / switch branches. <*>" }
 	)
 	util.Map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
@@ -163,14 +173,14 @@ function M.keymaps_init(buf)
 		util.Map(
 			"n",
 			"xo",
-			handle.other.conflict_start_manual,
+			handle.merge_rebase.conflict_start_manual,
 			{ buffer = buf_id, desc = "Start manual conflict resolution." }
 		)
 		-- complete (manual)
 		util.Map(
 			"n",
 			"xc",
-			handle.other.conflict_complete,
+			handle.merge_rebase.conflict_complete,
 			{ buffer = buf_id, desc = "Complete manual conflict resolution." }
 		)
 		-- diffview resolve
@@ -178,7 +188,7 @@ function M.keymaps_init(buf)
 			util.Map(
 				"n",
 				"xp",
-				handle.other.conflict_diffview,
+				handle.merge_rebase.conflict_diffview,
 				{ buffer = buf_id, desc = "Open Diffview for conflict resolution." }
 			)
 		end
@@ -261,7 +271,7 @@ function M.keymaps_init(buf)
 	util.Map(
 		"n",
 		"mm",
-		handle.other.merge_branch,
+		handle.merge_rebase.merge_branch,
 		{ buffer = buf_id, desc = "Start merge with branch under cursor. <*>" }
 	)
 	util.Map("n", "ml", function()
@@ -289,7 +299,7 @@ function M.keymaps_init(buf)
 	util.Map(
 		"n",
 		"rr",
-		handle.other.rebase_branch,
+		handle.merge_rebase.rebase_branch,
 		{ buffer = buf, desc = "Rebase branch under cursor with provided args. <*>" }
 	)
 	util.Map("n", "ri", function()

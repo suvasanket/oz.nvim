@@ -21,8 +21,8 @@ M.render_order = { "branch", "staged", "unstaged", "untracked", "worktrees", "st
 -- Template Configuration
 local section_template = {
 	branch = { header = "Branch: ", default_collapsed = true },
-	staged = { header = "Staged changes", default_collapsed = false },
-	unstaged = { header = "Unstaged changes", default_collapsed = false },
+	staged = { header = "Staged", default_collapsed = false },
+	unstaged = { header = "Unstaged", default_collapsed = false },
 	untracked = { header = "Untracked", default_collapsed = true },
 	worktrees = { header = "Worktrees", default_collapsed = false },
 	stash = { header = "Stashes", default_collapsed = false },
@@ -70,10 +70,10 @@ local function generate_status_info(current_branch, in_conflict)
 			if ahead and behind then
 				local parts = {}
 				if tonumber(ahead) > 0 then
-					table.insert(parts, "Ahead " .. ahead)
+					table.insert(parts, string.format("[] %d commit ahead", ahead))
 				end
 				if tonumber(behind) > 0 then
-					table.insert(parts, "Behind " .. behind)
+					table.insert(parts, string.format("[] %d commit behind", behind))
 				end
 
 				if #parts > 0 then

@@ -160,22 +160,22 @@ local job_env = {
 }
 
 -- refresh any required buffers.
----@param active boolean|nil
-function M.refresh_buf(active)
+---@param passive boolean|nil
+function M.refresh_buf(passive)
 	local status_win = require("oz.git.status").status_win
 	local log_win = require("oz.git.log").log_win
 
 	if status_win and vim.api.nvim_win_is_valid(status_win) then
-		if active then
-			require("oz.git.status").refresh_buf()
-		else
+		if passive then
 			require("oz.git.status").refresh_buf(true)
+		else
+			require("oz.git.status").refresh_buf()
 		end
 	elseif log_win and vim.api.nvim_win_is_valid(log_win) then
-		if active then
-			require("oz.git.log").refresh_buf()
-		else
+		if passive then
 			require("oz.git.log").refresh_buf(true)
+		else
+			require("oz.git.log").refresh_buf()
 		end
 	end
 end

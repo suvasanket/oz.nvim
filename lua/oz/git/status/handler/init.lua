@@ -7,6 +7,8 @@ local modules = {
     "oz.git.status.handler.diff",
     "oz.git.status.handler.add",
     "oz.git.status.handler.other",
+    "oz.git.status.handler.merge_rebase",
+    "oz.git.status.handler.quick_action",
 }
 
 local handlers = {}

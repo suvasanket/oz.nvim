@@ -1,49 +1,8 @@
 local M = {}
 local util = require("oz.util")
-local status = require("oz.git.status")
 local s_util = require("oz.git.status.util")
-local git = require("oz.git")
-local wizard = require("oz.git.wizard")
-local caching = require("oz.caching")
 
-local refresh = status.refresh_buf
-
-function M.quit()
-	vim.api.nvim_echo({ { "" } }, false, {})
-	vim.cmd("close")
-end
-
-function M.tab()
-	if s_util.toggle_section() then
-		return
-	end
-end
-
-function M.rename()
-	local branch = s_util.get_branch_under_cursor()
-	local file = s_util.get_file_under_cursor(true)[1]
-
-	if file or branch then
-		git.after_exec_complete(function(code)
-			if code == 0 then
-				refresh()
-			end
-		end, true)
-	end
-
-	if file then
-		local new_name = util.UserInput("New name: ", file)
-		if new_name then
-			s_util.run_n_refresh("Git mv " .. file .. " " .. new_name)
-		end
-	elseif branch then
-		local new_name = util.UserInput("New name: ", branch)
-		if new_name then
-			s_util.run_n_refresh("Git branch -m " .. branch .. " " .. new_name)
-		end
-	end
-end
-
+-- stash
 function M.stash_apply()
 	local current_line = vim.api.nvim_get_current_line()
 	local stash = current_line:match("^%s*(stash@{%d+})")
@@ -68,31 +27,7 @@ function M.stash_drop()
 	end
 end
 
-function M.enter_key()
-	local file = s_util.get_file_under_cursor()
-	local branch = s_util.get_branch_under_cursor()
-	local stash = s_util.get_stash_under_cursor()
-
-	local section = s_util.get_section_under_cursor()
-	local current_branch = status.state.current_branch
-
-	if branch then -- if branch
-		s_util.run_n_refresh(string.format("Git switch %s --quiet", branch))
-	elseif stash.index then -- if stash
-		s_util.run_n_refresh(string.format("Git stash show stash@{%d}", stash.index))
-	elseif section == "branch" then
-		if current_branch and (current_branch == "HEAD" or current_branch:match("HEAD detached")) then
-			util.set_cmdline("Git checkout ")
-		else
-			vim.cmd("Git show-branch -a")
-		end
-	elseif section == "stash" then
-		vim.cmd("Git stash list --stat")
-	elseif #file > 0 and (vim.fn.filereadable(file[1]) == 1 or vim.fn.isdirectory(file[1]) == 1) then -- if file.
-		vim.cmd("wincmd k | edit " .. file[1])
-	end
-end
-
+-- goto
 function M.goto_log()
 	vim.cmd("close") -- Close status window before opening log
 	require("oz.git.log").commit_log({ level = 1, from = "Git" })
@@ -119,65 +54,7 @@ function M.goto_gitignore()
 	end
 end
 
-function M.conflict_start_manual()
-	vim.cmd("close") -- Close status window
-	wizard.start_conflict_resolution()
-	vim.notify_once(
-		"]x / [x => jump between conflict marker.\n:CompleteConflictResolution => complete",
-		vim.log.levels.INFO,
-		{ title = "oz_git", timeout = 4000 }
-	)
-
-	-- Define command for completion within the resolution context
-	vim.api.nvim_create_user_command("CompleteConflictResolution", function()
-		wizard.complete_conflict_resolution()
-		vim.api.nvim_del_user_command("CompleteConflictResolution") -- Clean up command
-	end, {})
-end
-
-function M.conflict_complete()
-	if wizard.on_conflict_resolution then
-		wizard.complete_conflict_resolution()
-		-- Maybe refresh status after completion? Or rely on wizard to handle it.
-	else
-		util.Notify("Start the resolution with 'xo' first.", "warn", "oz_git")
-	end
-end
-
-function M.conflict_diffview()
-	if util.usercmd_exist("DiffviewOpen") then
-		vim.cmd("DiffviewOpen")
-	else
-		util.Notify("DiffviewOpen command not found.", "error", "oz_git")
-	end
-end
-
-function M.merge_branch(flag)
-	local branch_under_cursor = s_util.get_branch_under_cursor()
-	local key, json, input = "git_user_merge_flags", "oz_git", nil
-	flag = not flag and caching.get_data(key, json) or flag
-
-	if branch_under_cursor then
-		if flag then
-			input = util.inactive_input(":Git merge", " " .. flag .. " " .. branch_under_cursor)
-		else
-			input = util.inactive_input(":Git merge", " " .. branch_under_cursor)
-		end
-		if input then
-			s_util.run_n_refresh("Git merge" .. input)
-			local flags_to_cache = util.extract_flags(input)
-			caching.set_data(key, table.concat(flags_to_cache, " "), json)
-		end
-	end
-end
-
-function M.rebase_branch()
-	local branch_under_cursor = s_util.get_branch_under_cursor()
-	if branch_under_cursor then
-		util.set_cmdline("Git rebase| " .. branch_under_cursor)
-	end
-end
-
+-- reset
 function M.reset(arg)
 	local files = s_util.get_file_under_cursor(true)
 	local branch = s_util.get_branch_under_cursor()
