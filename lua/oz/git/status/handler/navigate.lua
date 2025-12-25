@@ -31,14 +31,24 @@ end
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	util.Map("n", "gl", M.log, { buffer = buf, desc = "goto commit logs." })
 	util.Map("n", "gL", M.log_context, { buffer = buf, desc = "goto commit logs for file/branch. <*>" })
-	
-	util.Map("n", "gu", function() s_util.jump_section("unstaged") end, { buffer = buf, desc = "Goto unstaged section." })
-	util.Map("n", "gs", function() s_util.jump_section("staged") end, { buffer = buf, desc = "Goto staged section." })
-	util.Map("n", "gU", function() s_util.jump_section("untracked") end, { buffer = buf, desc = "Goto untracked section." })
-	util.Map("n", "gz", function() s_util.jump_section("stash") end, { buffer = buf, desc = "Goto stash section." })
-	util.Map("n", "gw", function() s_util.jump_section("worktrees") end, { buffer = buf, desc = "Goto worktrees section." })
-	
-	util.Map( { "n", "x" }, "gI", M.gitignore, { buffer = buf, desc = "Add file to .gitignore. <*>" })
+
+	util.Map("n", "gu", function()
+		s_util.jump_section("unstaged")
+	end, { buffer = buf, desc = "Goto unstaged section." })
+	util.Map("n", "gs", function()
+		s_util.jump_section("staged")
+	end, { buffer = buf, desc = "Goto staged section." })
+	util.Map("n", "gU", function()
+		s_util.jump_section("untracked")
+	end, { buffer = buf, desc = "Goto untracked section." })
+	util.Map("n", "gz", function()
+		s_util.jump_section("stash")
+	end, { buffer = buf, desc = "Goto stash section." })
+	util.Map("n", "gw", function()
+		s_util.jump_section("worktrees")
+	end, { buffer = buf, desc = "Goto worktrees section." })
+
+	util.Map({ "n", "x" }, "gI", M.gitignore, { buffer = buf, desc = "Add file to .gitignore. <*>" })
 	util.Map("n", "gg", "gg", { buffer = buf, desc = "goto top of the buffer." })
 	map_help_key("g", "goto")
 	key_grp["goto[g]"] = { "gI", "gw", "gu", "gs", "gU", "gz", "gl", "gL", "gg", "g?" }
