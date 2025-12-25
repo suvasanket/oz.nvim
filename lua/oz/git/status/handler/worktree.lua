@@ -39,38 +39,22 @@ function M.add()
 	end -- Cancelled
 
 	-- Construct Command
-	-- git worktree add <path> [commit-ish]
-	-- If commit-ish is provided, it checks it out.
-	-- If implicit, it tries to create a branch from HEAD with the name of the directory (dwim).
-	local cmd = { "git", "worktree", "add", final_path }
+	local cmd = string.format("Git worktree add %q", final_path)
 	if commit_ish ~= "" then
-		table.insert(cmd, commit_ish)
+		cmd = cmd .. " " .. commit_ish
 	end
 
-	util.ShellCmd(cmd, function()
-		util.Notify("Worktree created at " .. final_path, nil, "oz_git")
-		status.refresh_buf()
-	end, function()
-		util.Notify("Failed to create worktree.", "error", "oz_git")
-	end)
+	s_util.run_n_refresh(cmd)
 end
 
 -- Prune (wp)
 function M.prune()
-	util.ShellCmd({ "git", "worktree", "prune" }, function()
-		util.Notify("Worktrees pruned.", nil, "oz_git")
-		status.refresh_buf()
-	end)
+	s_util.run_n_refresh("Git worktree prune")
 end
 
 -- Repair (wR) - Useful if worktrees were moved manually
 function M.repair()
-	util.ShellCmd({ "git", "worktree", "repair" }, function()
-		util.Notify("Worktrees repaired.", nil, "oz_git")
-		status.refresh_buf()
-	end, function()
-		util.Notify("Failed to repair worktrees.", "error", "oz_git")
-	end)
+	s_util.run_n_refresh("Git worktree repair")
 end
 
 -- Helper to get selected worktree path
@@ -92,19 +76,9 @@ function M.remove()
 
 	local ans = util.prompt("Remove worktree '" .. path .. "'?", "&Yes\n&No\n&Force", 2)
 	if ans == 1 then
-		util.ShellCmd({ "git", "worktree", "remove", path }, function()
-			util.Notify("Worktree removed.", nil, "oz_git")
-			status.refresh_buf()
-		end, function()
-			util.Notify("Failed to remove worktree.", "error", "oz_git")
-		end)
+		s_util.run_n_refresh(string.format("Git worktree remove %q", path))
 	elseif ans == 3 then
-		util.ShellCmd({ "git", "worktree", "remove", "--force", path }, function()
-			util.Notify("Worktree force removed.", nil, "oz_git")
-			status.refresh_buf()
-		end, function()
-			util.Notify("Failed to remove worktree.", "error", "oz_git")
-		end)
+		s_util.run_n_refresh(string.format("Git worktree remove --force %q", path))
 	end
 end
 
@@ -115,10 +89,7 @@ function M.lock()
 		util.Notify("No worktree selected.", "warn", "oz_git")
 		return
 	end
-	util.ShellCmd({ "git", "worktree", "lock", path }, function()
-		util.Notify("Worktree locked.", nil, "oz_git")
-		status.refresh_buf()
-	end)
+	s_util.run_n_refresh(string.format("Git worktree lock %q", path))
 end
 
 -- Unlock (wu)
@@ -128,10 +99,7 @@ function M.unlock()
 		util.Notify("No worktree selected.", "warn", "oz_git")
 		return
 	end
-	util.ShellCmd({ "git", "worktree", "unlock", path }, function()
-		util.Notify("Worktree unlocked.", nil, "oz_git")
-		status.refresh_buf()
-	end)
+	s_util.run_n_refresh(string.format("Git worktree unlock %q", path))
 end
 
 -- Move (wm)
@@ -144,12 +112,7 @@ function M.move()
 
 	local new_path = util.UserInput("New Path: ", path, "dir")
 	if new_path and new_path ~= path then
-		util.ShellCmd({ "git", "worktree", "move", path, new_path }, function()
-			util.Notify("Worktree moved.", nil, "oz_git")
-			status.refresh_buf()
-		end, function()
-			util.Notify("Failed to move worktree.", "error", "oz_git")
-		end)
+		s_util.run_n_refresh(string.format("Git worktree move %q %q", path, new_path))
 	end
 end
 

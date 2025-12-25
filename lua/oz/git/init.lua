@@ -4,6 +4,17 @@ local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
 local shell = require("oz.util.shell")
+local editor_ipc = require("oz.util.editor")
+
+local editor_req_cmds = {
+	"commit",
+	"commit --amend",
+	"tag -a",
+	"rebase -i",
+	"merge --no-commit",
+	"notes add",
+	"filter-branch",
+}
 
 M.user_config = nil
 M.running_git_jobs = {}
@@ -32,20 +43,7 @@ end
 local function special_cmd_exec(args_tbl, args_str)
 	local cmd = args_tbl[1]
 
-	local editor_req_cmds =
-		{ "commit", "commit --amend", "tag -a", "rebase -i", "merge --no-commit", "notes add", "filter-branch" }
 	if util.str_in_tbl(args_str, editor_req_cmds) then
-		if vim.fn.executable("nvr") ~= 1 then
-			local confirm_ans = util.prompt(
-				"neovim-remote not found, install to use editor required commands.",
-				"&visit\n&nevermind",
-				1
-			)
-			if confirm_ans == 1 then
-				util.open_url("https://github.com/mhinz/neovim-remote/blob/master/INSTALLATION.md")
-			end
-			return true
-		end
 		vim.api.nvim_create_autocmd("FileType", {
 			pattern = { "gitrebase", "gitcommit", "gitconfig" },
 			callback = function(event)
@@ -91,12 +89,20 @@ local function special_cmd_exec(args_tbl, args_str)
 		vim.cmd("Man git-" .. cmd_l)
 		return true
 
+    -- Diff cmd
+    elseif cmd == "diff" then
+        require("oz.git.remote_cmd").run_git_with_progress("diff", args_tbl, function(lines)
+            oz_git_win.open_oz_git_win(lines, args_str)
+            vim.api.nvim_buf_set_option(0, "filetype", "diff")
+        end)
+        return true
+
 	-- Progress cmds
 	elseif vim.tbl_contains(remote_cmds, cmd) then
 		if M.user_config and M.user_config.remote_opt_exec == "background" then -- user config
 			local command = table.remove(args_tbl, 1)
 
-			require("oz.git.progress_cmd").run_git_with_progress(command, args_tbl, function(lines)
+			require("oz.git.remote_cmd").run_git_with_progress(command, args_tbl, function(lines)
 				oz_git_win.open_oz_git_win(lines, args_str)
 				-- git suggestion
 				local suggestion = wizard.get_git_suggestions(lines, args_tbl)
@@ -130,34 +136,7 @@ function M.after_exec_complete(callback, ret)
 end
 
 -- ENV --
-local plugin_diff_tool_name = "nvr_plugin_diff"
-local plugin_merge_tool_name = "nvr_plugin_merge"
-
-local nvr_diff_cmd = [[nvr -s -d "$LOCAL" "$REMOTE"]]
-local nvr_merge_cmd = [[nvr -s -d $LOCAL $BASE $REMOTE $MERGED -c 'wincmd J | wincmd =']]
-
-local job_env = {
-	-- GIT_EDITOR = "nvim --listen '$NVIM' --remote-wait", -- future implementation
-	GIT_EDITOR = "nvr -cc split --remote-wait",
-	GIT_SEQUENCE_EDITOR = "nvr -cc split --remote-wait",
-
-	GIT_CONFIG_COUNT = "4",
-
-	GIT_CONFIG_KEY_0 = "diff.tool",
-	GIT_CONFIG_VALUE_0 = plugin_diff_tool_name,
-
-	GIT_CONFIG_KEY_1 = "difftool." .. plugin_diff_tool_name .. ".cmd",
-	GIT_CONFIG_VALUE_1 = nvr_diff_cmd,
-
-	GIT_CONFIG_KEY_2 = "merge.tool",
-	GIT_CONFIG_VALUE_2 = plugin_merge_tool_name,
-
-	GIT_CONFIG_KEY_3 = "mergetool." .. plugin_merge_tool_name .. ".cmd",
-	GIT_CONFIG_VALUE_3 = nvr_merge_cmd,
-
-	GIT_CONFIG_KEY_4 = "mergetool." .. plugin_merge_tool_name .. ".trustExitCode",
-	GIT_CONFIG_VALUE_4 = "false",
-}
+local job_env = {}
 
 -- refresh any required buffers.
 ---@param passive boolean|nil
@@ -217,6 +196,20 @@ end
 function M.run_git_job(args)
 	args = util.args_parser().expand_expressions(args)
 	local args_table = util.args_parser().parse_args(args)
+
+    local allowed_cmds = {
+        "add", "am", "archive", "bisect", "blame", "branch", "bundle", "checkout", "cherry-pick",
+        "clean", "clone", "commit", "config", "describe", "diff", "fetch", "gc", "grep", "init",
+        "log", "ls-files", "ls-remote", "ls-tree", "merge", "mv", "notes", "pull", "push",
+        "rebase", "reflog", "remote", "reset", "restore", "revert", "rm", "shortlog", "show",
+        "stash", "status", "submodule", "switch", "tag", "worktree",
+    }
+
+    if not vim.tbl_contains(allowed_cmds, args_table[1]) then
+        util.Notify("Command '" .. args_table[1] .. "' is not allowed or supported.", "error", "oz_git")
+        return
+    end
+
 	local suggestion = nil
 	local std_out = {}
 	local std_err = {}
@@ -225,10 +218,23 @@ function M.run_git_job(args)
 		return
 	end
 
+	local current_job_env = job_env
+	local ipc_cleanup = nil
+
+	if util.str_in_tbl(args, editor_req_cmds) then
+		local env, cleanup = editor_ipc.setup_ipc_env()
+		current_job_env = vim.tbl_extend("force", job_env, env)
+		ipc_cleanup = cleanup
+	end
+
+	if vim.tbl_isempty(current_job_env) then
+		current_job_env = nil
+	end
+
 	local job_id = vim.fn.jobstart({ "git", unpack(args_table) }, {
 		stdout_buffered = true,
 		stderr_buffered = true,
-		env = job_env,
+		env = current_job_env,
 		on_stdout = function(_, data, _)
 			if data then
 				for _, line in ipairs(data) do
@@ -250,6 +256,10 @@ function M.run_git_job(args)
 			suggestion = wizard.get_git_suggestions(data, args_table)
 		end,
 		on_exit = function(_, code, _)
+			if ipc_cleanup then
+				ipc_cleanup()
+			end
+
 			M.running_git_jobs[args_table[1]] = nil
 			-- run exec complete callbacks
 			if exec_complete_callback then

@@ -101,7 +101,25 @@ function M.start_progress(unique_id, opts)
 	end
 
 	-- Start progress updates
-	start_spinner_updates(unique_id)
+	if not opts.manual then
+		start_spinner_updates(unique_id)
+	end
+end
+
+-- Update progress manually
+---@param unique_id string
+---@param percentage number
+---@param message string
+function M.update_progress(unique_id, percentage, message)
+	progress_percentage = percentage
+
+	local fidget_handle = M.progress_tbl[unique_id .. "_fidget_handle"]
+	if fidget and fidget_handle then
+		fidget_handle:report({
+			percentage = percentage,
+			message = message,
+		})
+	end
 end
 
 -- Stop spinner
@@ -109,7 +127,7 @@ end
 ---@param opts {title: string, exit_code: integer, message: string[]}
 function M.stop_progress(unique_id, opts)
 	local msg = opts.message and (opts.exit_code == 0 and opts.message[1] or opts.message[2])
-		or (opts.exit_code == 0 and "completed succesfully" or "failed")
+		or (opts.exit_code == 0 and "completed successfully" or "failed")
 	spinner_active = false
 
 	local fidget_handle = M.progress_tbl[unique_id .. "_fidget_handle"]
@@ -131,7 +149,10 @@ function M.stop_progress(unique_id, opts)
 			fidget_handle:finish()
 			fidget_handle = nil
 		else
-			vim.api.nvim_echo({ { " ", "healthSuccess" }, { ("%s %s"):format(opts.title, msg) } }, false, {})
+			vim.api.nvim_echo({
+				{ " ", "healthSuccess" },
+				{ (" %s %s (100%%)"):format(opts.title, msg) },
+			}, false, {})
 		end
 	else
 		if fidget and fidget_handle then
@@ -141,7 +162,10 @@ function M.stop_progress(unique_id, opts)
 			fidget_handle:cancel()
 			fidget_handle = nil
 		else
-			vim.api.nvim_echo({ { ("✗ %s %s"):format(opts.title, msg), "healthError" } }, false, {})
+			vim.api.nvim_echo({
+				{ "✗ ", "healthError" },
+				{ (" %s %s (%s%%)"):format(opts.title, msg, progress_percentage) },
+			}, false, {})
 		end
 	end
 
@@ -150,8 +174,6 @@ function M.stop_progress(unique_id, opts)
 		spinner_handle:close()
 		spinner_handle = nil
 	end
-
-	vim.api.nvim_echo({ { "" } }, false, {})
 end
 
 return M

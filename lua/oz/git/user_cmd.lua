@@ -24,7 +24,7 @@ local function handle_g(opts)
 			vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
 			vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 		end
-	elseif opts.args and opts.args:find("init") then
+	elseif opts.args and (opts.args:find("init") or opts.args:find("clone")) then
 		main.run_git_job(opts.args)
 	else
 		util.Notify("You are not in a git repo. Try :Git init", "warn", "oz_git")

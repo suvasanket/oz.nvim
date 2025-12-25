@@ -76,15 +76,10 @@ function M.remove()
             -- Confirmation prompt
             local confirm_ans = util.prompt("Really remove remote '" .. choice .. "'?", "&Yes\n&No", 2)
             if confirm_ans == 1 then
-                util.ShellCmd({ "git", "remote", "remove", choice }, function()
-                    util.Notify("Remote '" .. choice .. "' removed.", nil, "oz_git")
-                    refresh() -- Refresh status potentially
-                end, function(err)
-                util.Notify("Failed to remove remote '" .. choice .. "'. " .. (err or ""), "error", "oz_git")
-            end)
+                s_util.run_n_refresh(string.format("Git remote remove %s", choice))
+            end
         end
-    end
-end)
+    end)
 end
 
 function M.rename()
@@ -98,12 +93,7 @@ function M.rename()
         if choice then
             local new_name = util.UserInput("New name for '" .. choice .. "':", choice)
             if new_name and new_name ~= choice then
-                util.ShellCmd({ "git", "remote", "rename", choice, new_name }, function()
-                    util.Notify("Renamed remote '" .. choice .. "' to '" .. new_name .. "'.", nil, "oz_git")
-                    refresh() -- Refresh status potentially
-                end, function(err)
-                    util.Notify("Failed to rename remote '" .. choice .. "'. " .. (err or ""), "error", "oz_git")
-                end)
+                s_util.run_n_refresh(string.format("Git remote rename %s %s", choice, new_name))
             end
         end
     end)
