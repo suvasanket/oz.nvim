@@ -11,6 +11,7 @@ local modules = {
     "oz.git.status.handler.navigate",
     "oz.git.status.handler.merge_rebase",
     "oz.git.status.handler.quick_action",
+    "oz.git.status.handler.worktree",
 }
 
 local handlers = {}

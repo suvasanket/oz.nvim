@@ -26,6 +26,7 @@ function M.keymaps_init(buf)
 	handle.remote.setup_keymaps(buf, key_grp, map_help_key)
 	handle.push_pull.setup_keymaps(buf, key_grp)
 	handle.branch.setup_keymaps(buf, key_grp, map_help_key)
+	handle.worktree.setup_keymaps(buf, key_grp, map_help_key)
 
 	-- help
 	util.Map("n", "g?", function()
