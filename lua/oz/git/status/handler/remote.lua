@@ -100,12 +100,32 @@ function M.rename()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-    util.Map("n", "MM", "<cmd>Git remote -v<cr>", { buffer = buf, desc = "Remote list." })
-    util.Map("n", "Ma", M.add_update, { buffer = buf, desc = "Add or update remotes." })
-    util.Map("n", "Md", M.remove, { buffer = buf, desc = "Remove remote. <*>" })
-    util.Map("n", "Mr", M.rename, { buffer = buf, desc = "Rename remote. <*>" })
-    map_help_key("M", "remote")
-    key_grp["remote[M]"] = { "Ma", "Md", "Mr", "MM" }
+	local options = {
+		{
+			title = "View",
+			items = {
+				{
+					key = "M",
+					cb = function()
+						vim.cmd("Git remote -v")
+					end,
+					desc = "Remote list",
+				},
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+				{ key = "a", cb = M.add_update, desc = "Add or update remotes" },
+				{ key = "d", cb = M.remove, desc = "Remove remote" },
+				{ key = "r", cb = M.rename, desc = "Rename remote" },
+			},
+		},
+	}
+
+	util.Map("n", "M", function()
+		require("oz.util.help_keymaps").show_menu("Remote Actions", options)
+	end, { buffer = buf, desc = "Remote Actions", nowait = true })
 end
 
 return M

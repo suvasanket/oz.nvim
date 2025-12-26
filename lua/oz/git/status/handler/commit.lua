@@ -26,16 +26,40 @@ function M.undo()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-    util.Map("n", "cc", M.create, { buffer = buf, desc = "Create a commit" })
-    util.Map("n", "ce", M.amend_no_edit, { buffer = buf, desc = "Ammend with --no-edit." })
-    util.Map("n", "ca", M.amend, { buffer = buf, desc = "Ammend previous commit." })
-    util.Map("n", "cu", M.undo, { buffer = buf, desc = "Undo last commit." })
-    util.Map("n", "c<space>", function()
-        util.set_cmdline("Git commit ")
-    end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git commit." })
-    util.Map("n", "cw", ":Gcw", { silent = false, buffer = buf, desc = "Populate cmdline with :Gcw" })
-    map_help_key("c", "commit")
-    key_grp["commit[c]"] = { "cc", "ca", "ce", "c<Space>", "cw", "cu" }
+	local options = {
+		{
+			title = "Commit",
+			items = {
+				{ key = "c", cb = M.create, desc = "Create a commit" },
+				{
+					key = "<Space>",
+					cb = function()
+						util.set_cmdline("Git commit ")
+					end,
+					desc = "Populate cmdline with :Git commit",
+				},
+				{
+					key = "w",
+					cb = function()
+						vim.cmd("Gcw")
+					end,
+					desc = "Populate cmdline with :Gcw",
+				},
+			},
+		},
+		{
+			title = "Amend",
+			items = {
+				{ key = "e", cb = M.amend_no_edit, desc = "Ammend with --no-edit" },
+				{ key = "a", cb = M.amend, desc = "Ammend previous commit" },
+				{ key = "u", cb = M.undo, desc = "Undo last commit" },
+			},
+		},
+	}
+
+	util.Map("n", "c", function()
+		require("oz.util.help_keymaps").show_menu("Commit Actions", options)
+	end, { buffer = buf, desc = "Commit Actions", nowait = true })
 end
 
 return M

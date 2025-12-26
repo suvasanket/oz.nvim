@@ -60,4 +60,79 @@ function M.create_win(unique_id, opts)
 	end
 end
 
+--- Create a floating window
+---@param opts {content: string[], title: string, width: number|nil, height: number|nil, footer: string|nil}
+---@return integer win_id
+---@return integer buf_id
+function M.create_floating_window(opts)
+	local content = opts.content or {}
+	local width = opts.width or 60
+	local height = opts.height or #content
+	local title = opts.title or "Menu"
+
+	-- Calculate centered position
+	local row = math.floor((vim.o.lines - height) / 2)
+	local col = math.floor((vim.o.columns - width) / 2)
+
+	local buf_id = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
+
+	local win_opts = {
+		relative = "editor",
+		width = width,
+		height = height,
+		row = row,
+		col = col,
+		style = "minimal",
+		border = "rounded",
+		title = " " .. title .. " ",
+		title_pos = "center",
+		footer = opts.footer,
+		footer_pos = "center",
+	}
+
+	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
+
+	return win_id, buf_id
+end
+
+--- Create a bottom overlay window (Magit/Neogit style)
+---@param opts {content: string[], title: string, height: number|nil}
+---@return integer win_id
+---@return integer buf_id
+function M.create_bottom_overlay(opts)
+	local content = opts.content or {}
+	local height = opts.height or #content
+	local title = opts.title or "Menu"
+	local width = vim.o.columns
+
+	local buf_id = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
+
+	-- We want a window at the bottom, full width.
+	-- We use a border to show the title, but we can customize the characters to look like a top-only line if needed,
+	-- or just use "single" which is clean.
+	-- To make it "from the bottom", row should be lines - height.
+	local row = vim.o.lines - height - 2 -- -2 for statusline and cmdline space roughly
+
+	local win_opts = {
+		relative = "editor",
+		width = width,
+		height = height,
+		row = row,
+		col = 0,
+		style = "minimal",
+		border = { "─", "─", " ", " ", " ", " ", " ", " " }, -- Top border only
+		title = " " .. title .. " ",
+		title_pos = "left",
+	}
+
+	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
+	
+	-- Set local options for "minimal" feel
+	vim.api.nvim_win_set_option(win_id, "winblend", 0)
+
+	return win_id, buf_id
+end
+
 return M

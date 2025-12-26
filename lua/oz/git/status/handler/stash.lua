@@ -34,15 +34,33 @@ function M.save()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "za", M.apply, { buffer = buf, desc = "Apply stash under cursor. <*>" })
-	util.Map("n", "zp", M.pop, { buffer = buf, desc = "Pop stash under cursor. <*>" })
-	util.Map("n", "zd", M.drop, { buffer = buf, desc = "Drop stash under cursor. <*>" })
-	util.Map("n", "z<space>", function()
-		util.set_cmdline("Git stash ")
-	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git stash." })
-	util.Map("n", "zz", M.save, { buffer = buf, desc = "Stash save optionally add a message." })
-	map_help_key("z", "stash")
-	key_grp["stash[z]"] = { "zz", "za", "zp", "zd", "z<Space>", "z" }
+	local options = {
+		{
+			title = "Create",
+			items = {
+				{ key = "z", cb = M.save, desc = "Stash save optionally add a message" },
+				{
+					key = "<Space>",
+					cb = function()
+						util.set_cmdline("Git stash ")
+					end,
+					desc = "Populate cmdline with :Git stash",
+				},
+			},
+		},
+		{
+			title = "Manage",
+			items = {
+				{ key = "a", cb = M.apply, desc = "Apply stash under cursor" },
+				{ key = "p", cb = M.pop, desc = "Pop stash under cursor" },
+				{ key = "d", cb = M.drop, desc = "Drop stash under cursor" },
+			},
+		},
+	}
+
+	util.Map("n", "z", function()
+		require("oz.util.help_keymaps").show_menu("Stash Actions", options)
+	end, { buffer = buf, desc = "Stash Actions", nowait = true })
 end
 
 return M

@@ -72,18 +72,49 @@ function M.diff()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "dh", M.file_history, { buffer = buf, desc = "Diff file history or stash. <*>" })
-	util.Map("n", "df", M.file_changes, { buffer = buf, desc = "Diff file changes. <*>" })
-	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then -- only diffview keymaps
-		util.Map("n", "dv", M.diff, { buffer = buf, desc = "Diff" })
-		util.Map("n", "d<space>", function()
-			util.set_cmdline("DiffviewOpen ")
-		end, { buffer = buf, desc = "Populate cmd line with DiffviewOpen." })
-		util.Map("n", "du", "<cmd>DiffviewOpen -uno<cr>", { buffer = buf, desc = "Diff all unstaged changes." })
-		util.Map("n", "ds", "<cmd>DiffviewOpen --staged<cr>", { buffer = buf, desc = "Diff all staged changes." })
+	local options = {
+		{
+			title = "Common",
+			items = {
+				{ key = "h", cb = M.file_history, desc = "Diff file history or stash" },
+				{ key = "f", cb = M.file_changes, desc = "Diff file changes" },
+			},
+		},
+	}
+
+	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then
+		table.insert(options, {
+			title = "Diffview",
+			items = {
+				{ key = "v", cb = M.diff, desc = "Diff" },
+				{
+					key = "<Space>",
+					cb = function()
+						util.set_cmdline("DiffviewOpen ")
+					end,
+					desc = "Populate cmd line with DiffviewOpen",
+				},
+				{
+					key = "u",
+					cb = function()
+						vim.cmd("DiffviewOpen -uno")
+					end,
+					desc = "Diff all unstaged changes",
+				},
+				{
+					key = "s",
+					cb = function()
+						vim.cmd("DiffviewOpen --staged")
+					end,
+					desc = "Diff all staged changes",
+				},
+			},
+		})
 	end
-	map_help_key("d", "diff")
-	key_grp["diff[d]"] = { "dh", "df", "dv", "d<Space>", "du", "ds" }
+
+	util.Map("n", "d", function()
+		require("oz.util.help_keymaps").show_menu("Diff Actions", options)
+	end, { buffer = buf, desc = "Diff Actions", nowait = true })
 end
 
 return M

@@ -47,20 +47,47 @@ function M.Map(mode, lhs, rhs, opts)
 	if not lhs then
 		return
 	end
-	local options = { silent = true, remap = false }
+
+	-- Prepare options
+	local options = { silent = true, noremap = true }
+
+	-- Logic for auto-nowait on multi-char/multi-item lhs
 	if #lhs ~= 1 then
 		options.nowait = true
 	end
+
 	if opts then
-		options = vim.tbl_extend("force", options, opts)
+		local user_opts = vim.deepcopy(opts)
+		-- Handle remap/noremap translation
+		if user_opts.remap ~= nil then
+			options.noremap = not user_opts.remap
+			user_opts.remap = nil
+		end
+		options = vim.tbl_extend("force", options, user_opts)
 	end
 
-	if type(lhs) == "table" then
-		for _, key in ipairs(lhs) do
-			vim.keymap.set(mode, key, rhs, options)
+	-- Handle callback
+	local rhs_val = rhs
+	if type(rhs) == "function" then
+		options.callback = rhs
+		rhs_val = ""
+	end
+
+	-- Extract buffer
+	local buffer = options.buffer
+	options.buffer = nil
+
+	local modes = type(mode) == "table" and mode or { mode }
+	local keys = type(lhs) == "table" and lhs or { lhs }
+
+	for _, m in ipairs(modes) do
+		for _, k in ipairs(keys) do
+			if buffer then
+				vim.api.nvim_buf_set_keymap(buffer, m, k, rhs_val, options)
+			else
+				vim.api.nvim_set_keymap(m, k, rhs_val, options)
+			end
 		end
-	else
-		vim.keymap.set(mode, lhs, rhs, options)
 	end
 end
 

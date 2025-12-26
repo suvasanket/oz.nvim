@@ -105,4 +105,3 @@ function M.run_git_with_progress(command, args, output_callback)
 end
 
 return M
-

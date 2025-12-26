@@ -117,16 +117,29 @@ function M.move()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "ww", M.add, { buffer = buf, desc = "Add new worktree." })
-	util.Map("n", "wd", M.remove, { buffer = buf, desc = "Remove worktree under cursor. <*>" })
-	util.Map("n", "wp", M.prune, { buffer = buf, desc = "Prune worktrees." })
-	util.Map("n", "wR", M.repair, { buffer = buf, desc = "Repair worktrees." })
-	util.Map("n", "wl", M.lock, { buffer = buf, desc = "Lock worktree under cursor. <*>" })
-	util.Map("n", "wu", M.unlock, { buffer = buf, desc = "Unlock worktree under cursor. <*>" })
-	util.Map("n", "wm", M.move, { buffer = buf, desc = "Move worktree under cursor. <*>" })
+	local options = {
+		{
+			title = "Manage",
+			items = {
+				{ key = "w", cb = M.add, desc = "Add new worktree" },
+				{ key = "d", cb = M.remove, desc = "Remove worktree under cursor" },
+				{ key = "m", cb = M.move, desc = "Move worktree under cursor" },
+				{ key = "l", cb = M.lock, desc = "Lock worktree under cursor" },
+				{ key = "u", cb = M.unlock, desc = "Unlock worktree under cursor" },
+			},
+		},
+		{
+			title = "Maintenance",
+			items = {
+				{ key = "p", cb = M.prune, desc = "Prune worktrees" },
+				{ key = "R", cb = M.repair, desc = "Repair worktrees" },
+			},
+		},
+	}
 
-	map_help_key("w", "worktree")
-	key_grp["worktree[w]"] = { "ww", "wd", "wp", "wR", "wl", "wu", "wm" }
+	util.Map("n", "w", function()
+		require("oz.util.help_keymaps").show_menu("Worktree Actions", options)
+	end, { buffer = buf, desc = "Worktree Actions", nowait = true })
 end
 
 return M

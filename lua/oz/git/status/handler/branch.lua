@@ -97,25 +97,34 @@ function M.rename()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "bn", M.new, { buffer = buf, desc = "Create a new branch. <*>" })
-	util.Map("n", "bb", M.switch, { buffer = buf, desc = "Populate cmdline with switch." })
-	util.Map("n", "bf", M.new_from, { buffer = buf, desc = "New branch from a given branch." })
-	util.Map("n", "bd", M.delete, { buffer = buf, desc = "Delete branch under cursor. <*>" })
-	util.Map(
-		"n",
-		"bu",
-		M.set_upstream,
-		{ buffer = buf, desc = "Set upstream for branch under cursor. <*>" }
-	)
-	util.Map(
-		"n",
-		"bU",
-		M.unset_upstream,
-		{ buffer = buf, desc = "Unset upstream for branch under cursor. <*>" }
-	)
-	util.Map("n", "br", M.rename, { buffer = buf, desc = "Rename branch under cursor. <*>" })
-	map_help_key("b", "branch")
-	key_grp["branch[b]"] = { "bb", "bn", "bf", "bd", "bu", "bU", "br" }
+	local options = {
+		{
+			title = "Creation",
+			items = {
+				{ key = "n", cb = M.new, desc = "Create a new branch" },
+				{ key = "b", cb = M.switch, desc = "Populate cmdline with switch" },
+				{ key = "f", cb = M.new_from, desc = "New branch from a given branch" },
+			},
+		},
+		{
+			title = "Manipulation",
+			items = {
+				{ key = "d", cb = M.delete, desc = "Delete branch under cursor" },
+				{ key = "r", cb = M.rename, desc = "Rename branch under cursor" },
+			},
+		},
+		{
+			title = "Upstream",
+			items = {
+				{ key = "u", cb = M.set_upstream, desc = "Set upstream" },
+				{ key = "U", cb = M.unset_upstream, desc = "Unset upstream" },
+			},
+		},
+	}
+
+	util.Map("n", "b", function()
+		require("oz.util.help_keymaps").show_menu("Branch Actions", options)
+	end, { buffer = buf, desc = "Branch Actions", nowait = true })
 end
 
 return M

@@ -73,54 +73,130 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	-- merge mappings
-	util.Map("n", "mm", M.merge_branch, { buffer = buf, desc = "Start merge with branch under cursor. <*>" })
-	util.Map("n", "ml", function()
-		s_util.run_n_refresh("Git merge --continue")
-	end, { buffer = buf, desc = "Merge continue." })
-	util.Map("n", "ma", function()
-		s_util.run_n_refresh("Git merge --abort")
-	end, { buffer = buf, desc = "Merge abort." })
-	util.Map("n", "ms", function()
-		M.merge_branch("--squash")
-	end, { buffer = buf, desc = "Merge with squash." })
-	util.Map("n", "me", function()
-		M.merge_branch("--no-commit")
-	end, { buffer = buf, desc = "Merge with no-commit." })
-	util.Map("n", "mq", function()
-		M.merge_branch("--quit")
-	end, { buffer = buf, desc = "Merge quit." })
-	util.Map("n", "m<space>", function()
-		util.set_cmdline("Git merge ")
-	end, { silent = false, buffer = buf, desc = "Populate cmdline with Git merge." })
-	map_help_key("m", "merge")
-	key_grp["merge[m]"] = { "mm", "ml", "ma", "ms", "me", "mq", "m<Space>" }
+	local m_opts = {
+		{
+			title = "Merge",
+			items = {
+				{ key = "m", cb = M.merge_branch, desc = "Start merge with branch under cursor" },
+				{
+					key = "<Space>",
+					cb = function()
+						util.set_cmdline("Git merge ")
+					end,
+					desc = "Populate cmdline with Git merge",
+				},
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = "l",
+					cb = function()
+						s_util.run_n_refresh("Git merge --continue")
+					end,
+					desc = "Merge continue",
+				},
+				{
+					key = "a",
+					cb = function()
+						s_util.run_n_refresh("Git merge --abort")
+					end,
+					desc = "Merge abort",
+				},
+				{
+					key = "q",
+					cb = function()
+						M.merge_branch("--quit")
+					end,
+					desc = "Merge quit",
+				},
+			},
+		},
+		{
+			title = "Options",
+			items = {
+				{
+					key = "s",
+					cb = function()
+						M.merge_branch("--squash")
+					end,
+					desc = "Merge with squash",
+				},
+				{
+					key = "e",
+					cb = function()
+						M.merge_branch("--no-commit")
+					end,
+					desc = "Merge with no-commit",
+				},
+			},
+		},
+	}
+	util.Map("n", "m", function()
+		require("oz.util.help_keymaps").show_menu("Merge Actions", m_opts)
+	end, { buffer = buf, desc = "Merge Actions", nowait = true })
 
 	-- [R]ebase mappings
-	util.Map("n", "rr", M.rebase_branch, { buffer = buf, desc = "Rebase branch under cursor with provided args. <*>" })
-	util.Map("n", "ri", M.rebase_interactive, {
-		buffer = buf,
-		desc = "Start interactive rebase with branch under cursor. <*>",
-	})
-	util.Map("n", "rl", function()
-		s_util.run_n_refresh("Git rebase --continue")
-	end, { buffer = buf, desc = "Rebase continue." })
-	util.Map("n", "ra", function()
-		s_util.run_n_refresh("Git rebase --abort")
-	end, { buffer = buf, desc = "Rebase abort." })
-	util.Map("n", "rq", function()
-		s_util.run_n_refresh("Git rebase --quit")
-	end, { buffer = buf, desc = "Rebase quit." })
-	util.Map("n", "rk", function()
-		s_util.run_n_refresh("Git rebase --skip")
-	end, { buffer = buf, desc = "Rebase skip." })
-	util.Map("n", "re", function()
-		s_util.run_n_refresh("Git rebase --edit-todo")
-	end, { buffer = buf, desc = "Rebase edit todo." })
-	util.Map("n", "r<space>", function()
-		util.set_cmdline("Git rebase ")
-	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git rebase." })
-	map_help_key("r", "rebase")
-	key_grp["rebase[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "re", "r<Space>" }
+	local r_opts = {
+		{
+			title = "Rebase",
+			items = {
+				{ key = "r", cb = M.rebase_branch, desc = "Rebase branch under cursor" },
+				{ key = "i", cb = M.rebase_interactive, desc = "Start interactive rebase" },
+				{
+					key = "<Space>",
+					cb = function()
+						util.set_cmdline("Git rebase ")
+					end,
+					desc = "Populate cmdline with :Git rebase",
+				},
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = "l",
+					cb = function()
+						s_util.run_n_refresh("Git rebase --continue")
+					end,
+					desc = "Rebase continue",
+				},
+				{
+					key = "a",
+					cb = function()
+						s_util.run_n_refresh("Git rebase --abort")
+					end,
+					desc = "Rebase abort",
+				},
+				{
+					key = "q",
+					cb = function()
+						s_util.run_n_refresh("Git rebase --quit")
+					end,
+					desc = "Rebase quit",
+				},
+				{
+					key = "k",
+					cb = function()
+						s_util.run_n_refresh("Git rebase --skip")
+					end,
+					desc = "Rebase skip",
+				},
+				{
+					key = "e",
+					cb = function()
+						s_util.run_n_refresh("Git rebase --edit-todo")
+					end,
+					desc = "Rebase edit todo",
+				},
+			},
+		},
+	}
+	util.Map("n", "r", function()
+		require("oz.util.help_keymaps").show_menu("Rebase Actions", r_opts)
+	end, { buffer = buf, desc = "Rebase Actions", nowait = true })
 
 	-- Merge/Conflict helper
 	if status.state.in_conflict then
@@ -138,17 +214,25 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 				{ title = "oz_git", timeout = 3000 }
 			)
 		end
-		-- start resolution
-		util.Map("n", "xo", M.conflict_start_manual, { buffer = buf, desc = "Start manual conflict resolution." })
-		-- complete (manual)
-		util.Map("n", "xc", M.conflict_complete, { buffer = buf, desc = "Complete manual conflict resolution." })
-		-- diffview resolve
+		
+		local x_opts = {
+			{
+				title = "Resolve",
+				items = {
+					{ key = "o", cb = M.conflict_start_manual, desc = "Start manual conflict resolution" },
+					{ key = "c", cb = M.conflict_complete, desc = "Complete manual conflict resolution" },
+				},
+			}
+		}
+		
 		if util.usercmd_exist("DiffviewOpen") then
-			util.Map("n", "xp", M.conflict_diffview, { buffer = buf, desc = "Open Diffview for conflict resolution." })
+			table.insert(x_opts[1].items, { key = "p", cb = M.conflict_diffview, desc = "Open Diffview for conflict resolution" })
 		end
-		map_help_key("x", "conflict resolution")
+		
+		util.Map("n", "x", function()
+			require("oz.util.help_keymaps").show_menu("Conflict Resolution", x_opts)
+		end, { buffer = buf, desc = "Conflict Resolution", nowait = true })
 	end
-	key_grp["conflict resolution[x]"] = { "xo", "xc", "xp" }
 end
 
 return M
