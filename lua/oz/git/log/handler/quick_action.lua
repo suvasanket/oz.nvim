@@ -140,11 +140,36 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 	key_grp["quick actions"] = { "<lt>", ">", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "q" }
 
 	-- goto mappings
-	util.Map("n", "g:", M.add_args, { buffer = buf, desc = "Add args to log command." })
-	util.Map("n", "gs", M.go_status, { buffer = buf, desc = "Go to git status buffer." })
-	util.Map("n", "gg", "gg", { buffer = buf, desc = "Goto top of buffer." })
-	map_help_key("g", "goto")
-	key_grp["goto[g]"] = { "g:", "g?", "gs", "gg" }
+	local g_options = {
+		{
+			title = "Goto",
+			items = {
+				{ key = ":", cb = M.add_args, desc = "Add args to log command" },
+				{ key = "s", cb = M.go_status, desc = "Go to git status buffer" },
+				{ key = "g", cb = function() vim.cmd("normal! gg") end, desc = "Goto top of buffer" },
+				{
+					key = "?",
+					cb = function()
+						require("oz.util.help_keymaps").show_maps({
+							group = key_grp,
+							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
+							no_empty = true,
+							on_open = function()
+								vim.schedule(function()
+									util.inactive_echo("press ctrl-f to search section")
+								end)
+							end,
+						})
+					end,
+					desc = "Show all available keymaps",
+				},
+			},
+		},
+	}
+
+	util.Map("n", "g", function()
+		require("oz.util.help_keymaps").show_menu("Goto Actions", g_options)
+	end, { buffer = buf, desc = "Goto Actions", nowait = true })
 
 	-- pick hash
 	util.Map("n", user_mappings.toggle_pick, M.toggle_pick, { buffer = buf, desc = "Pick or unpick any hash under cursor. <*>" })

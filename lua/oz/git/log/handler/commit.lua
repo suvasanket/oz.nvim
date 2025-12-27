@@ -36,13 +36,22 @@ function M.amend()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "cs", M.squash, { buffer = buf, desc = "Create commit with commit under cursor(--squash). <*>" })
-	util.Map("n", "cf", M.fixup, { buffer = buf, desc = "Create commit with commit under cursor(--fixup). <*>" })
-	util.Map("n", "cc", M.commit, { buffer = buf, desc = "Populate cmdline with Git commit followed by current hash. <*>" })
-	util.Map("n", "ce", M.extend, { buffer = buf, desc = "Create commit & reuse message from commit under cursor. <*>" })
-	util.Map("n", "ca", M.amend, { buffer = buf, desc = "Create commit & edit message from commit under cursor. <*>" })
-	map_help_key("c", "commit")
-	key_grp["commit[c]"] = { "cs", "cf", "cc", "ce", "ca" }
+	local options = {
+		{
+			title = "Commit Actions",
+			items = {
+				{ key = "s", cb = M.squash, desc = "Create commit with commit under cursor(--squash)" },
+				{ key = "f", cb = M.fixup, desc = "Create commit with commit under cursor(--fixup)" },
+				{ key = "c", cb = M.commit, desc = "Populate cmdline with Git commit followed by current hash" },
+				{ key = "e", cb = M.extend, desc = "Create commit & reuse message from commit under cursor" },
+				{ key = "a", cb = M.amend, desc = "Create commit & edit message from commit under cursor" },
+			},
+		},
+	}
+
+	util.Map("n", "c", function()
+		require("oz.util.help_keymaps").show_menu("Commit Actions", options)
+	end, { buffer = buf, desc = "Commit Actions", nowait = true })
 end
 
 return M

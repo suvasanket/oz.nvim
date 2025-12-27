@@ -48,16 +48,25 @@ function M.edit_todo()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "ri", M.interactive, { buffer = buf, desc = "Start interactive rebase including commit under cursor. <*>" })
-	util.Map("n", "rr", M.pick, { buffer = buf, desc = "Rebase with commit under cursor. <*>" })
-	util.Map("n", "rl", M.continue, { buffer = buf, desc = "Rebase continue." })
-	util.Map("n", "ra", M.abort, { buffer = buf, desc = "Rebase abort." })
-	util.Map("n", "rq", M.quit, { buffer = buf, desc = "Rebase quit." })
-	util.Map("n", "rk", M.skip, { buffer = buf, desc = "Rebase skip." })
-	util.Map("n", "ro", M.autosquash, { buffer = buf, desc = "Start interactive rebase with commit under cursor(--autosquash). <*>" })
-	util.Map("n", "re", M.edit_todo, { buffer = buf, desc = "Rebase edit todo." })
-	map_help_key("r", "rebase")
-	key_grp["rebase[r]"] = { "rr", "ri", "rl", "ra", "rq", "rk", "ro", "re" }
+	local options = {
+		{
+			title = "Rebase Actions",
+			items = {
+				{ key = "i", cb = M.interactive, desc = "Start interactive rebase including commit under cursor" },
+				{ key = "r", cb = M.pick, desc = "Rebase with commit under cursor" },
+				{ key = "l", cb = M.continue, desc = "Rebase continue" },
+				{ key = "a", cb = M.abort, desc = "Rebase abort" },
+				{ key = "q", cb = M.quit, desc = "Rebase quit" },
+				{ key = "k", cb = M.skip, desc = "Rebase skip" },
+				{ key = "o", cb = M.autosquash, desc = "Start interactive rebase with commit under cursor(--autosquash)" },
+				{ key = "e", cb = M.edit_todo, desc = "Rebase edit todo" },
+			},
+		},
+	}
+
+	util.Map("n", "r", function()
+		require("oz.util.help_keymaps").show_menu("Rebase Actions", options)
+	end, { buffer = buf, desc = "Rebase Actions", nowait = true })
 end
 
 return M

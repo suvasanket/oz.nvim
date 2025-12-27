@@ -27,20 +27,6 @@ function M.keymaps_init(buf)
 	handle.push_pull.setup_keymaps(buf, key_grp)
 	handle.branch.setup_keymaps(buf, key_grp, map_help_key)
 	handle.worktree.setup_keymaps(buf, key_grp, map_help_key)
-
-	-- help
-	util.Map("n", "g?", function()
-		show_map.show_maps({
-			group = key_grp,
-			no_empty = true,
-			on_open = function()
-				vim.schedule(function()
-					util.inactive_echo("press ctrl-f to search section")
-				end)
-			end,
-			subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
-		})
-	end, { buffer = buf, desc = "Show all availble keymaps." })
 end
 
 return M

@@ -45,14 +45,24 @@ function M.skip()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map({ "n", "x" }, "pp", M.handle_cherrypick, { buffer = buf, desc = "Cherry-pick commit under cursor. <*>" })
+	local options = {
+		{
+			title = "Cherry Pick",
+			items = {
+				{ key = "p", cb = M.handle_cherrypick, desc = "Cherry-pick commit under cursor" },
+				{ key = "a", cb = M.abort, desc = "Cherry-pick abort" },
+				{ key = "q", cb = M.quit, desc = "Cherry-pick quit" },
+				{ key = "l", cb = M.continue, desc = "Cherry-pick continue" },
+				{ key = "k", cb = M.skip, desc = "Cherry-pick skip" },
+			},
+		},
+	}
 
-	util.Map("n", "pa", M.abort, { buffer = buf, desc = "Cherry-pick abort." })
-	util.Map("n", "pq", M.quit, { buffer = buf, desc = "Cherry-pick quit." })
-	util.Map("n", "pl", M.continue, { buffer = buf, desc = "Cherry-pick continue." })
-	util.Map("n", "pk", M.skip, { buffer = buf, desc = "Cherry-pick skip." })
-	map_help_key("p", "cherry-pick")
-	key_grp["cherry-pick[p]"] = { "pp", "pa", "pk", "pl", "pq" }
+	util.Map("n", "p", function()
+		require("oz.util.help_keymaps").show_menu("Cherry Pick Actions", options)
+	end, { buffer = buf, desc = "Cherry Pick Actions", nowait = true })
+
+	util.Map("x", "p", M.handle_cherrypick, { buffer = buf, desc = "Cherry-pick selection" })
 end
 
 return M

@@ -50,11 +50,22 @@ function M.diff_range()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "dv", M.diff_working, { buffer = buf, desc = "diff the working tree against the commit under cursor. <*>" })
-	util.Map("n", "dc", M.diff_commit, { buffer = buf, desc = "Diff the changes introduced by commit under cursor. <*>" })
-	util.Map({ "n", "x" }, "dp", M.diff_range, { buffer = buf, desc = "Diff commits between a range of commits. <*>" })
-    map_help_key("d", "diff[d]")
-	key_grp["diff[v]"] = { "dv", "dd", "dc", "dp" }
+	local options = {
+		{
+			title = "Diff Actions",
+			items = {
+				{ key = "v", cb = M.diff_working, desc = "diff the working tree against the commit under cursor" },
+				{ key = "c", cb = M.diff_commit, desc = "Diff the changes introduced by commit under cursor" },
+				{ key = "p", cb = M.diff_range, desc = "Diff commits between a range of commits" },
+			},
+		},
+	}
+
+	util.Map("n", "d", function()
+		require("oz.util.help_keymaps").show_menu("Diff Actions", options)
+	end, { buffer = buf, desc = "Diff Actions", nowait = true })
+
+	util.Map("x", "d", M.diff_range, { buffer = buf, desc = "Diff range selection" })
 end
 
 return M

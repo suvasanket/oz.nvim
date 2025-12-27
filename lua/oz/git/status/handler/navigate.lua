@@ -37,7 +37,7 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			},
 		},
 		{
-			title = "Section",
+			title = "Goto",
 			items = {
 				{
 					key = "u",
@@ -74,12 +74,22 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 					end,
 					desc = "Goto worktrees section",
 				},
-			},
-		},
-		{
-			title = "File",
-			items = {
-				{ key = "I", cb = M.gitignore, desc = "Add file to .gitignore" },
+				{
+					key = "?",
+					cb = function()
+						require("oz.util.help_keymaps").show_maps({
+							group = key_grp,
+							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
+							no_empty = true,
+							on_open = function()
+								vim.schedule(function()
+									util.inactive_echo("press ctrl-f to search section")
+								end)
+							end,
+						})
+					end,
+					desc = "Show all available keymaps",
+				},
 				{
 					key = "g",
 					cb = function()
@@ -87,6 +97,12 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 					end,
 					desc = "goto top of the buffer",
 				},
+			},
+		},
+		{
+			title = "File",
+			items = {
+				{ key = "I", cb = M.gitignore, desc = "Add file to .gitignore" },
 			},
 		},
 	}

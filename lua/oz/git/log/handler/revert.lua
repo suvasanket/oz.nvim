@@ -59,15 +59,26 @@ function M.abort()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map({ "n", "x" }, "uu", M.handle_revert, { buffer = buf, desc = "Revert selection or current commit. <*>" })
-	util.Map("n", "ui", M.edit, { buffer = buf, desc = "Revert commit with edit. <*>" })
-	util.Map("n", "ue", M.no_edit, { buffer = buf, desc = "Revert commit with no-edit. <*>" })
-	util.Map("n", "ul", M.continue, { buffer = buf, desc = "Revert continue." })
-	util.Map("n", "uk", M.skip, { buffer = buf, desc = "Revert skip." })
-	util.Map("n", "uq", M.quit, { buffer = buf, desc = "Revert quit." })
-	util.Map("n", "ua", M.abort, { buffer = buf, desc = "Revert abort." })
-	map_help_key("u", "revert")
-	key_grp["revert[u]"] = { "uu", "ul", "uk", "ua", "uq", "ui", "ue" }
+	local options = {
+		{
+			title = "Revert Actions",
+			items = {
+				{ key = "u", cb = M.handle_revert, desc = "Revert selection or current commit" },
+				{ key = "i", cb = M.edit, desc = "Revert commit with edit" },
+				{ key = "e", cb = M.no_edit, desc = "Revert commit with no-edit" },
+				{ key = "l", cb = M.continue, desc = "Revert continue" },
+				{ key = "k", cb = M.skip, desc = "Revert skip" },
+				{ key = "q", cb = M.quit, desc = "Revert quit" },
+				{ key = "a", cb = M.abort, desc = "Revert abort" },
+			},
+		},
+	}
+
+	util.Map("n", "u", function()
+		require("oz.util.help_keymaps").show_menu("Revert Actions", options)
+	end, { buffer = buf, desc = "Revert Actions", nowait = true })
+
+	util.Map("x", "u", M.handle_revert, { buffer = buf, desc = "Revert selection" })
 end
 
 return M

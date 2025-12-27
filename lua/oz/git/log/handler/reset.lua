@@ -31,12 +31,21 @@ function M.hard()
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
-	util.Map("n", "UU", M.handle_reset, { buffer = buf, desc = "Reset commit. <* >" })
-	util.Map("n", "Us", M.soft, { buffer = buf, desc = "Reset commit(--soft). <* >" })
-	util.Map("n", "Um", M.mixed, { buffer = buf, desc = "Reset commit(--mixed). <* >" })
-	util.Map("n", "Uh", M.hard, { buffer = buf, desc = "Reset commit(--hard). <* >" })
-	map_help_key("U", "reset")
-	key_grp["reset[U]"] = { "UU", "Us", "Uh", "Um" }
+	local options = {
+		{
+			title = "Reset Actions",
+			items = {
+				{ key = "U", cb = M.handle_reset, desc = "Reset commit" },
+				{ key = "s", cb = M.soft, desc = "Reset commit(--soft)" },
+				{ key = "m", cb = M.mixed, desc = "Reset commit(--mixed)" },
+				{ key = "h", cb = M.hard, desc = "Reset commit(--hard)" },
+			},
+		},
+	}
+
+	util.Map("n", "U", function()
+		require("oz.util.help_keymaps").show_menu("Reset Actions", options)
+	end, { buffer = buf, desc = "Reset Actions", nowait = true })
 end
 
 return M
