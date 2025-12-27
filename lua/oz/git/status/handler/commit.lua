@@ -3,8 +3,12 @@ local util = require("oz.util")
 local s_util = require("oz.git.status.util")
 local shell = require("oz.util.shell")
 
-function M.create()
-    s_util.run_n_refresh("Git commit -q")
+function M.create(flags)
+    local cmd = "Git commit"
+    if flags and #flags > 0 then
+        cmd = cmd .. " " .. table.concat(flags, " ")
+    end
+    s_util.run_n_refresh(cmd)
 end
 
 function M.amend_no_edit()
@@ -27,6 +31,14 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+		{
+			title = "Switches",
+			items = {
+				{ key = "-s", name = "--signoff", type = "switch", desc = "Signoff" },
+				{ key = "-n", name = "--no-verify", type = "switch", desc = "Bypass hooks" },
+                { key = "-q", name = "-q", type = "switch", desc = "Quiet", default = true },
+			},
+		},
 		{
 			title = "Commit",
 			items = {

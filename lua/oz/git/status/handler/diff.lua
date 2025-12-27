@@ -44,11 +44,16 @@ function M.file_changes()
 	end
 end
 
-function M.diff()
+function M.diff(flags)
 	local branches = g_util.get_branch()
 	local stash = shell.shellout_tbl("git stash list --format=%gd")
 
 	local all = util.join_tables(branches, stash)
+    
+    local flag_str = ""
+    if flags and #flags > 0 then
+        flag_str = " " .. table.concat(flags, " ")
+    end
 
 	vim.ui.select(all, {
 		prompt = "lhs..",
@@ -66,6 +71,8 @@ function M.diff()
 			if not rhs then
 				return
 			end
+            -- Note: Diffview might not support arbitrary git flags easily via args, 
+            -- but for 'Git diff' fallback it works.
 			vim.cmd(string.format("DiffviewOpen %s..%s", lhs, rhs))
 		end)
 	end)
@@ -73,6 +80,14 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-f", name = "--function-context", type = "switch", desc = "Show function context" },
+                { key = "-w", name = "--ignore-all-space", type = "switch", desc = "Ignore whitespace" },
+                { key = "-b", name = "--ignore-space-change", type = "switch", desc = "Ignore space change" },
+            }
+        },
 		{
 			title = "Common",
 			items = {

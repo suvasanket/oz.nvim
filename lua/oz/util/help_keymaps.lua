@@ -223,7 +223,7 @@ function M.show_maps(args)
 
 		-- Highlight keys
 		vim.cmd([=[syntax match KeyName /\(\[[^]]\+\] \+\)\@<=\S\+/]=])
-		vim.cmd("highlight link KeyName Boolean")
+		vim.cmd("highlight link KeyName @attribute")
 
 		vim.cmd([=[syntax match HeaderName /^%#HeaderName#.*/ contains=IGNORE]=])
 		vim.cmd([=[syntax match Title /^\S.*/]=])
@@ -258,59 +258,88 @@ end
 
 -- Show interactive menu
 ---@param title string
----@param items {key: string, desc: string, cb: function}[]|{title: string, items: {key: string, desc: string, cb: function}[]}[]
+---@param items {key: string, desc: string, cb: function, type: string|nil, name: string|nil, default: boolean|nil}[]|{title: string, items: {key: string, desc: string, cb: function, type: string|nil, name: string|nil, default: boolean|nil}[]}[]
 function M.show_menu(title, items)
 	close_menu() -- Close any existing menu
 
 	-- Store current window to restore focus
 	local start_win = vim.api.nvim_get_current_win()
 
-	local key_map = {}
-	local lines = {}
-	local max_width = 0
+	-- Normalize items to groups if flat
+	local groups = items
+	if not (items[1] and items[1].items) then
+		groups = { { items = items } }
+	end
 
-	-- Helper to process a list of items
-	local function process_item_list(list)
-		for _, item in ipairs(list) do
-			local key_display = item.key:gsub(" ", "<Space>")
-			local desc = item.desc
-			local entry = string.format(" %-3s %s", key_display, desc)
-			table.insert(lines, { text = entry, key = item.key, cb = item.cb })
-			key_map[item.key] = item.cb
-			if #entry > max_width then
-				max_width = #entry
+	local active_switches = {}
+	local switch_map = {}
+	local action_map = {}
+
+	-- Initialize state
+	for _, group in ipairs(groups) do
+		for _, item in ipairs(group.items) do
+			if item.type == "switch" then
+				switch_map[item.key] = item
+				if item.default then
+					active_switches[item.key] = true
+				end
+			else
+				action_map[item.key] = item
 			end
 		end
 	end
 
-	-- Check if items are grouped or flat
-	local is_grouped = false
-	if items[1] and items[1].items then
-		is_grouped = true
+	local win_id, buf_id = nil, nil
+
+	local function get_active_flags()
+		local flags = {}
+		-- Iterate in defined order for consistency? or just map keys?
+		-- Map keys might be random order. Let's iterate groups to preserve order if possible,
+		-- or just active_switches keys.
+		for _, group in ipairs(groups) do
+			for _, item in ipairs(group.items) do
+				if item.type == "switch" and active_switches[item.key] then
+					table.insert(flags, item.name)
+				end
+			end
+		end
+		return flags
 	end
 
-	local render_lines = {}
+	local function render()
+		local render_lines = {}
+		local highlight_queue = {} -- {group, line, col_start, col_end}
+		local line_idx = 0
 
-	if is_grouped then
-		local col_width = 40 -- Minimum column width
-		local win_width = vim.o.columns
-		local num_cols = math.floor(win_width / col_width)
-		if num_cols < 1 then
-			num_cols = 1
-		end
+		-- Helper to layout
+		local max_width = 0
+		local processed_groups = {}
 
-		for _, group in ipairs(items) do
-			table.insert(render_lines, string.format("%%#HeaderName#%s", group.title))
+		for _, group in ipairs(groups) do
+			local p_group = { title = group.title, items = {} }
 			for _, item in ipairs(group.items) do
 				local key_display = item.key:gsub(" ", "<Space>")
-				table.insert(render_lines, string.format(" %-3s %s", key_display, item.desc))
-				key_map[item.key] = item.cb
+				local text
+				if item.type == "switch" then
+					-- Format: -s --signoff
+					text = string.format(" %-3s %-12s %s", key_display, item.name, item.desc)
+				else
+					text = string.format(" %-3s %s", key_display, item.desc)
+				end
+
+				table.insert(p_group.items, {
+					text = text,
+					key = item.key,
+					item = item,
+					key_display = key_display,
+				})
+				if #text > max_width then
+					max_width = #text
+				end
 			end
-			table.insert(render_lines, "") -- spacer
+			table.insert(processed_groups, p_group)
 		end
-	else
-		-- Flat list: render in columns
-		process_item_list(items)
+
 		local col_width = max_width + 4
 		local win_width = vim.o.columns
 		local num_cols = math.floor(win_width / col_width)
@@ -318,78 +347,134 @@ function M.show_menu(title, items)
 			num_cols = 1
 		end
 
-		local num_rows = math.ceil(#lines / num_cols)
+		for _, group in ipairs(processed_groups) do
+			if group.title then
+				table.insert(render_lines, group.title)
+				table.insert(highlight_queue, { "Title", line_idx, 0, -1 })
+				line_idx = line_idx + 1
+			end
 
-		for r = 1, num_rows do
-			local line_parts = {}
-			for c = 1, num_cols do
-				local idx = (c - 1) * num_rows + r
-				if idx <= #lines then
-					local entry = lines[idx]
-					local padding = string.rep(" ", col_width - #entry.text)
-					table.insert(line_parts, entry.text .. padding)
+			local items_list = group.items
+			local num_rows = math.ceil(#items_list / num_cols)
+
+			for r = 1, num_rows do
+				local line_parts = {}
+				local current_len = 0
+				for c = 1, num_cols do
+					local idx = (c - 1) * num_rows + r
+					if idx <= #items_list then
+						local entry = items_list[idx]
+						local padding = string.rep(" ", col_width - #entry.text)
+						local part = entry.text .. padding
+						table.insert(line_parts, part)
+
+						-- Determine Highlight Groups
+						local active = active_switches[entry.key]
+						local key_hl = "@attribute"
+						local flag_hl = "ozInactivePrompt"
+
+						if active then
+							key_hl = "Boolean"
+							flag_hl = "Boolean"
+						end
+
+						-- Find positions (naive find is safe enough here as keys are distinct in the formatted string)
+						-- Entry Text: " -s  --signoff    Desc"
+						local s_key = part:find(vim.pesc(entry.key_display))
+						if s_key then
+							local e_key = s_key + #entry.key_display
+							table.insert(highlight_queue, { key_hl, line_idx, current_len + s_key - 1, current_len + e_key })
+						end
+
+						if entry.item.type == "switch" then
+							local s_name = part:find(vim.pesc(entry.item.name), (s_key or 0) + #entry.key_display)
+							if s_name then
+								local e_name = s_name + #entry.item.name
+								table.insert(highlight_queue, { flag_hl, line_idx, current_len + s_name - 1, current_len + e_name })
+							end
+						end
+
+						current_len = current_len + #part
+					end
+				end
+				table.insert(render_lines, table.concat(line_parts))
+				line_idx = line_idx + 1
+			end
+			table.insert(render_lines, "") -- spacer
+			line_idx = line_idx + 1
+		end
+
+		-- Window Creation / Update
+		if not win_id or not vim.api.nvim_win_is_valid(win_id) then
+			win_id, buf_id = win_util.create_bottom_overlay({
+				content = render_lines,
+				title = title,
+			})
+			menu_win = win_id
+			menu_buf = buf_id
+		else
+			vim.api.nvim_buf_set_option(buf_id, "modifiable", true)
+			vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, render_lines)
+			vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
+		end
+
+		-- Apply Highlights
+		vim.api.nvim_buf_clear_namespace(buf_id, -1, 0, -1)
+		local ns = vim.api.nvim_create_namespace("oz_menu_switches")
+		for _, hl in ipairs(highlight_queue) do
+			vim.api.nvim_buf_add_highlight(buf_id, ns, hl[1], hl[2], hl[3], hl[4])
+		end
+	end
+
+	-- Interaction Loop
+	while true do
+		render()
+		vim.cmd("redraw")
+
+		local ok, char_code = pcall(vim.fn.getchar)
+		if not ok then
+			close_menu()
+			break
+		end
+
+		local char
+		if type(char_code) == "number" then
+			char = vim.fn.nr2char(char_code)
+		else
+			char = char_code
+		end
+
+		if char == "-" then
+			-- Switch Mode
+			local next_ok, next_code = pcall(vim.fn.getchar)
+			if next_ok then
+				local next_char
+				if type(next_code) == "number" then
+					next_char = vim.fn.nr2char(next_code)
+				else
+					next_char = next_code
+				end
+				local switch_key = "-" .. next_char
+				if switch_map[switch_key] then
+					active_switches[switch_key] = not active_switches[switch_key]
 				end
 			end
-			table.insert(render_lines, table.concat(line_parts))
-		end
-	end
-
-	-- Create Window
-	local win_id, buf_id = win_util.create_bottom_overlay({
-		content = render_lines,
-		title = title,
-	})
-
-	menu_win = win_id
-	menu_buf = buf_id
-
-	-- Syntax highlighting
-	vim.api.nvim_buf_call(buf_id, function()
-		vim.cmd([[syntax match SpecialKey /^ \S\+/]])
-		vim.cmd("highlight link SpecialKey @attribute")
-		vim.cmd([[syntax match HeaderName /^%#HeaderName#.*/ contains=IGNORE]]) -- Hide the marker
-		if is_grouped then
-			vim.cmd([[syntax match Title /^\S.*/]])
-		end
-	end)
-
-	-- Clean up the header markers if used
-	if is_grouped then
-		local clean_lines = {}
-		for _, l in ipairs(render_lines) do
-			table.insert(clean_lines, (l:gsub("%%#HeaderName#", "")))
-		end
-		vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, clean_lines)
-	end
-
-	vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
-	vim.api.nvim_buf_set_option(buf_id, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(buf_id, "cursorline", false)
-
-	-- Restore focus to the original window
-	if vim.api.nvim_win_is_valid(start_win) then
-		vim.api.nvim_set_current_win(start_win)
-	end
-
-	vim.cmd("redraw")
-
-	-- Blocking wait for input
-	local ok, char_code = pcall(vim.fn.getchar)
-	if ok and type(char_code) == "number" then
-		local char = vim.fn.nr2char(char_code)
-		if key_map[char] then
+		elseif action_map[char] then
+			-- Action Mode
 			close_menu()
-			key_map[char]()
-		elseif char == "q" or char == "\27" then -- q or Esc
+			if vim.api.nvim_win_is_valid(start_win) then
+				vim.api.nvim_set_current_win(start_win)
+			end
+			action_map[char].cb(get_active_flags())
+			break
+		elseif char == "q" or char == "\27" then
 			close_menu()
-		else
-			-- Unknown key, just close? Or stay open?
-			-- Usually strictly transient menus close on invalid input or execute it in original buffer
-			-- For safety and "Magit-like" feel, let's close.
-			close_menu()
+			if vim.api.nvim_win_is_valid(start_win) then
+				vim.api.nvim_set_current_win(start_win)
+			end
+			break
 		end
-	else
-		close_menu()
+		-- Unknown keys are ignored in the loop
 	end
 end
 

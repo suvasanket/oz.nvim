@@ -4,7 +4,14 @@ local s_util = require("oz.git.status.util")
 local status = require("oz.git.status")
 
 -- Add Worktree (ww)
-function M.add()
+function M.add(flags)
+    local force = false
+    if flags then
+        for _, f in ipairs(flags) do
+            if f == "--force" then force = true end
+        end
+    end
+    
 	-- 1. Location Selection using util.prompt (confirm dialog)
 	local ans = util.prompt("Select Worktree Location Base", "&Parent of root\n&This dir\n&Custom path", 2)
 	if not ans or ans == 0 then
@@ -40,6 +47,8 @@ function M.add()
 
 	-- Construct Command
 	local cmd = string.format("Git worktree add %q", final_path)
+    if force then cmd = cmd .. " --force" end
+    
 	if commit_ish ~= "" then
 		cmd = cmd .. " " .. commit_ish
 	end
@@ -67,18 +76,25 @@ local function get_selected_worktree_path()
 end
 
 -- Remove (wd)
-function M.remove()
+function M.remove(flags)
 	local path = get_selected_worktree_path()
 	if not path then
 		util.Notify("No worktree selected.", "warn", "oz_git")
 		return
 	end
+    
+    local force = false
+    if flags then
+        for _, f in ipairs(flags) do
+            if f == "--force" then force = true end
+        end
+    end
 
-	local ans = util.prompt("Remove worktree '" .. path .. "'?", "&Yes\n&No\n&Force", 2)
+	local ans = util.prompt("Remove worktree '" .. path .. "'?", "&Yes\n&No", 2)
 	if ans == 1 then
-		s_util.run_n_refresh(string.format("Git worktree remove %q", path))
-	elseif ans == 3 then
-		s_util.run_n_refresh(string.format("Git worktree remove --force %q", path))
+        local cmd = "Git worktree remove"
+        if force then cmd = cmd .. " --force" end
+		s_util.run_n_refresh(string.format("%s %q", cmd, path))
 	end
 end
 
@@ -118,14 +134,20 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-f", name = "--force", type = "switch", desc = "Force" },
+            }
+        },
 		{
 			title = "Manage",
 			items = {
 				{ key = "w", cb = M.add, desc = "Add new worktree" },
-				{ key = "d", cb = M.remove, desc = "Remove worktree under cursor" },
-				{ key = "m", cb = M.move, desc = "Move worktree under cursor" },
-				{ key = "l", cb = M.lock, desc = "Lock worktree under cursor" },
-				{ key = "u", cb = M.unlock, desc = "Unlock worktree under cursor" },
+				{ key = "d", cb = M.remove, desc = "Remove worktree" },
+				{ key = "m", cb = M.move, desc = "Move worktree" },
+				{ key = "l", cb = M.lock, desc = "Lock worktree" },
+				{ key = "u", cb = M.unlock, desc = "Unlock worktree" },
 			},
 		},
 		{

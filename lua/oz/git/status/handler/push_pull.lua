@@ -6,99 +6,135 @@ local shell = require("oz.util.shell")
 
 local state = status.state
 
-function M.push()
+function M.push_cmd(flags)
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
+    local args = ""
+    if flags and #flags > 0 then
+        args = " " .. table.concat(flags, " ")
+    end
 
 	if not current_branch then
 		util.Notify("could not determine current branch.", "error", "oz_git")
 		return
 	end
 
+    -- Logic simplified for menu action 'p' (PushCurrent)
 	local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
-	local cur_remote_branch_ref = shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
-	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- fallback?
-
-	local refined_args, branch
-
-	if cur_remote_branch == state.current_branch then
-		branch = cur_remote_branch
-	else
-		branch = current_branch .. ":" .. cur_remote_branch
-	end
-
-	if cur_remote_branch_ref == "" then
-		local remote = shell.shellout_str("git remote")
-		if remote ~= "" then
-			refined_args = ("-u %s %s"):format(remote, current_branch)
-		else
-			util.Notify("press 'ma' to add a remote first", "warn", "oz_git")
-		end
-	else
-		refined_args = string.format("%s %s", cur_remote, branch)
-	end
-
-	if refined_args then
-		util.set_cmdline("Git push " .. refined_args)
-	end
+    -- If no upstream, maybe prompt? Or let git handle it.
+    -- Magit 'p' usually pushes to configured upstream or prompts.
+    
+    if cur_remote == "" then
+         -- No upstream
+         util.Notify("No upstream configured. Use 'u' to push to specific upstream or configure it.", "warn", "oz_git")
+         return
+    end
+    
+    s_util.run_n_refresh("Git push" .. args)
 end
 
-function M.pull()
-	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
-
-	if not current_branch then
-		util.Notify("could not determine current branch.", "error", "oz_git")
-		return
-	end
-
-	local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
-	local cur_remote_branch_ref = shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
-
-	if cur_remote == "" or cur_remote_branch_ref == "" then
-		util.Notify(
-			"upstream not configured for branch '" .. current_branch .. "'. press 'bu' to set upstream.",
-			"warn",
-			"oz_git"
-		)
-		return
-	end
-
-	-- extract remote branch name (handle potential errors/empty output)
-	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- fallback?
-
-	local branch
-
-	if cur_remote_branch == state.current_branch then
-		branch = cur_remote_branch
-	else
-		branch = cur_remote_branch .. ":" .. current_branch
-	end
-
-	util.set_cmdline(("Git pull %s %s"):format(cur_remote, branch))
+function M.push_upstream(flags)
+    -- Push to upstream (explicitly -u if needed or just push)
+    -- Magit 'u' is Push to upstream.
+    M.push_cmd(flags)
 end
 
-function M.fetch()
-	s_util.run_n_refresh("Git fetch")
+function M.pull_cmd(flags)
+    local args = ""
+    if flags and #flags > 0 then
+        args = " " .. table.concat(flags, " ")
+    end
+	s_util.run_n_refresh("Git pull" .. args)
+end
+
+function M.fetch_cmd(flags)
+    local args = ""
+    if flags and #flags > 0 then
+        args = " " .. table.concat(flags, " ")
+    end
+	s_util.run_n_refresh("Git fetch" .. args)
 end
 
 function M.setup_keymaps(buf, key_grp)
-	util.Map(
-		"n",
-		"p",
-		M.pull,
-		{ buffer = buf, desc = "Git pull or pull from branch under cursor. <*>" }
-	)
-	util.Map(
-		"n",
-		"P",
-		M.push,
-		{ buffer = buf, desc = "Git push or push to branch under cursor. <*>" }
-	)
-	util.Map(
-		"n",
-		"f",
-		M.fetch,
-		{ buffer = buf, desc = "Git push or push to branch under cursor. <*>" }
-	)
+    -- Push Menu
+    local push_opts = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-f", name = "--force-with-lease", type = "switch", desc = "Force with lease" },
+                { key = "-F", name = "--force", type = "switch", desc = "Force" },
+                { key = "-u", name = "--set-upstream", type = "switch", desc = "Set upstream" },
+                { key = "-n", name = "--no-verify", type = "switch", desc = "No verify" },
+            }
+        },
+        {
+            title = "Push",
+            items = {
+                { key = "p", cb = M.push_cmd, desc = "Push to upstream" },
+                { key = "e", cb = function(f) 
+                    local flags = f and table.concat(f, " ") or ""
+                    util.set_cmdline("Git push " .. flags .. " ") 
+                end, desc = "Push elsewhere" },
+            }
+        }
+    }
+    
+    -- Pull Menu
+    local pull_opts = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-r", name = "--rebase", type = "switch", desc = "Rebase" },
+            }
+        },
+        {
+            title = "Pull",
+            items = {
+                { key = "p", cb = M.pull_cmd, desc = "Pull from upstream" },
+                { key = "e", cb = function(f)
+                    local flags = f and table.concat(f, " ") or ""
+                    util.set_cmdline("Git pull " .. flags .. " ")
+                end, desc = "Pull elsewhere" },
+            }
+        }
+    }
+
+    -- Fetch Menu
+    local fetch_opts = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-p", name = "--prune", type = "switch", desc = "Prune" },
+                { key = "-t", name = "--tags", type = "switch", desc = "Tags" },
+            }
+        },
+        {
+            title = "Fetch",
+            items = {
+                { key = "p", cb = M.fetch_cmd, desc = "Fetch upstream" },
+                { key = "a", cb = function(f)
+                    local flags = f and table.concat(f, " ") or ""
+                    s_util.run_n_refresh("Git fetch --all " .. flags)
+                end, desc = "Fetch all" },
+                { key = "e", cb = function(f)
+                    local flags = f and table.concat(f, " ") or ""
+                    util.set_cmdline("Git fetch " .. flags .. " ")
+                end, desc = "Fetch elsewhere" },
+            }
+        }
+    }
+
+	util.Map("n", "P", function()
+		require("oz.util.help_keymaps").show_menu("Push", push_opts)
+	end, { buffer = buf, desc = "Push Actions", nowait = true })
+    
+	util.Map("n", "p", function()
+		require("oz.util.help_keymaps").show_menu("Pull", pull_opts)
+	end, { buffer = buf, desc = "Pull Actions", nowait = true })
+    
+	util.Map("n", "f", function()
+		require("oz.util.help_keymaps").show_menu("Fetch", fetch_opts)
+	end, { buffer = buf, desc = "Fetch Actions", nowait = true })
+    
 	key_grp["remote action"] = { "p", "P", "f" }
 end
 

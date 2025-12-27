@@ -38,52 +38,72 @@ function M.conflict_diffview()
 	end
 end
 
-function M.merge_branch(flag)
+function M.merge_branch(flags)
 	local branch_under_cursor = s_util.get_branch_under_cursor()
-	local key, json, input = "git_user_merge_flags", "oz_git", nil
-	flag = not flag and caching.get_data(key, json) or flag
+    local flag_str = ""
+    if flags and #flags > 0 then
+        flag_str = " " .. table.concat(flags, " ")
+    end
 
 	if branch_under_cursor then
-		if flag then
-			input = util.inactive_input(":Git merge", " " .. flag .. " " .. branch_under_cursor)
-		else
-			input = util.inactive_input(":Git merge", " " .. branch_under_cursor)
-		end
+        -- Inactive input usually prompts user to confirm command
+        -- Magit usually just executes if you select 'Merge', but 'inactive_input' allows edit.
+        -- Let's populate it with flags.
+		local input = util.inactive_input(":Git merge", flag_str .. " " .. branch_under_cursor)
 		if input then
 			s_util.run_n_refresh("Git merge" .. input)
-			local flags_to_cache = util.extract_flags(input)
-			caching.set_data(key, table.concat(flags_to_cache, " "), json)
+            -- Caching might be less relevant if we use explicit switches, but let's keep it clean
+            -- We just run it.
 		end
 	end
 end
 
-function M.rebase_branch()
+function M.rebase_branch(flags)
 	local branch_under_cursor = s_util.get_branch_under_cursor()
+    local flag_str = ""
+    if flags and #flags > 0 then
+        flag_str = " " .. table.concat(flags, " ")
+    end
 	if branch_under_cursor then
-		util.set_cmdline("Git rebase| " .. branch_under_cursor)
+        -- Magit 'r' rebase on branch.
+		s_util.run_n_refresh("Git rebase" .. flag_str .. " " .. branch_under_cursor)
 	end
 end
 
-function M.rebase_interactive()
+function M.rebase_interactive(flags)
 	local branch_under_cursor = s_util.get_branch_under_cursor()
+    local flag_str = ""
+    if flags and #flags > 0 then
+        flag_str = " " .. table.concat(flags, " ")
+    end
 	if branch_under_cursor then
-		s_util.run_n_refresh("Git rebase -i " .. branch_under_cursor)
+		s_util.run_n_refresh("Git rebase -i" .. flag_str .. " " .. branch_under_cursor)
 	end
 end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	-- merge mappings
 	local m_opts = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-f", name = "--ff-only", type = "switch", desc = "Fast-forward only" },
+                { key = "-n", name = "--no-ff", type = "switch", desc = "No fast-forward" },
+                { key = "-s", name = "--squash", type = "switch", desc = "Squash" },
+                { key = "-c", name = "--no-commit", type = "switch", desc = "No commit" },
+            }
+        },
 		{
 			title = "Merge",
 			items = {
-				{ key = "m", cb = M.merge_branch, desc = "Start merge with branch under cursor" },
+				{ key = "m", cb = M.merge_branch, desc = "Merge" },
 				{
-					key = "<Space>",
-					cb = function()
-						util.set_cmdline("Git merge ")
+					key = "e",
+					cb = function(f)
+                        local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git merge " .. flags .. " ")
 					end,
-					desc = "Populate cmdline with Git merge",
+					desc = "Merge (edit cmd)",
 				},
 			},
 		},
@@ -91,44 +111,11 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			title = "Actions",
 			items = {
 				{
-					key = "l",
-					cb = function()
-						s_util.run_n_refresh("Git merge --continue")
-					end,
-					desc = "Merge continue",
-				},
-				{
 					key = "a",
 					cb = function()
 						s_util.run_n_refresh("Git merge --abort")
 					end,
-					desc = "Merge abort",
-				},
-				{
-					key = "q",
-					cb = function()
-						M.merge_branch("--quit")
-					end,
-					desc = "Merge quit",
-				},
-			},
-		},
-		{
-			title = "Options",
-			items = {
-				{
-					key = "s",
-					cb = function()
-						M.merge_branch("--squash")
-					end,
-					desc = "Merge with squash",
-				},
-				{
-					key = "e",
-					cb = function()
-						M.merge_branch("--no-commit")
-					end,
-					desc = "Merge with no-commit",
+					desc = "Abort",
 				},
 			},
 		},
@@ -139,17 +126,26 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 
 	-- [R]ebase mappings
 	local r_opts = {
+        {
+            title = "Switches",
+            items = {
+                { key = "-k", name = "--keep-base", type = "switch", desc = "Keep base" },
+                { key = "-a", name = "--autosquash", type = "switch", desc = "Autosquash" },
+                { key = "-S", name = "--autostash", type = "switch", desc = "Autostash" },
+            }
+        },
 		{
 			title = "Rebase",
 			items = {
-				{ key = "r", cb = M.rebase_branch, desc = "Rebase branch under cursor" },
-				{ key = "i", cb = M.rebase_interactive, desc = "Start interactive rebase" },
+				{ key = "r", cb = M.rebase_branch, desc = "Rebase on..." },
+				{ key = "i", cb = M.rebase_interactive, desc = "Interactive" },
 				{
-					key = "<Space>",
-					cb = function()
-						util.set_cmdline("Git rebase ")
+					key = "e",
+					cb = function(f)
+                        local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git rebase " .. flags .. " ")
 					end,
-					desc = "Populate cmdline with :Git rebase",
+					desc = "Rebase (edit cmd)",
 				},
 			},
 		},
@@ -157,39 +153,32 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			title = "Actions",
 			items = {
 				{
-					key = "l",
+					key = "c",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --continue")
 					end,
-					desc = "Rebase continue",
+					desc = "Continue",
+				},
+				{
+					key = "s",
+					cb = function()
+						s_util.run_n_refresh("Git rebase --skip")
+					end,
+					desc = "Skip",
 				},
 				{
 					key = "a",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --abort")
 					end,
-					desc = "Rebase abort",
+					desc = "Abort",
 				},
-				{
-					key = "q",
-					cb = function()
-						s_util.run_n_refresh("Git rebase --quit")
-					end,
-					desc = "Rebase quit",
-				},
-				{
-					key = "k",
-					cb = function()
-						s_util.run_n_refresh("Git rebase --skip")
-					end,
-					desc = "Rebase skip",
-				},
-				{
-					key = "e",
+                {
+					key = "t",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --edit-todo")
 					end,
-					desc = "Rebase edit todo",
+					desc = "Edit todo",
 				},
 			},
 		},

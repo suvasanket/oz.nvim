@@ -98,23 +98,31 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+        -- Magit Branch Popup
+        {
+            title = "Checkout",
+            items = {
+                { key = "b", cb = M.switch, desc = "Checkout/Switch branch" },
+                { key = "l", cb = function() s_util.run_n_refresh("Git checkout -") end, desc = "Checkout local branch" }, -- Placeholder logic
+            }
+        },
 		{
 			title = "Creation",
 			items = {
 				{ key = "n", cb = M.new, desc = "Create a new branch" },
-				{ key = "b", cb = M.switch, desc = "Populate cmdline with switch" },
-				{ key = "f", cb = M.new_from, desc = "New branch from a given branch" },
+				{ key = "c", cb = M.new_from, desc = "Create new branch..." },
 			},
 		},
 		{
 			title = "Manipulation",
 			items = {
-				{ key = "d", cb = M.delete, desc = "Delete branch under cursor" },
-				{ key = "r", cb = M.rename, desc = "Rename branch under cursor" },
+				{ key = "k", cb = M.delete, desc = "Delete branch" },
+				{ key = "r", cb = M.rename, desc = "Rename branch" },
+                { key = "x", cb = function() s_util.run_n_refresh("Git branch --edit-description") end, desc = "Edit description" },
 			},
 		},
 		{
-			title = "Upstream",
+			title = "Configure",
 			items = {
 				{ key = "u", cb = M.set_upstream, desc = "Set upstream" },
 				{ key = "U", cb = M.unset_upstream, desc = "Unset upstream" },
