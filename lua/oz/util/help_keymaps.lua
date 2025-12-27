@@ -246,14 +246,9 @@ function M.show_maps(args)
 	vim.keymap.set("n", "q", M.close, opts)
 	vim.keymap.set("n", "<Esc>", M.close, opts)
 
-	-- Explicit scroll maps (though native <C-d>/<C-u> works in normal mode)
-	-- We add them just to be safe and explicit as requested
-	vim.keymap.set("n", "<C-d>", "<C-d>", { buffer = buf_id, noremap = true })
-	vim.keymap.set("n", "<C-u>", "<C-u>", { buffer = buf_id, noremap = true })
-
 	vim.cmd("redraw")
 
-	require("oz.util").inactive_echo("Scroll: <C-d>/<C-u> | Close: q/<Esc>")
+	require("oz.util").inactive_echo("press q to close this window.")
 end
 
 -- Show interactive menu

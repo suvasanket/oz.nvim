@@ -230,7 +230,7 @@ function M.refresh_buf(passive)
 	end
 	s_util.render(M.status_buf)
 	pcall(vim.api.nvim_win_set_cursor, 0, pos)
-    pcall(vim.cmd.checktime())
+	pcall(vim.cmd.checktime())
 end
 
 function M.GitStatus()
@@ -247,7 +247,9 @@ function M.GitStatus()
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id
 			M.status_win = win_id
-			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]])
+			vim.cmd(
+				[[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
+			)
 			vim.opt_local.fillchars:append({ eob = " " })
 			s_util.render(buf_id)
 			vim.fn.timer_start(10, function()

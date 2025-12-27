@@ -5,8 +5,17 @@ local g_util = require("oz.git.util")
 local status = require("oz.git.status")
 local shell = require("oz.util.shell")
 
-function M.switch()
-	util.set_cmdline("Git switch ")
+function M.cc()
+	util.set_cmdline("Git checkout ")
+end
+
+function M.checkout_local()
+	local branches = g_util.get_branch({ rem = false })
+	vim.ui.select(branches, { prompt = "Checkout branch:" }, function(choice)
+		if choice then
+			s_util.run_n_refresh("Git switch " .. choice)
+		end
+	end)
 end
 
 function M.new()
@@ -19,13 +28,15 @@ function M.new()
 end
 
 function M.new_from()
-	local branches = g_util.get_branch()
+	local branches = shell.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
 	local new_branch = util.UserInput("New Branch Name:")
-	vim.ui.select(branches, { prompt = "From branch:" }, function(choice)
-		if choice then
-			s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
-		end
-	end)
+	if new_branch then
+		vim.ui.select(branches, { prompt = "From branch:" }, function(choice)
+			if choice then
+				s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
+			end
+		end)
+	end
 end
 
 function M.delete()
@@ -40,10 +51,16 @@ function M.delete()
 			s_util.run_n_refresh("Git branch -D " .. branch)
 		elseif ans == 2 then
 			local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", branch))
+			if cur_remote == "" then
+				cur_remote = "origin"
+			end
 			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		elseif ans == 3 then
 			s_util.run_n_refresh("Git branch -D " .. branch)
 			local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", branch))
+			if cur_remote == "" then
+				cur_remote = "origin"
+			end
 			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		end
 	else
@@ -98,19 +115,18 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
-        -- Magit Branch Popup
-        {
-            title = "Checkout",
-            items = {
-                { key = "b", cb = M.switch, desc = "Checkout/Switch branch" },
-                { key = "l", cb = function() s_util.run_n_refresh("Git checkout -") end, desc = "Checkout local branch" }, -- Placeholder logic
-            }
-        },
+		{
+			title = "Checkout",
+			items = {
+				{ key = "b", cb = M.cc, desc = "Checkout/Switch branch" },
+				{ key = "l", cb = M.checkout_local, desc = "Checkout local branch" },
+			},
+		},
 		{
 			title = "Creation",
 			items = {
+                { key = "c", cb = M.new_from, desc = "Checkout new branch" },
 				{ key = "n", cb = M.new, desc = "Create a new branch" },
-				{ key = "c", cb = M.new_from, desc = "Create new branch..." },
 			},
 		},
 		{
@@ -118,7 +134,13 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			items = {
 				{ key = "k", cb = M.delete, desc = "Delete branch" },
 				{ key = "r", cb = M.rename, desc = "Rename branch" },
-                { key = "x", cb = function() s_util.run_n_refresh("Git branch --edit-description") end, desc = "Edit description" },
+				{
+					key = "x",
+					cb = function()
+						s_util.run_n_refresh("Git branch --edit-description")
+					end,
+					desc = "Edit description",
+				},
 			},
 		},
 		{

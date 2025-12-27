@@ -104,6 +104,9 @@ end
 --- echo inactive
 ---@param str string
 function M.inactive_echo(str)
+	if not str or str == "" or vim.fn.strdisplaywidth(str) >= vim.v.echospace then
+		return
+	end
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.api.nvim_echo({ { "" } }, false, {})
 	vim.api.nvim_echo({ { str, "ozInactivePrompt" } }, false, {})

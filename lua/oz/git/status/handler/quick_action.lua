@@ -22,7 +22,7 @@ function M.enter_key()
 		local full_path = status.state.worktree_map[worktree.path]
 
 		if full_path and vim.loop.fs_stat(full_path) then
-			vim.cmd("wincmd k | edit " .. vim.fn.fnameescape(full_path))
+			vim.cmd("split | edit " .. vim.fn.fnameescape(full_path))
 		else
 			util.Notify("Worktree doesn't exist(prunable).", "warn", "oz_git")
 		end
@@ -53,7 +53,7 @@ function M.enter_key()
 	if #files > 0 then
 		local target = files[1]
 		if vim.fn.filereadable(target) == 1 or vim.fn.isdirectory(target) == 1 then
-			vim.cmd("wincmd k | edit " .. vim.fn.fnameescape(target))
+			vim.cmd("split | edit " .. vim.fn.fnameescape(target))
 		end
 		return
 	end
@@ -71,9 +71,9 @@ function M.setup_keymaps(buf, key_grp)
 	util.Map("n", "-", function()
 		util.set_cmdline("Git ")
 	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git." })
-	util.Map("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry under cursor. <*>" })
+	util.Map("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry under cursor." })
 	util.Map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
-	key_grp["quick actions"] = { "-", "<Tab>", "<S-Tab>", "<CR>", "I", "<C-R>", "q" }
+	key_grp["Quick actions"] = { "-", "<Tab>", "<S-Tab>", "<CR>", "I", "<C-R>", "q" }
 end
 
 return M

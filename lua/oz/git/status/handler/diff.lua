@@ -49,11 +49,11 @@ function M.diff(flags)
 	local stash = shell.shellout_tbl("git stash list --format=%gd")
 
 	local all = util.join_tables(branches, stash)
-    
-    local flag_str = ""
-    if flags and #flags > 0 then
-        flag_str = " " .. table.concat(flags, " ")
-    end
+
+	local flag_str = ""
+	if flags and #flags > 0 then
+		flag_str = " " .. table.concat(flags, " ")
+	end
 
 	vim.ui.select(all, {
 		prompt = "lhs..",
@@ -71,23 +71,29 @@ function M.diff(flags)
 			if not rhs then
 				return
 			end
-            -- Note: Diffview might not support arbitrary git flags easily via args, 
-            -- but for 'Git diff' fallback it works.
 			vim.cmd(string.format("DiffviewOpen %s..%s", lhs, rhs))
 		end)
 	end)
 end
 
+function M.diff_range()
+	-- Prompt for range
+	local range = util.UserInput("Diff range:")
+	if range and range ~= "" then
+		vim.cmd("DiffviewOpen " .. range)
+	end
+end
+
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
-        {
-            title = "Switches",
-            items = {
-                { key = "-f", name = "--function-context", type = "switch", desc = "Show function context" },
-                { key = "-w", name = "--ignore-all-space", type = "switch", desc = "Ignore whitespace" },
-                { key = "-b", name = "--ignore-space-change", type = "switch", desc = "Ignore space change" },
-            }
-        },
+		{
+			title = "Switches",
+			items = {
+				{ key = "-f", name = "--function-context", type = "switch", desc = "Show function context" },
+				{ key = "-w", name = "--ignore-all-space", type = "switch", desc = "Ignore whitespace" },
+				{ key = "-b", name = "--ignore-space-change", type = "switch", desc = "Ignore space change" },
+			},
+		},
 		{
 			title = "Common",
 			items = {
@@ -101,9 +107,10 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		table.insert(options, {
 			title = "Diffview",
 			items = {
-				{ key = "v", cb = M.diff, desc = "Diff" },
+				{ key = "d", cb = M.diff, desc = "Diff" },
+				{ key = "r", cb = M.diff_range, desc = "Diff range" },
 				{
-					key = "<Space>",
+					key = "e",
 					cb = function()
 						util.set_cmdline("DiffviewOpen ")
 					end,
