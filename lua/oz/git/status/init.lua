@@ -55,13 +55,46 @@ local function generate_status_info(current_branch, in_conflict)
 	local info = {}
 	local root_path = g_util.get_project_root()
 
+	local ok, git_dir_res = shell.run_command({ "git", "rev-parse", "--git-dir" }, root_path)
+	if ok and git_dir_res[1] then
+		local git_dir = git_dir_res[1]
+		if not git_dir:match("^/") then
+			git_dir = root_path .. "/" .. git_dir
+		end
+		git_dir = vim.trim(git_dir)
+
+		if vim.fn.filereadable(git_dir .. "/MERGE_HEAD") == 1 then
+			table.insert(info, "[!] Merging")
+		end
+
+		if vim.fn.filereadable(git_dir .. "/CHERRY_PICK_HEAD") == 1 then
+			table.insert(info, "[!] Cherry-picking")
+		end
+
+		if vim.fn.filereadable(git_dir .. "/REVERT_HEAD") == 1 then
+			table.insert(info, "[!] Reverting")
+		end
+
+		if
+			vim.fn.isdirectory(git_dir .. "/rebase-merge") == 1
+			or vim.fn.isdirectory(git_dir .. "/rebase-apply") == 1
+		then
+			table.insert(info, "[!] Rebasing")
+		end
+
+		if vim.fn.filereadable(git_dir .. "/BISECT_LOG") == 1 then
+			table.insert(info, "[!] Bisecting")
+		end
+	end
+
 	if in_conflict then -- conflict
 		table.insert(info, "[!] Merge Conflict Detected")
 	elseif current_branch == "HEAD" or current_branch:match("HEAD detached") then -- detached head
 		table.insert(info, "[!] HEAD is detached")
 	elseif current_branch ~= "HEAD" then -- ahead/behind
-		local ok, counts = shell.run_command({ "git", "rev-list", "--left-right", "--count", "HEAD...@{u}" }, root_path)
-		if ok and #counts > 0 then
+		local c_ok, counts =
+			shell.run_command({ "git", "rev-list", "--left-right", "--count", "HEAD...@{u}" }, root_path)
+		if c_ok and #counts > 0 then
 			local ahead, behind = counts[1]:match("(%d+)%s+(%d+)")
 			if ahead and behind then
 				local parts = {}
