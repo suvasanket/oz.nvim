@@ -169,13 +169,14 @@ function M.commit_log(opts, args)
 	-- open log
 	win.create_win("log", {
 		content = commit_log_lines,
-		win_type = "bot",
+		win_type = (opts and opts.win_type) or "tab",
+		buf_name = "OzGitLog",
 		callback = function(buf_id, win_id)
 			M.log_buf = buf_id
 			M.log_win = win_id
 
 			-- opts
-			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]])
 			vim.opt_local.fillchars:append({ eob = " " })
 
 			-- async component

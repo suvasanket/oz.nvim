@@ -3,17 +3,31 @@ local M = {}
 local unique_ids = {}
 
 --- helper
----@param opts {win_type: string, content: table, callback: function}
+---@param opts {win_type: string, buf_name: string, content: table, callback: function}
 ---@return integer
 ---@return integer
 local function create_window(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
-	vim.cmd(("%s new"):format(opts.win_type)) -- hor, vert, tab
-	local temp_buf = vim.api.nvim_get_current_buf()
-	local win_id = vim.api.nvim_get_current_win()
+	if opts.buf_name then
+		local existing = vim.fn.bufnr("^" .. opts.buf_name .. "$")
+		if existing ~= -1 and existing ~= buf_id then
+			vim.api.nvim_buf_delete(existing, { force = true })
+		end
+		vim.api.nvim_buf_set_name(buf_id, opts.buf_name)
+	end
 
-	vim.api.nvim_win_set_buf(win_id, buf_id)
-	vim.api.nvim_buf_delete(temp_buf, { force = true })
+	local win_id
+	if opts.win_type == "current" then
+		win_id = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(win_id, buf_id)
+	else
+		vim.cmd(("%s new"):format(opts.win_type)) -- hor, vert, tab
+		local temp_buf = vim.api.nvim_get_current_buf()
+		win_id = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(win_id, buf_id)
+		vim.api.nvim_buf_delete(temp_buf, { force = true })
+	end
+
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, opts.content)
 
 	opts.callback(buf_id, win_id)
@@ -128,7 +142,7 @@ function M.create_bottom_overlay(opts)
 	}
 
 	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
-	
+
 	-- Set local options for "minimal" feel
 	vim.api.nvim_win_set_option(win_id, "winblend", 0)
 

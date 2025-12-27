@@ -3,8 +3,8 @@ local util = require("oz.util")
 local s_util = require("oz.git.status.util")
 
 function M.log()
-	vim.cmd("close") -- Close status window before opening log
-	require("oz.git.log").commit_log({ level = 1, from = "Git" })
+	-- vim.cmd("close") -- Close status window before opening log
+	require("oz.git.log").commit_log({ level = 1, from = "Git", win_type = "current" })
 end
 
 function M.log_context()

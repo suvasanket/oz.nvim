@@ -242,11 +242,12 @@ function M.GitStatus()
 
 	win.create_win("status", {
 		content = {},
-		win_type = "bot",
+		win_type = "tab",
+		buf_name = "OzGitStatus",
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id
 			M.status_win = win_id
-			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]])
 			vim.opt_local.fillchars:append({ eob = " " })
 			s_util.render(buf_id)
 			vim.fn.timer_start(10, function()
