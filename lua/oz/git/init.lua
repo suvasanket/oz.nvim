@@ -40,7 +40,7 @@ end
 ---@param args_tbl table
 ---@param args_str string
 ---@return boolean
-local function special_cmd_exec(args_tbl, args_str)
+local function subcmd_exec(args_tbl, args_str)
 	local cmd = args_tbl[1]
 
 	if util.str_in_tbl(args_str, editor_req_cmds) then
@@ -91,10 +91,8 @@ local function special_cmd_exec(args_tbl, args_str)
 
     -- Diff cmd
     elseif cmd == "diff" then
-        require("oz.git.remote_cmd").run_git_with_progress("diff", args_tbl, function(lines)
-            oz_git_win.open_oz_git_win(lines, args_str)
-            vim.api.nvim_buf_set_option(0, "filetype", "diff")
-        end)
+        table.remove(args_tbl, 1)
+        require("oz.git.diff").diff(args_tbl)
         return true
 
 	-- Progress cmds
@@ -214,7 +212,7 @@ function M.run_git_job(args)
 	local std_out = {}
 	local std_err = {}
 
-	if special_cmd_exec(args_table, args) then
+	if subcmd_exec(args_table, args) then
 		return
 	end
 

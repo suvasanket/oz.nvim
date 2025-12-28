@@ -1,5 +1,6 @@
 local M = {}
 local win_util = require("oz.util.win")
+local util = require("oz.util")
 
 -- Module-level tracking for singleton behavior
 local key_help_win = nil
@@ -66,7 +67,7 @@ local function filter_table(tbl, str)
 end
 
 --- show mappings
----@param args {title: string, key: string, group: table<string, string[]>}
+---@param args {title: string, key: string, group: table<string, string[]>, show_general: boolean}
 function M.show_maps(args)
 	-- 1. Enforce Singleton: Close any existing instances
 	close_window()
@@ -129,23 +130,25 @@ function M.show_maps(args)
 	end
 
 	-- Process remaining keys (General)
-	local general_items = {}
-	local sorted_keys = vim.tbl_keys(all_keymaps)
-	table.sort(sorted_keys)
+	if args.show_general == nil or args.show_general == true then
+		local general_items = {}
+		local sorted_keys = vim.tbl_keys(all_keymaps)
+		table.sort(sorted_keys)
 
-	for _, key in ipairs(sorted_keys) do
-		if not used_keys[key] then
-			table.insert(general_items, { key = key, data = all_keymaps[key] })
+		for _, key in ipairs(sorted_keys) do
+			if not used_keys[key] then
+				table.insert(general_items, { key = key, data = all_keymaps[key] })
+			end
 		end
-	end
 
-	if #general_items > 0 then
-		table.insert(groups, { title = args.group and "General" or nil, items = general_items })
-	end
+		if #general_items > 0 then
+			table.insert(groups, { title = args.group and "General" or nil, items = general_items })
+		end
 
-	if #groups == 0 then
-		vim.api.nvim_echo({ { "No keymaps found.", "WarningMsg" } }, false, {})
-		return
+		if #groups == 0 then
+			vim.api.nvim_echo({ { "No keymaps found.", "WarningMsg" } }, false, {})
+			return
+		end
 	end
 
 	-- 4. Calculate Layout
@@ -243,12 +246,14 @@ function M.show_maps(args)
 	-- 6. Keymaps and Interaction
 	-- Close maps
 	local opts = { nowait = true, noremap = true, silent = true, buffer = buf_id }
-	vim.keymap.set("n", "q", M.close, opts)
-	vim.keymap.set("n", "<Esc>", M.close, opts)
+	util.Map("n", { "q", "<C-c>", "<esc>" }, function()
+		M.close()
+		vim.api.nvim_echo({ { "" } }, false, {})
+	end, opts)
 
 	vim.cmd("redraw")
 
-	require("oz.util").inactive_echo("press q to close this window.")
+	require("oz.util").inactive_echo("press 'q' to close this window.")
 end
 
 -- Show interactive menu
@@ -378,14 +383,20 @@ function M.show_menu(title, items)
 						local s_key = part:find(vim.pesc(entry.key_display))
 						if s_key then
 							local e_key = s_key + #entry.key_display
-							table.insert(highlight_queue, { key_hl, line_idx, current_len + s_key - 1, current_len + e_key })
+							table.insert(
+								highlight_queue,
+								{ key_hl, line_idx, current_len + s_key - 1, current_len + e_key }
+							)
 						end
 
 						if entry.item.type == "switch" then
 							local s_name = part:find(vim.pesc(entry.item.name), (s_key or 0) + #entry.key_display)
 							if s_name then
 								local e_name = s_name + #entry.item.name
-								table.insert(highlight_queue, { flag_hl, line_idx, current_len + s_name - 1, current_len + e_name })
+								table.insert(
+									highlight_queue,
+									{ flag_hl, line_idx, current_len + s_name - 1, current_len + e_name }
+								)
 							end
 						end
 

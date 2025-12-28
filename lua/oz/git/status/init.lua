@@ -244,10 +244,10 @@ local function status_buf_hl()
 end
 
 local function is_conflict(sections)
-	for _, line in ipairs(sections.unstaged.content or {}) do
-		if line:match("unmerged:") then
-			return true
-		end
+	local root_path = g_util.get_project_root()
+	local ok, out = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root_path)
+	if ok and #out > 0 then
+		return true
 	end
 	return false
 end
@@ -262,6 +262,7 @@ function M.refresh_buf(passive)
 		M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
 	end
 	s_util.render(M.status_buf)
+	require("oz.git.status.keymaps").keymaps_init(M.status_buf)
 	pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	pcall(vim.cmd.checktime())
 end
