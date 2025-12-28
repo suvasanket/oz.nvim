@@ -47,7 +47,7 @@ function M.pull_cmd()
 
     -- Magit pull just pulls (with flags). The logic above seems to be constructing specific push/pull specs?
     -- "Git pull <remote> <refspec>"
-    s_util.run_n_refresh(("Git pull %s %s"):format(cur_remote, branch))
+    s_util.run_n_refresh(("Git pull%s %s %s"):format(get_args(flags), cur_remote, branch))
 end
 
 function M.pull_from(flags)
@@ -67,6 +67,8 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "-r", name = "--rebase", type = "switch", desc = "Rebase" },
 				{ key = "-a", name = "--autostash", type = "switch", desc = "Autostash" },
+				{ key = "-f", name = "--ff-only", type = "switch", desc = "Fast-forward only" },
+				{ key = "-n", name = "--no-ff", type = "switch", desc = "No fast-forward" },
 			},
 		},
 		{

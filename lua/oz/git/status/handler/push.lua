@@ -72,6 +72,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "-u", name = "--set-upstream", type = "switch", desc = "Set upstream" },
 				{ key = "-n", name = "--no-verify", type = "switch", desc = "No verify" },
 				{ key = "-d", name = "--dry-run", type = "switch", desc = "Dry run" },
+				{ key = "-t", name = "--tags", type = "switch", desc = "Tags" },
 			},
 		},
 		{

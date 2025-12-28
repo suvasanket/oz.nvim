@@ -51,6 +51,20 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 					end,
 					desc = "Abort",
 				},
+				{
+					key = "c",
+					cb = function()
+						s_util.run_n_refresh("Git merge --continue")
+					end,
+					desc = "Continue",
+				},
+				{
+					key = "q",
+					cb = function()
+						s_util.run_n_refresh("Git merge --quit")
+					end,
+					desc = "Quit",
+				},
 			},
 		},
 	}

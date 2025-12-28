@@ -6,11 +6,20 @@ local log_util = require("oz.git.log.util")
 local get_selected_hash = log.get_selected_hash
 local run_n_refresh = log_util.run_n_refresh
 
-function M.interactive()
-    local current_hash = get_selected_hash()
-    if #current_hash > 0 then
-        run_n_refresh("Git rebase -i " .. current_hash[1] .. "^")
-    end
+-- Helper to construct args
+local function get_args(flags)
+	if flags and #flags > 0 then
+		return " " .. table.concat(flags, " ")
+	end
+	return ""
+end
+
+function M.interactive(flags)
+	local args = get_args(flags)
+	local current_hash = get_selected_hash()
+	if #current_hash > 0 then
+		run_n_refresh("Git rebase" .. args .. " -i " .. current_hash[1] .. "^")
+	end
 end
 
 function M.pick()
@@ -36,11 +45,12 @@ function M.skip()
     run_n_refresh("Git rebase --skip")
 end
 
-function M.autosquash()
-    local hash = get_selected_hash()
-    if #hash > 0 then
-        run_n_refresh("Git rebase -i --autosquash " .. hash[1] .. "^")
-    end
+function M.autosquash(flags)
+	local args = get_args(flags)
+	local hash = get_selected_hash()
+	if #hash > 0 then
+		run_n_refresh("Git rebase" .. args .. " -i --autosquash " .. hash[1] .. "^")
+	end
 end
 
 function M.edit_todo()
@@ -49,6 +59,14 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+		{
+			title = "Switches",
+			items = {
+				{ key = "-a", name = "--autostash", type = "switch", desc = "Autostash" },
+				{ key = "-k", name = "--keep-empty", type = "switch", desc = "Keep empty" },
+				{ key = "-n", name = "--no-verify", type = "switch", desc = "No verify" },
+			},
+		},
 		{
 			title = "Rebase Actions",
 			items = {

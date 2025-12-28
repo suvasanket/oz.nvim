@@ -8,19 +8,28 @@ local grab_hashs = log.grab_hashs
 local run_n_refresh = log_util.run_n_refresh
 local clear_all_picked = log_util.clear_all_picked
 
-function M.handle_cherrypick()
+-- Helper to construct args
+local function get_args(flags)
+	if flags and #flags > 0 then
+		return " " .. table.concat(flags, " ")
+	end
+	return ""
+end
+
+function M.handle_cherrypick(flags)
+	local args = get_args(flags)
 	local input
 	if #grab_hashs > 0 then
-		input = " " .. table.concat(grab_hashs, " ")
+		input = args .. " " .. table.concat(grab_hashs, " ")
 		clear_all_picked()
 	else
 		local hash = get_selected_hash()
 		if #hash == 1 then
-			input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1])
+			input = util.inactive_input(":Git cherry-pick", args .. " -x " .. hash[1])
 		elseif #hash == 2 then
-			input = util.inactive_input(":Git cherry-pick", " -x " .. table.concat(hash, " "))
+			input = util.inactive_input(":Git cherry-pick", args .. " -x " .. table.concat(hash, " "))
 		elseif #hash > 2 then
-			input = util.inactive_input(":Git cherry-pick", " -x " .. hash[1] .. ".." .. hash[#hash])
+			input = util.inactive_input(":Git cherry-pick", args .. " -x " .. hash[1] .. ".." .. hash[#hash])
 		end
 	end
 	if input then
@@ -46,6 +55,15 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+		{
+			title = "Switches",
+			items = {
+				{ key = "-e", name = "--edit", type = "switch", desc = "Edit" },
+				{ key = "-n", name = "--no-commit", type = "switch", desc = "No commit" },
+				{ key = "-s", name = "--signoff", type = "switch", desc = "Signoff" },
+				{ key = "-f", name = "--ff", type = "switch", desc = "Fast-forward" },
+			},
+		},
 		{
 			title = "Cherry Pick",
 			items = {

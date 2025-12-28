@@ -80,7 +80,7 @@ function M.diff_range()
 	if #hashes > 1 then
 		vim.cmd("Git diff " .. hashes[1] .. ".." .. hashes[#hashes])
 	elseif #hashes == 1 then
-		vim.notify_once("press 'd' on another to pick <end-commit-hash>.")
+		vim.notify_once("press 'dp' on another to pick <end-commit-hash>.")
 		util.tbl_insert(diff_range_hash, hashes[1])
 		if #diff_range_hash == 2 then
 			vim.cmd("Git diff " .. diff_range_hash[1] .. ".." .. diff_range_hash[#diff_range_hash])

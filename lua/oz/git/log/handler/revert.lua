@@ -8,7 +8,16 @@ local grab_hashs = log.grab_hashs
 local run_n_refresh = log_util.run_n_refresh
 local clear_all_picked = log_util.clear_all_picked
 
-function M.handle_revert()
+-- Helper to construct args
+local function get_args(flags)
+	if flags and #flags > 0 then
+		return " " .. table.concat(flags, " ")
+	end
+	return ""
+end
+
+function M.handle_revert(flags)
+	local args = get_args(flags)
 	local str
 	if #grab_hashs > 0 then
 		str = table.concat(grab_hashs, " ")
@@ -24,7 +33,7 @@ function M.handle_revert()
 		end
 	end
 	if str then
-		util.set_cmdline("Git revert| " .. str)
+		util.set_cmdline("Git revert" .. args .. " " .. str)
 	end
 end
 
@@ -60,6 +69,13 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+		{
+			title = "Switches",
+			items = {
+				{ key = "-n", name = "--no-commit", type = "switch", desc = "No commit" },
+				{ key = "-s", name = "--signoff", type = "switch", desc = "Signoff" },
+			},
+		},
 		{
 			title = "Revert Actions",
 			items = {

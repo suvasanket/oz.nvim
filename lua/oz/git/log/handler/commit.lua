@@ -5,16 +5,26 @@ local log_util = require("oz.git.log.util")
 local run_n_refresh = log_util.run_n_refresh
 local cmd_upon_current_commit = log_util.cmd_upon_current_commit
 
-function M.squash()
-    cmd_upon_current_commit(function(hash)
-        run_n_refresh("Git commit --squash " .. hash)
-    end)
+-- Helper to construct args
+local function get_args(flags)
+	if flags and #flags > 0 then
+		return " " .. table.concat(flags, " ")
+	end
+	return ""
 end
 
-function M.fixup()
-    cmd_upon_current_commit(function(hash)
-        run_n_refresh("Git commit --fixup " .. hash)
-    end)
+function M.squash(flags)
+	local args = get_args(flags)
+	cmd_upon_current_commit(function(hash)
+		run_n_refresh("Git commit" .. args .. " --squash " .. hash)
+	end)
+end
+
+function M.fixup(flags)
+	local args = get_args(flags)
+	cmd_upon_current_commit(function(hash)
+		run_n_refresh("Git commit" .. args .. " --fixup " .. hash)
+	end)
 end
 
 function M.commit()
@@ -37,6 +47,13 @@ end
 
 function M.setup_keymaps(buf, key_grp, map_help_key)
 	local options = {
+		{
+			title = "Switches",
+			items = {
+				{ key = "-e", name = "--edit", type = "switch", desc = "Edit" },
+				{ key = "-n", name = "--no-verify", type = "switch", desc = "No verify" },
+			},
+		},
 		{
 			title = "Commit Actions",
 			items = {
