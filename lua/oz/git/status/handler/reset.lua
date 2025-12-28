@@ -82,11 +82,11 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			},
 		},
 	}
-	util.Map("n", "X", function()
+	util.Map("n", "U", function()
 		require("oz.util.help_keymaps").show_menu("Reset Actions", options)
 	end, { buffer = buf, desc = "Reset Actions", nowait = true })
 
-	util.Map("x", "X", M.reset, { buffer = buf, desc = "Reset selection" })
+	util.Map("x", "U", M.reset, { buffer = buf, desc = "Reset selection" })
 end
 
 return M

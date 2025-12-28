@@ -281,33 +281,6 @@ function M.start_conflict_resolution()
 	end
 end
 
-function M.complete_conflict_resolution()
-	if #conflicted_files == 0 then
-		return
-	end
-	g_util.restore_mapping("n", "[x")
-	g_util.restore_mapping("n", "]x")
-
-	-- util.clear_qflist("OzGitMergeConflictFiles")
-	vim.cmd("cclose")
-
-	for _, file in ipairs(conflicted_files) do
-		local lines = vim.fn.readfile(vim.trim(file))
-		local new_lines = {}
-		for _, line in ipairs(lines) do
-			if not (line:match("^<<<<<<<") or line:match("^=======") or line:match("^>>>>>>>")) then
-				table.insert(new_lines, line)
-			end
-		end
-		local bufnr = vim.fn.bufnr(file)
-		if bufnr ~= -1 then
-			vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, new_lines)
-			vim.api.nvim_buf_set_option(bufnr, "modified", true)
-		end
-	end
-	M.on_conflict_resolution_complete = true
-end
-
 function M.rebase_buf_mappigs(buf)
 	local map = util.Map
 

@@ -47,7 +47,7 @@ function M.pull_cmd()
 
     -- Magit pull just pulls (with flags). The logic above seems to be constructing specific push/pull specs?
     -- "Git pull <remote> <refspec>"
-	util.set_cmdline(("Git pull %s %s"):format(cur_remote, branch))
+    s_util.run_n_refresh(("Git pull %s %s"):format(cur_remote, branch))
 end
 
 function M.pull_from(flags)

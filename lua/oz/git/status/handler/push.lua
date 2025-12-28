@@ -16,7 +16,6 @@ end
 
 function M.push_cmd(flags)
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
-	local args = get_args(flags)
 
 	if not current_branch then
 		util.Notify("could not determine current branch.", "error", "oz_git")
@@ -24,18 +23,31 @@ function M.push_cmd(flags)
 	end
 
 	local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- fallback?
 
-	if cur_remote == "" then
-		-- Try to find origin or prompt
-		if #flags == 0 then
-			-- No flags, basic push, might fail if no upstream
-			-- Magit prompts.
-			util.set_cmdline("Git push -u origin " .. current_branch)
-			return
-		end
+	local refined_args, branch
+	if cur_remote_branch == state.current_branch then
+		branch = cur_remote_branch
+	else
+		branch = current_branch .. ":" .. cur_remote_branch
 	end
 
-	s_util.run_n_refresh("Git push" .. args)
+	if cur_remote_branch_ref == "" then
+		local remote = shell.shellout_str("git remote")
+		if remote ~= "" then
+			refined_args = ("-u %s %s"):format(remote, current_branch)
+		else
+			util.Notify("press 'ma' to add a remote first", "warn", "oz_git")
+		end
+	else
+		refined_args = string.format("%s %s", cur_remote, branch)
+	end
+
+	if refined_args then
+		local cmd = string.format("Git push %s%s", refined_args, get_args(flags))
+		s_util.run_n_refresh(cmd)
+	end
 end
 
 function M.push_to(flags)
