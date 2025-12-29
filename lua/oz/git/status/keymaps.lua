@@ -22,7 +22,6 @@ function M.keymaps_init(buf)
 	handle.commit.setup_keymaps(buf, key_grp, map_help_key)
 	handle.diff.setup_keymaps(buf, key_grp, map_help_key)
 	handle.merge.setup_keymaps(buf, key_grp, map_help_key)
-	handle.conflict.setup_keymaps(buf)
 	handle.rebase.setup_keymaps(buf, key_grp, map_help_key)
 	handle.pick.setup_keymaps(buf, key_grp)
 	handle.remote.setup_keymaps(buf, key_grp, map_help_key)
@@ -31,6 +30,10 @@ function M.keymaps_init(buf)
 	handle.fetch.setup_keymaps(buf, key_grp)
 	handle.branch.setup_keymaps(buf, key_grp, map_help_key)
 	handle.worktree.setup_keymaps(buf, key_grp, map_help_key)
+	if require("oz.git.status").state.in_conflict then
+		handle.conflict.setup_keymaps(buf)
+        vim.notify_once("Conflict-Resolution mappings unlocked press 'x'")
+	end
 end
 
 return M

@@ -4,20 +4,26 @@ local shell = require("oz.util.shell")
 local oz_git_win = require("oz.git.oz_git_win")
 local git_util = require("oz.git.util")
 
+local function get_content(target)
+	local state = require("oz.git").state
+	state.show_cache = state.show_cache or {}
+	if state.show_cache[target] then
+		return state.show_cache[target]
+	end
+	local ok, content = shell.run_command({ "git", "show", target })
+	if ok then
+		state.show_cache[target] = content
+		return content
+	end
+	return { "" }
+end
+
 local function fallback_text(args)
 	local ok, lines = shell.run_command({ "git", "diff", unpack(args) })
 	if ok then
 		oz_git_win.open_oz_git_win(lines, "diff " .. table.concat(args, " "))
-		vim.api.nvim_buf_set_option(0, "filetype", "diff")
+		vim.api.nvim_set_option_value("filetype", "diff", { scope = "local" })
 	end
-end
-
-local function get_content(target)
-	local ok, content = shell.run_command({ "git", "show", target })
-	if ok then
-		return content
-	end
-	return { "" }
 end
 
 local start_visual_diff -- forward decl
@@ -37,11 +43,21 @@ local function show_picker(files, args)
 				if f == choice then
 					idx = i
 					break
-				end
 			end
+		end
 			start_visual_diff(choice, args, files, idx)
 		end
 	end)
+end
+
+local function setup_diff_buf(buf, name, content, ft)
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+	pcall(vim.api.nvim_buf_set_name, buf, name)
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+	if ft then
+		vim.api.nvim_set_option_value("filetype", ft, { buf = buf })
+	end
 end
 
 function start_visual_diff(target_file, args, file_list, index)
@@ -50,12 +66,7 @@ function start_visual_diff(target_file, args, file_list, index)
 		return fallback_text(args)
 	end
 
-	local abs_target = target_file
-	if not vim.startswith(target_file, "/") then
-		abs_target = root .. "/" .. target_file
-	end
-	abs_target = vim.fs.normalize(abs_target)
-
+	local abs_target = vim.fs.normalize(vim.startswith(target_file, "/") and target_file or (root .. "/" .. target_file))
 	local rel_path = abs_target:sub(#root + 2)
 
 	-- Parse args for revisions
@@ -76,49 +87,32 @@ function start_visual_diff(target_file, args, file_list, index)
 
 	if #revisions == 0 then
 		if is_cached then
-			lhs_name = "HEAD"
-			lhs_content = get_content("HEAD:" .. rel_path)
-			rhs_name = "Index"
-			rhs_content = get_content(":0:" .. rel_path)
+			lhs_name, lhs_content = "HEAD", get_content("HEAD:" .. rel_path)
+			rhs_name, rhs_content = "Index", get_content(":0:" .. rel_path)
 		else
-			lhs_name = "Index"
-			lhs_content = get_content(":0:" .. rel_path)
-			rhs_name = "Working"
-			rhs_is_working = true
+			lhs_name, lhs_content = "Index", get_content(":0:" .. rel_path)
+			rhs_name, rhs_is_working = "Working", true
 		end
 	elseif #revisions == 1 then
-		lhs_name = revisions[1]
-		lhs_content = get_content(revisions[1] .. ":" .. rel_path)
+		lhs_name, lhs_content = revisions[1], get_content(revisions[1] .. ":" .. rel_path)
 		if is_cached then
-			rhs_name = "Index"
-			rhs_content = get_content(":0:" .. rel_path)
+			rhs_name, rhs_content = "Index", get_content(":0:" .. rel_path)
 		else
-			rhs_name = "Working"
-			rhs_is_working = true
+			rhs_name, rhs_is_working = "Working", true
 		end
 	elseif #revisions >= 2 then
-		lhs_name = revisions[1]
-		lhs_content = get_content(revisions[1] .. ":" .. rel_path)
-		rhs_name = revisions[2]
-		rhs_content = get_content(revisions[2] .. ":" .. rel_path)
+		lhs_name, lhs_content = revisions[1], get_content(revisions[1] .. ":" .. rel_path)
+		rhs_name, rhs_content = revisions[2], get_content(revisions[2] .. ":" .. rel_path)
 	end
 
 	-- Setup View
 	vim.cmd("tabnew")
 
+	local ft = vim.filetype.match({ filename = abs_target })
+
 	-- LHS
 	local lhs_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(lhs_buf, 0, -1, false, lhs_content)
-	vim.api.nvim_buf_set_name(lhs_buf, lhs_name .. ":" .. rel_path)
-	vim.api.nvim_buf_set_option(lhs_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(lhs_buf, "bufhidden", "wipe")
-	-- Try detect ft
-	if vim.fn.filereadable(abs_target) == 1 then
-		local actual_ft = vim.filetype.match({ filename = abs_target })
-		if actual_ft then
-			vim.api.nvim_buf_set_option(lhs_buf, "filetype", actual_ft)
-		end
-	end
+	setup_diff_buf(lhs_buf, lhs_name .. ":" .. rel_path, lhs_content, ft)
 	vim.api.nvim_win_set_buf(0, lhs_buf)
 	local lhs_win = vim.api.nvim_get_current_win()
 	vim.cmd("diffthis")
@@ -127,17 +121,11 @@ function start_visual_diff(target_file, args, file_list, index)
 	vim.cmd("vsplit")
 	local rhs_buf
 	if rhs_is_working then
-		vim.cmd("edit " .. abs_target)
+		vim.cmd("edit " .. vim.fn.fnameescape(abs_target))
 		rhs_buf = vim.api.nvim_get_current_buf()
 	else
 		rhs_buf = vim.api.nvim_create_buf(false, true)
-		vim.api.nvim_buf_set_lines(rhs_buf, 0, -1, false, rhs_content)
-		vim.api.nvim_buf_set_name(rhs_buf, rhs_name .. ":" .. rel_path)
-		vim.api.nvim_buf_set_option(rhs_buf, "buftype", "nofile")
-		vim.api.nvim_buf_set_option(rhs_buf, "bufhidden", "wipe")
-		if vim.bo[lhs_buf].filetype ~= "" then
-			vim.api.nvim_buf_set_option(rhs_buf, "filetype", vim.bo[lhs_buf].filetype)
-		end
+		setup_diff_buf(rhs_buf, rhs_name .. ":" .. rel_path, rhs_content, ft)
 		vim.api.nvim_win_set_buf(0, rhs_buf)
 	end
 	local rhs_win = vim.api.nvim_get_current_win()
@@ -169,13 +157,7 @@ function start_visual_diff(target_file, args, file_list, index)
 
 		if file_list and index then
 			local function jump(dir)
-				local next_idx = index + dir
-				if next_idx > #file_list then
-					next_idx = 1
-				end
-				if next_idx < 1 then
-					next_idx = #file_list
-				end
+				local next_idx = (index + dir - 1) % #file_list + 1
 				close_diff()
 				start_visual_diff(file_list[next_idx], args, file_list, next_idx)
 			end
@@ -212,9 +194,11 @@ function start_visual_diff(target_file, args, file_list, index)
 	util.inactive_echo("press 'g?' to see mappings.")
 end
 
---- Open a diff window
+---
+-- Open a diff window
 ---@param args table
 function M.diff(args)
+	require("oz.git").state.show_cache = {} -- Clear cache for new diff command
 	local target_file = nil
 	local dash_dash_found = false
 
@@ -236,20 +220,6 @@ function M.diff(args)
 		return
 	end
 
-	-- If implicit target (buffer), check it
-	if not target_file then
-		local current = vim.fn.expand("%:p")
-		if current ~= "" and vim.fn.filereadable(current) == 1 then
-			-- Verify current buffer is relevant to diff args?
-			-- Usually if no file args, git diff applies to whole repo.
-			-- So current file is just ONE of them.
-			-- We should prefer the list picker if there are other files.
-			-- But `Git diff` on a file buffer usually expects diffing THAT file.
-			-- Let's check if the diff output actually contains this file.
-			-- Or simpler: Check file list first.
-		end
-	end
-
 	-- Fetch file list for these args
 	local cmd = { "git", "diff", "--name-only", unpack(args) }
 	local ok, files = shell.run_command(cmd)
@@ -267,62 +237,67 @@ function M.diff(args)
 	fallback_text(args)
 end
 
---- Start a 3-way merge resolution for the current file
+---
+-- Start a 3-way merge resolution for the current file
 function M.resolve_three_way()
-	local file_path = vim.fn.expand("%:p")
-	if file_path == "" then
-		util.Notify("No file to resolve", "error", "oz_git")
+	require("oz.git").state.show_cache = {} -- Clear cache
+	local root = git_util.get_project_root()
+	if not root then
+		util.Notify("Not in a git repository", "error", "oz_git")
 		return
 	end
 
-	local root = git_util.get_project_root()
-	local rel_path = file_path:sub(#root + 2)
+	-- Auto-detect conflicted files
+	local ok, conflicted_files = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
+	if not ok or #conflicted_files == 0 then
+		util.Notify("No conflicted files to resolve", "info", "oz_git")
+		return
+	end
 
-	-- Fetch versions: :1 (Base), :2 (Ours/Local), :3 (Theirs/Remote)
-	local versions = {
-		base = { cmd = ":1:" .. rel_path, name = "BASE" },
-		ours = { cmd = ":2:" .. rel_path, name = "OURS" },
-		theirs = { cmd = ":3:" .. rel_path, name = "THEIRS" },
-	}
+	local current_file = vim.fs.normalize(vim.fn.expand("%:p"))
+	local target_file = nil
 
-	local contents = {}
-	for key, ver in pairs(versions) do
-		local ok, content = shell.run_command({ "git", "show", ver.cmd })
-		if ok then
-			contents[key] = content
-		else
-			contents[key] = { "" } -- Handle missing version (e.g. add/add conflict)
+	-- Check if current file is conflicted
+	for _, f in ipairs(conflicted_files) do
+		local abs = vim.fs.normalize(root .. "/" .. f)
+		if abs == current_file then
+			target_file = abs
+			break
 		end
 	end
 
-	-- Setup Layout
-	-- Top: Ours | Base | Theirs
-	-- Bottom: Working File (Current Buffer)
+	-- If current file is not conflicted, pick the first one
+	if not target_file then
+		target_file = vim.fs.normalize(root .. "/" .. conflicted_files[1])
+		vim.cmd("edit " .. vim.fn.fnameescape(target_file))
+	end
+
+	local file_path = vim.fn.expand("%:p")
+	local rel_path = file_path:sub(#root + 2)
+
+	-- Fetch versions: :1 (Base), :2 (Ours/Local), :3 (Theirs/Remote)
+	local contents = {
+		base = get_content(":1:" .. rel_path),
+		ours = get_content(":2:" .. rel_path),
+		theirs = get_content(":3:" .. rel_path),
+	}
 
 	local work_buf = vim.api.nvim_get_current_buf()
 	local ft = vim.bo.filetype
 
-	-- Create Buffers
-	local ours_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(ours_buf, 0, -1, false, contents.ours)
-	vim.api.nvim_buf_set_name(ours_buf, "OURS (Local)")
-	vim.api.nvim_buf_set_option(ours_buf, "filetype", ft)
-	vim.api.nvim_buf_set_option(ours_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(ours_buf, "bufhidden", "wipe")
+	local function create_merge_buf(name, content)
+		local buf = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+		pcall(vim.api.nvim_buf_set_name, buf, name)
+		vim.api.nvim_set_option_value("filetype", ft, { buf = buf })
+		vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+		vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+		return buf
+	end
 
-	local base_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(base_buf, 0, -1, false, contents.base)
-	vim.api.nvim_buf_set_name(base_buf, "BASE (Common Ancestor)")
-	vim.api.nvim_buf_set_option(base_buf, "filetype", ft)
-	vim.api.nvim_buf_set_option(base_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(base_buf, "bufhidden", "wipe")
-
-	local theirs_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(theirs_buf, 0, -1, false, contents.theirs)
-	vim.api.nvim_buf_set_name(theirs_buf, "THEIRS (Remote)")
-	vim.api.nvim_buf_set_option(theirs_buf, "filetype", ft)
-	vim.api.nvim_buf_set_option(theirs_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(theirs_buf, "bufhidden", "wipe")
+	local ours_buf = create_merge_buf("OURS (Local)", contents.ours)
+	local base_buf = create_merge_buf("BASE (Common Ancestor)", contents.base)
+	local theirs_buf = create_merge_buf("THEIRS (Remote)", contents.theirs)
 
 	-- Create Layout
 	vim.cmd("tabnew")
@@ -372,40 +347,66 @@ function M.resolve_three_way()
 	-- Helper Keymaps
 	local function get_diff(buf_from)
 		vim.api.nvim_set_current_win(result_win)
-		-- "diffget" from specific buffer is tricky with buffer numbers in `diffget`.
-		-- `diffget //2` gets from target (ours), `//3` (theirs).
-		-- Buffer numbers can also be used.
-		vim.cmd("diffget " .. buf_from)
+
+		local cur_line = vim.fn.line(".")
+		local max_lines = vim.api.nvim_buf_line_count(0)
+
+		-- Find Start (<<<<<<<)
+		local start_line = nil
+		for i = cur_line, 1, -1 do
+			local line = vim.fn.getline(i)
+			if line:match("^<<<<<<<") then
+				start_line = i
+				break
+			elseif line:match("^>>>>>>>") and i ~= cur_line then
+				break
+			end
+		end
+
+		-- Find End (>>>>>>>)
+		local end_line = nil
+		if start_line then
+			for i = cur_line, max_lines do
+				local line = vim.fn.getline(i)
+				if line:match("^>>>>>>>") then
+					end_line = i
+					break
+			elseif line:match("^<<<<<<<") and i ~= start_line then
+				break
+			end
+		end
 	end
 
-	local map_opts = { buffer = work_buf, noremap = true, silent = true, desc = "Get change from OURS" }
-	vim.keymap.set("n", "<localleader>2", function()
+		if start_line and end_line then
+			vim.cmd(start_line .. "," .. end_line .. "diffget " .. buf_from)
+			vim.cmd("diffupdate")
+		else
+			vim.cmd("diffget " .. buf_from)
+		end
+	end
+
+	local map_opts = { buffer = work_buf, noremap = true, silent = true }
+	vim.keymap.set("n", "<leader>1", function()
 		get_diff(ours_buf)
-	end, map_opts)
-
-	map_opts.desc = "Get change from BASE"
-	vim.keymap.set("n", "<localleader>1", function()
+	end, vim.tbl_extend("force", map_opts, { desc = "Get change from OURS" }))
+	vim.keymap.set("n", "<leader>2", function()
 		get_diff(base_buf)
-	end, map_opts)
-
-	map_opts.desc = "Get change from THEIRS"
-	vim.keymap.set("n", "<localleader>3", function()
+	end, vim.tbl_extend("force", map_opts, { desc = "Get change from BASE" }))
+	vim.keymap.set("n", "<leader>3", function()
 		get_diff(theirs_buf)
-	end, map_opts)
+	end, vim.tbl_extend("force", map_opts, { desc = "Get change from THEIRS" }))
 
 	-- Jumps
-	vim.keymap.set("n", "]x", function()
-		local patterns = { "^<<<<<<<", "^=====", "^>>>>>>" }
-		for _, pattern in ipairs(patterns) do
+	vim.keymap.set("n", "<leader>j", function()
+		for _, pattern in ipairs({ "^<<<<<<<", "^=====", "^>>>>>>" }) do
 			if vim.fn.search(pattern, "W") ~= 0 then
 				return
 			end
 		end
 	end, { buffer = work_buf, silent = true, desc = "Next conflict marker" })
 
-	vim.keymap.set("n", "[x", function()
-		local patterns = { "^>>>>>>", "^=====", "^<<<<<<<" }
-		for _, pattern in ipairs(patterns) do
+	vim.keymap.set("n", "<leader>k", function()
+		for _, pattern in ipairs({ "^>>>>>>", "^=====", "^<<<<<<<" }) do
 			if vim.fn.search(pattern, "Wb") ~= 0 then
 				return
 			end
@@ -415,20 +416,16 @@ function M.resolve_three_way()
 	-- Jump File
 	local function jump_file(direction)
 		local r_root = git_util.get_project_root()
-		local ok, out = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, r_root)
-		if not ok or #out == 0 then
+		local ok_j, out = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, r_root)
+		if not ok_j or #out == 0 then
 			util.Notify("No conflicted files found.", "warn", "oz_git")
 			return
 		end
 
-		local current_file = vim.fn.expand("%:p")
-		-- normalize paths for comparison
-		current_file = vim.fs.normalize(current_file)
-
+		local current_file_j = vim.fs.normalize(vim.fn.expand("%:p"))
 		local index = nil
 		for i, file in ipairs(out) do
-			local abs_path = vim.fs.normalize(root .. "/" .. file)
-			if abs_path == current_file then
+			if vim.fs.normalize(r_root .. "/" .. file) == current_file_j then
 				index = i
 				break
 			end
@@ -438,18 +435,11 @@ function M.resolve_three_way()
 			return
 		end
 
-		local next_index = index + direction
-		if next_index > #out then
-			next_index = 1
-		end
-		if next_index < 1 then
-			next_index = #out
-		end
+		local next_index = (index + direction - 1) % #out + 1
+		local target_file_j = vim.fs.normalize(r_root .. "/" .. out[next_index])
 
-		local target_file = vim.fs.normalize(root .. "/" .. out[next_index])
-
-		vim.cmd("tabclose")
-		vim.cmd("edit " .. target_file)
+		close_merge()
+		vim.cmd("edit " .. vim.fn.fnameescape(target_file_j))
 		M.resolve_three_way()
 	end
 
@@ -460,12 +450,41 @@ function M.resolve_three_way()
 		jump_file(-1)
 	end, { buffer = work_buf, desc = "Prev conflicted file" })
 
+	-- Pick File
+	vim.keymap.set("n", "<leader>e", function()
+		local ok_p, c_files = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
+		if not ok_p or #c_files == 0 then
+			util.Notify("No conflicted files found.", "warn", "oz_git")
+			close_merge()
+			return
+		end
+
+		vim.ui.select(c_files, { prompt = "Select Conflicted File:" }, function(choice)
+			if not choice then
+				return
+			end
+			close_merge()
+			vim.cmd("edit " .. vim.fn.fnameescape(vim.fs.normalize(root .. "/" .. choice)))
+			M.resolve_three_way()
+		end)
+	end, { buffer = work_buf, desc = "Pick conflicted file" })
+
 	-- Help
 	vim.keymap.set("n", "g?", function()
-		local ll = vim.g.maplocalleader or "\\"
+		local leader = vim.g.mapleader or "\\"
 		require("oz.util.help_keymaps").show_maps({
 			group = {
-				["Resolution Actions"] = { ll .. "1", ll .. "2", ll .. "3", "]x", "[x", "]f", "[f", "gq" },
+				["Resolution Actions"] = {
+					leader .. "1",
+					leader .. "2",
+					leader .. "3",
+					leader .. "j",
+					leader .. "k",
+					"]f",
+					"[f",
+					leader .. "e",
+					"gq",
+				},
 			},
 			show_general = false,
 		})

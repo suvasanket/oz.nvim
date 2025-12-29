@@ -145,11 +145,17 @@ function M.User_cmd(commands, func, opts)
 end
 
 function M.get_project_root()
+	local state = require("oz.git").state
+	if state and state.root then
+		return state.root
+	end
+
 	local ok, path = shell.run_command({ "git", "rev-parse", "--show-toplevel" })
 	if ok and #path ~= 0 then
-		local joined_path = table.concat(path, " ")
-		vim.trim(joined_path)
-		require("oz.git").state.root = joined_path
+		local joined_path = vim.trim(table.concat(path, " "))
+		if state then
+			state.root = joined_path
+		end
 
 		return joined_path
 	else
