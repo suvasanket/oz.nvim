@@ -155,6 +155,47 @@ function start_visual_diff(target_file, args, file_list, index)
 
 		vim.keymap.set("n", "gq", close_diff, vim.tbl_extend("force", map_opts, { desc = "Close diff" }))
 
+		local function do_hunk(op, mode)
+			local s, e
+			if mode == "v" then
+				s = vim.fn.line("v")
+				e = vim.fn.line(".")
+				if s > e then
+					s, e = e, s
+				end
+				vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+			else
+				s = vim.fn.line(".")
+				e = s
+			end
+
+			local ok, err
+			if op == "stage" then
+				ok, err = require("oz.git.hunk_action").stage_range(0, s, e, { root = root, rel_path = rel_path })
+			else
+				ok, err = require("oz.git.hunk_action").unstage_range(0, s, e, { root = root, rel_path = rel_path })
+			end
+
+			if ok then
+				util.Notify((op == "stage" and "Staged" or "Unstaged") .. " lines " .. s .. "-" .. e, "info", "oz_git")
+			else
+				util.Notify("Failed: " .. (err or "unknown"), "error", "oz_git")
+			end
+		end
+
+		vim.keymap.set("n", "gs", function()
+			do_hunk("stage", "n")
+		end, vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
+		vim.keymap.set("v", "gs", function()
+			do_hunk("stage", "v")
+		end, vim.tbl_extend("force", map_opts, { desc = "Stage selection" }))
+		vim.keymap.set("n", "gu", function()
+			do_hunk("unstage", "n")
+		end, vim.tbl_extend("force", map_opts, { desc = "Unstage hunk" }))
+		vim.keymap.set("v", "gu", function()
+			do_hunk("unstage", "v")
+		end, vim.tbl_extend("force", map_opts, { desc = "Unstage selection" }))
+
 		if file_list and index then
 			local function jump(dir)
 				local next_idx = (index + dir - 1) % #file_list + 1
@@ -181,7 +222,7 @@ function start_visual_diff(target_file, args, file_list, index)
 			local leader = vim.g.mapleader or "\\"
 			require("oz.util.help_keymaps").show_maps({
 				group = {
-					["Diff"] = { "]f", "[f", leader .. "f", "gq" },
+					["Diff"] = { "]f", "[f", leader .. "f", "gq", "gs", "gu" },
 				},
 				show_general = false,
 			})

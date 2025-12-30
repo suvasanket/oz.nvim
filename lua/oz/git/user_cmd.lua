@@ -111,6 +111,16 @@ end
 local function handle_gwrite(opts)
 	local file_name = vim.trim(opts.args)
 	if g_util.if_in_git() then
+		if opts.range and opts.range > 0 and file_name == "" then
+			local ok, err = require("oz.git.hunk_action").stage_range(0, opts.line1, opts.line2)
+			if ok then
+				util.Notify("Staged lines " .. opts.line1 .. "-" .. opts.line2, "info", "oz_git")
+			else
+				util.Notify("Failed to stage lines: " .. (err or "unknown"), "error", "oz_git")
+			end
+			return
+		end
+
 		if file_name == "" then
 			local ok = pcall(vim.cmd, "w")
 			if ok then
@@ -191,7 +201,7 @@ function M.init()
 	-- Gw
 	g_util.User_cmd({ "Gw", "Gwrite" }, function(opts)
 		handle_gwrite(opts)
-	end, { nargs = "?", complete = "file", desc = "oz_git: add/stage/rename current file." })
+	end, { nargs = "?", range = true, complete = "file", desc = "oz_git: add/stage/rename current file." })
 
 	-- :GBrowse
 	g_util.User_cmd({ "GBrowse" }, function(opts)
