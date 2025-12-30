@@ -35,21 +35,8 @@ M.state = {
 	worktree_map = {},
 	info_lines = {},
 	in_conflict = false,
+	line_map = {},
 }
-
-local function format_git_line(code, file)
-	local map = {
-		["M"] = "modified:   ",
-		["A"] = "new file:   ",
-		["D"] = "deleted:    ",
-		["R"] = "renamed:    ",
-		["C"] = "copied:     ",
-		["U"] = "unmerged:   ",
-		["?"] = "",
-	}
-	local prefix = map[code] or "modified:   "
-	return "  " .. prefix .. file
-end
 
 local function generate_status_info(current_branch, in_conflict)
 	local info = {}
@@ -142,7 +129,7 @@ local function generate_sections()
 	local _, branch_list = shell.run_command({ "git", "branch", "-vv" }, root_path)
 	for _, line in ipairs(branch_list) do
 		if line ~= "" then
-			table.insert(new_sections.branch.content, "  " .. line)
+			table.insert(new_sections.branch.content, { type = "branch_item", text = "  " .. line })
 		end
 	end
 
@@ -176,9 +163,13 @@ local function generate_sections()
 
 		if #worktree_items >= 2 then
 			for _, item in ipairs(worktree_items) do
-				local display = string.format("  %s(%s) %s %s", item.name, item.branch, item.sha, item.status)
-				display = display:gsub("%s+$", "")
-				table.insert(new_sections.worktrees.content, display)
+				table.insert(new_sections.worktrees.content, {
+					type = "worktree",
+					name = item.name,
+					branch = item.branch,
+					sha = item.sha,
+					status = item.status,
+				})
 			end
 		else
 			new_sections.worktrees.content = {}
@@ -192,13 +183,13 @@ local function generate_sections()
 			if line ~= "" then
 				local x, y, file = line:sub(1, 1), line:sub(2, 2), line:sub(4)
 				if x ~= " " and x ~= "?" then
-					table.insert(new_sections.staged.content, format_git_line(x, file))
+					table.insert(new_sections.staged.content, { type = "file", status = x, path = file })
 				end
 				if y ~= " " and y ~= "?" then
-					table.insert(new_sections.unstaged.content, format_git_line(y, file))
+					table.insert(new_sections.unstaged.content, { type = "file", status = y, path = file })
 				end
 				if x == "?" and y == "?" then
-					table.insert(new_sections.untracked.content, "  " .. file)
+					table.insert(new_sections.untracked.content, { type = "file", status = "?", path = file })
 				end
 			end
 		end
@@ -209,7 +200,7 @@ local function generate_sections()
 	if stash_ok then
 		for _, line in ipairs(stash_out) do
 			if line ~= "" then
-				table.insert(new_sections.stash.content, "  " .. line)
+				table.insert(new_sections.stash.content, { type = "stash", raw = "  " .. line })
 			end
 		end
 	end
@@ -274,6 +265,9 @@ function M.GitStatus()
 	M.state.in_conflict = is_conflict(M.state.sections)
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
 
+	vim.fn.sign_define("OzGitStatusExpanded", { text = M.icons.expanded, texthl = "ozInactivePrompt" })
+	vim.fn.sign_define("OzGitStatusCollapsed", { text = M.icons.collapsed, texthl = "ozInactivePrompt" })
+
 	win.create_win("status", {
 		content = {},
 		win_type = "tab",
@@ -282,7 +276,7 @@ function M.GitStatus()
 			M.status_buf = buf_id
 			M.status_win = win_id
 			vim.cmd(
-				[[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
+				[[setlocal ft=oz_git signcolumn=yes listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
 			)
 			vim.opt_local.fillchars:append({ eob = " " })
 			s_util.render(buf_id)

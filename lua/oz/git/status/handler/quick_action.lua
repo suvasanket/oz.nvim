@@ -9,51 +9,65 @@ function M.quit()
 end
 
 function M.enter_key()
+	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+	local item = status.state.line_map[cursor_line]
+
+	if not item then
+		return
+	end
+
 	-- 1. Header Toggle
-	local section_id = s_util.get_section_under_cursor()
-	if section_id then
+	if item.type == "header" then
 		s_util.toggle_section()
 		return
 	end
 
-	-- 2. Worktree (Map Lookup)
-	local worktree = s_util.get_worktree_under_cursor()
-	if worktree then
-		local full_path = status.state.worktree_map[worktree.path]
+	-- 2. Worktree
+	if item.type == "worktree" then
+		local worktree = s_util.get_worktree_under_cursor()
+		if worktree then
+			local full_path = status.state.worktree_map[worktree.path]
 
-		if full_path and vim.loop.fs_stat(full_path) then
-			vim.cmd("split | edit " .. vim.fn.fnameescape(full_path))
-		else
-			util.Notify("Worktree doesn't exist(prunable).", "warn", "oz_git")
+			if full_path and vim.loop.fs_stat(full_path) then
+				vim.cmd("split | edit " .. vim.fn.fnameescape(full_path))
+			else
+				util.Notify("Worktree doesn't exist(prunable).", "warn", "oz_git")
+			end
 		end
 		return
 	end
 
-	-- branch
-	local branch = s_util.get_branch_under_cursor()
-	if branch then
-		if branch == status.state.current_branch then
-			vim.cmd.close()
-			require("oz.git.log").commit_log({ level = 1, from = "Git" }, { branch })
-		else
-			s_util.run_n_refresh(string.format("Git switch %s --quiet", branch))
+	-- 3. Branch
+	if item.type == "branch_item" then
+		local branch = s_util.get_branch_under_cursor()
+		if branch then
+			if branch == status.state.current_branch then
+				vim.cmd.close()
+				require("oz.git.log").commit_log({ level = 1, from = "Git" }, { branch })
+			else
+				s_util.run_n_refresh(string.format("Git switch %s --quiet", branch))
+			end
 		end
 		return
 	end
 
-	-- stash
-	local stash = s_util.get_stash_under_cursor()
-	if stash.index then
-		vim.cmd(string.format("Git stash show -p stash@{%d}", stash.index))
+	-- 4. Stash
+	if item.type == "stash" then
+		local stash = s_util.get_stash_under_cursor()
+		if stash.index then
+			vim.cmd(string.format("Git stash show -p stash@{%d}", stash.index))
+		end
 		return
 	end
 
-	-- files
-	local files = s_util.get_file_under_cursor()
-	if #files > 0 then
-		local target = files[1]
-		if vim.fn.filereadable(target) == 1 or vim.fn.isdirectory(target) == 1 then
-			vim.cmd("split | edit " .. vim.fn.fnameescape(target))
+	-- 5. Files
+	if item.type == "file" then
+		local files = s_util.get_file_under_cursor()
+		if #files > 0 then
+			local target = files[1]
+			if vim.fn.filereadable(target) == 1 or vim.fn.isdirectory(target) == 1 then
+				vim.cmd("split | edit " .. vim.fn.fnameescape(target))
+			end
 		end
 		return
 	end
