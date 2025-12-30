@@ -9,7 +9,6 @@ M.status_buf = nil
 M.state = {}
 M.status_grab_buffer = {}
 
--- CONFIGURATION
 M.icons = {
 	collapsed = "",
 	expanded = "",
@@ -129,7 +128,7 @@ local function generate_sections()
 	local _, branch_list = shell.run_command({ "git", "branch", "-vv" }, root_path)
 	for _, line in ipairs(branch_list) do
 		if line ~= "" then
-			table.insert(new_sections.branch.content, { type = "branch_item", text = "  " .. line })
+			table.insert(new_sections.branch.content, { type = "branch_item", text = line })
 		end
 	end
 
@@ -200,7 +199,7 @@ local function generate_sections()
 	if stash_ok then
 		for _, line in ipairs(stash_out) do
 			if line ~= "" then
-				table.insert(new_sections.stash.content, { type = "stash", raw = "  " .. line })
+				table.insert(new_sections.stash.content, { type = "stash", raw = line })
 			end
 		end
 	end
@@ -213,12 +212,12 @@ local function status_buf_hl()
 	vim.api.nvim_set_hl(0, "ozInactivePrompt", { fg = "#757575" })
 	vim.api.nvim_set_hl(0, "ozGitStatusHeading", { fg = "#ffffff", bold = true })
 
-	vim.fn.matchadd("healthError", "^\\s\\+deleted:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("healthWarning", "^\\s\\+both modified:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("@field", "^\\s\\+modified:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("healthSuccess", "^\\s\\+new file:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("@diff.plus", "^    +.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("@diff.minus", "^    -.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("healthError", "^deleted:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("healthWarning", "^both modified:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@field", "^modified:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("healthSuccess", "^new file:\\s\\+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@diff.plus", "^+.*$", 0, -1, { extend = true })
+	vim.fn.matchadd("@diff.minus", "^-.*$", 0, -1, { extend = true })
 
 	vim.cmd([[
     syntax match ozGitStatusBranchName "\S\+" contained
@@ -264,13 +263,14 @@ function M.GitStatus()
 	M.state.sections = generate_sections()
 	M.state.in_conflict = is_conflict(M.state.sections)
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
+	local win_type = require("oz.git").user_config.win_type or "tab"
 
 	vim.fn.sign_define("OzGitStatusExpanded", { text = M.icons.expanded, texthl = "ozInactivePrompt" })
 	vim.fn.sign_define("OzGitStatusCollapsed", { text = M.icons.collapsed, texthl = "ozInactivePrompt" })
 
 	win.create_win("status", {
 		content = {},
-		win_type = "tab",
+		win_type = win_type,
 		buf_name = "OzGitStatus",
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id

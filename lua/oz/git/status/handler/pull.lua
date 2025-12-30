@@ -14,6 +14,7 @@ local function get_args(flags)
 	return ""
 end
 
+-- FIXME flags?
 function M.pull_cmd()
 	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
 

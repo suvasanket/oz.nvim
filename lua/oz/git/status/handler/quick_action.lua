@@ -5,7 +5,9 @@ local util = require("oz.util")
 
 function M.quit()
 	vim.api.nvim_echo({ { "" } }, false, {})
-	vim.cmd("close")
+	if not pcall(vim.cmd.close) then
+		vim.cmd.blast()
+	end
 end
 
 function M.enter_key()
@@ -29,7 +31,8 @@ function M.enter_key()
 			local full_path = status.state.worktree_map[worktree.path]
 
 			if full_path and vim.loop.fs_stat(full_path) then
-				vim.cmd("split | edit " .. vim.fn.fnameescape(full_path))
+				-- vim.cmd("split | edit " .. vim.fn.fnameescape(full_path))
+                util.open_in_split(vim.fn.fnameescape(full_path))
 			else
 				util.Notify("Worktree doesn't exist(prunable).", "warn", "oz_git")
 			end
@@ -66,7 +69,8 @@ function M.enter_key()
 		if #files > 0 then
 			local target = files[1]
 			if vim.fn.filereadable(target) == 1 or vim.fn.isdirectory(target) == 1 then
-				vim.cmd("split | edit " .. vim.fn.fnameescape(target))
+				-- vim.cmd("split | edit " .. vim.fn.fnameescape(target)) -- WIP
+				util.open_in_split(vim.fn.fnameescape(target))
 			end
 		end
 		return

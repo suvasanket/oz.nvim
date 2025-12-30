@@ -72,7 +72,7 @@ local function log_buf_hl()
     highlight PathSeparator guifg=#99BC85 guibg=NONE gui=italic
     ]])
 
-    vim.cmd([[
+	vim.cmd([[
     syntax match Comment /\*\w\+/ containedin=ALL
     syntax match Comment /\zs\*\w\+\ze.\{-}\*\w\+/ skipwhite
     ]])
@@ -148,7 +148,7 @@ function M.refresh_buf(passive)
 		M.commit_log({ from = M.comming_from })
 		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
-    pcall(vim.cmd.checktime())
+	pcall(vim.cmd.checktime())
 end
 
 -- commit log
@@ -160,6 +160,7 @@ function M.commit_log(opts, args)
 		M.comming_from = opts.from
 		level = opts.level
 	end
+	local win_type = (opts and opts.win_type) or require("oz.git").user_config.win_type or "tab"
 
 	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
 
@@ -169,14 +170,16 @@ function M.commit_log(opts, args)
 	-- open log
 	win.create_win("log", {
 		content = commit_log_lines,
-		win_type = (opts and opts.win_type) or "tab",
+		win_type = win_type,
 		buf_name = "OzGitLog",
 		callback = function(buf_id, win_id)
 			M.log_buf = buf_id
 			M.log_win = win_id
 
 			-- opts
-			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]])
+			vim.cmd(
+				[[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
+			)
 			vim.opt_local.fillchars:append({ eob = " " })
 
 			-- async component

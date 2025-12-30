@@ -10,14 +10,14 @@ function M.apply()
 	end
 
 	if stash then
-		s_util.run_n_refresh("G stash apply -q " .. stash)
+		s_util.run_n_refresh("Git stash apply -q " .. stash)
 	else
 		-- Prompt
 		local stash_id = util.UserInput("Stash index (0):")
 		if stash_id == "" then
 			stash_id = "0"
 		end
-		s_util.run_n_refresh("G stash apply -q stash@{" .. stash_id .. "}")
+		s_util.run_n_refresh("Git stash apply -q stash@{" .. stash_id .. "}")
 	end
 end
 
@@ -29,13 +29,13 @@ function M.pop()
 	end
 
 	if stash then
-		s_util.run_n_refresh("G stash pop -q " .. stash)
+		s_util.run_n_refresh("Git stash pop -q " .. stash)
 	else
 		local stash_id = util.UserInput("Stash index (0):")
 		if stash_id == "" then
 			stash_id = "0"
 		end
-		s_util.run_n_refresh("G stash pop -q stash@{" .. stash_id .. "}")
+		s_util.run_n_refresh("Git stash pop -q stash@{" .. stash_id .. "}")
 	end
 end
 
@@ -47,13 +47,13 @@ function M.drop()
 	end
 
 	if stash then
-		s_util.run_n_refresh("G stash drop -q " .. stash)
+		s_util.run_n_refresh("Git stash drop -q " .. stash)
 	else
 		local stash_id = util.UserInput("Stash index (0):")
 		if stash_id == "" then
 			stash_id = "0"
 		end
-		s_util.run_n_refresh("G stash drop -q stash@{" .. stash_id .. "}")
+		s_util.run_n_refresh("Git stash drop -q stash@{" .. stash_id .. "}")
 	end
 end
 
@@ -71,7 +71,6 @@ function M.save(flags)
 end
 
 function M.snapshot()
-	-- stash create + stash store (or just stash push)
 	s_util.run_n_refresh("Git stash push -m 'Snapshot'")
 end
 

@@ -89,32 +89,24 @@ local function subcmd_exec(args_tbl, args_str)
 		vim.cmd("Man git-" .. cmd_l)
 		return true
 
-    -- Diff cmd
-    elseif cmd == "diff" then
-        table.remove(args_tbl, 1)
-        require("oz.git.diff").diff(args_tbl)
-        return true
+	-- Diff cmd
+	elseif cmd == "diff" then
+		table.remove(args_tbl, 1)
+		require("oz.git.diff").diff(args_tbl)
+		return true
 
 	-- Progress cmds
 	elseif vim.tbl_contains(remote_cmds, cmd) then
-		if M.user_config and M.user_config.remote_opt_exec == "background" then -- user config
-			local command = table.remove(args_tbl, 1)
+		local command = table.remove(args_tbl, 1)
 
-			require("oz.git.remote_cmd").run_git_with_progress(command, args_tbl, function(lines)
-				oz_git_win.open_oz_git_win(lines, args_str)
-				-- git suggestion
-				local suggestion = wizard.get_git_suggestions(lines, args_tbl)
-				if suggestion then
-					util.set_cmdline(suggestion)
-				end
-			end)
-		elseif M.user_config and M.user_config.remote_opt_exec == "term" then -- TODO run in oz_term
-			vim.cmd("hor term git " .. table.concat(args_tbl, " "))
-			vim.api.nvim_buf_set_option(0, "ft", oz_git_win.oz_git_ft() and "oz_git" or "git")
-			vim.cmd("resize 9")
-			vim.api.nvim_buf_set_name(0, "")
-			vim.cmd.wincmd("p")
-		end
+		require("oz.git.remote_cmd").run_git_with_progress(command, args_tbl, function(lines)
+			oz_git_win.open_oz_git_win(lines, args_str)
+			-- git suggestion
+			local suggestion = wizard.get_git_suggestions(lines, args_tbl)
+			if suggestion then
+				util.set_cmdline(suggestion)
+			end
+		end)
 		return true
 	end
 	return false
@@ -195,18 +187,56 @@ function M.run_git_job(args)
 	args = util.args_parser().expand_expressions(args)
 	local args_table = util.args_parser().parse_args(args)
 
-    local allowed_cmds = {
-        "add", "am", "archive", "bisect", "blame", "branch", "bundle", "checkout", "cherry-pick",
-        "clean", "clone", "commit", "config", "describe", "diff", "fetch", "gc", "grep", "init",
-        "log", "ls-files", "ls-remote", "ls-tree", "merge", "mv", "notes", "pull", "push",
-        "rebase", "reflog", "remote", "reset", "restore", "revert", "rm", "shortlog", "show",
-        "stash", "status", "submodule", "switch", "tag", "worktree",
-    }
+	local allowed_cmds = {
+		"add",
+		"am",
+		"archive",
+		"bisect",
+		"blame",
+		"branch",
+		"bundle",
+		"checkout",
+		"cherry-pick",
+		"clean",
+		"clone",
+		"commit",
+		"config",
+		"describe",
+		"diff",
+		"fetch",
+		"gc",
+		"grep",
+		"init",
+		"log",
+		"ls-files",
+		"ls-remote",
+		"ls-tree",
+		"merge",
+		"mv",
+		"notes",
+		"pull",
+		"push",
+		"rebase",
+		"reflog",
+		"remote",
+		"reset",
+		"restore",
+		"revert",
+		"rm",
+		"shortlog",
+		"show",
+		"stash",
+		"status",
+		"submodule",
+		"switch",
+		"tag",
+		"worktree",
+	}
 
-    if not vim.tbl_contains(allowed_cmds, args_table[1]) then
-        util.Notify("Command '" .. args_table[1] .. "' is not allowed or supported.", "error", "oz_git")
-        return
-    end
+	if not vim.tbl_contains(allowed_cmds, args_table[1]) then
+		util.Notify("Command '" .. args_table[1] .. "' is not allowed or supported.", "error", "oz_git")
+		return
+	end
 
 	local suggestion = nil
 	local std_out = {}

@@ -75,8 +75,8 @@ local function oil_buf_mappings(config, g_mappings)
 		local input = util.UserInput("Command:")
 		if input and input ~= "" then
 			local cmd = config.entry_exec.use_fullpath
-					and split_input(input, get_cur_entry(), config.entry_exec.lead_prefix)
-				or split_input(input, get_cur_entry(true), config.entry_exec.lead_prefix)
+					and split_input(input, get_cur_entry(), config.entry_exec.tail_prefix)
+				or split_input(input, get_cur_entry(true), config.entry_exec.tail_prefix)
 
 			if config.entry_exec.method == "background" then
 				util.ShellCmd(cmd, function()

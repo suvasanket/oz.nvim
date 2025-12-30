@@ -12,7 +12,7 @@ local defaults = {
 
 	-- Git
 	oz_git = {
-        remote_opt_exec = "background", -- |background,term|
+        win_type = "tab",
 		mappings = {
 			toggle_pick = "<C-P>",
 			unpick_all = "<C-S-P>",
@@ -56,7 +56,7 @@ local defaults = {
 			entry_exec = {
 				method = "term", -- |background, term|
 				use_fullpath = true, -- false: only file or dir name will be used
-				lead_prefix = ":", -- this char will be used to define the pre and post of the entry
+				tail_prefix = ":", -- split LHS RHS
 			},
 			mappings = {
 				term = "<global>",

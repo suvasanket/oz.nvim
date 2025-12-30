@@ -1,6 +1,5 @@
 local M = {}
 local util = require("oz.util")
-local g_util = require("oz.git.util")
 local win = require("oz.util.win")
 
 M.oz_git_buf = nil

@@ -83,6 +83,7 @@ function M.Map(mode, lhs, rhs, opts)
 	for _, m in ipairs(modes) do
 		for _, k in ipairs(keys) do
 			if buffer then
+                -- FIXME
 				vim.api.nvim_buf_set_keymap(buffer, m, k, rhs_val, options)
 			else
 				vim.api.nvim_set_keymap(m, k, rhs_val, options)
@@ -374,13 +375,31 @@ function M.transient_cmd_complete()
 end
 
 function M.set_cmdline(str)
-    local cmdline = str:gsub("%|", "")
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(":<C-U>" .. cmdline, true, false, true), "n", false)
-    local cursor_pos = str:find("%|")
-    if cursor_pos then
-        vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
-    end
-    M.transient_cmd_complete()
+	local cmdline = str:gsub("%|", "")
+	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(":<C-U>" .. cmdline, true, false, true), "n", false)
+	local cursor_pos = str:find("%|")
+	if cursor_pos then
+		vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
+	end
+	M.transient_cmd_complete()
+end
+
+function M.open_in_split(path)
+	local current_win = vim.api.nvim_get_current_win()
+	local wins = vim.api.nvim_tabpage_list_wins(0)
+
+	for _, win in ipairs(wins) do
+		if win ~= current_win then
+			local config = vim.api.nvim_win_get_config(win)
+			if config.relative == "" then
+				vim.api.nvim_set_current_win(win)
+				vim.cmd.edit(vim.fn.fnameescape(path))
+				return
+			end
+		end
+	end
+
+	vim.cmd("aboveleft split " .. vim.fn.fnameescape(path))
 end
 
 return M

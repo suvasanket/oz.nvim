@@ -54,11 +54,11 @@ function M.render(buf)
 
 					if item.type == "file" then
 						local prefix = status_code_map[item.status] or "modified:   "
-						add_line("  " .. prefix .. item.path, item_data)
+						add_line(prefix .. item.path, item_data)
 					elseif item.type == "branch_item" then
 						add_line(item.text, item_data)
 					elseif item.type == "worktree" then
-						local display = string.format("  %s(%s) %s %s", item.name, item.branch, item.sha, item.status)
+						local display = string.format("%s(%s) %s %s", item.name, item.branch, item.sha, item.status)
 						display = display:gsub("%s+$", "")
 						add_line(display, item_data)
 					elseif item.type == "stash" then
@@ -70,7 +70,7 @@ function M.render(buf)
 			-- 3. Info Line (Only for branch)
 			if section_id == "branch" and state.info_lines and #state.info_lines > 0 then
 				for _, info in ipairs(state.info_lines) do
-					add_line("  " .. info, { type = "info", text = info, section_id = section_id })
+					add_line(info, { type = "info", text = info, section_id = section_id })
 				end
 			end
 

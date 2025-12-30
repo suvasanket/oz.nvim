@@ -13,19 +13,12 @@ A Neovim plugin collection to turbocharge everyday shell-related workflow.
 
 ## Requirement
 - Neovim >= 0.9.4
-- [diffview.nvim](https://github.com/sindrets/diffview.nvim?tab=readme-ov-file) (optional for oz\_git)
-- [nvim-notify](https://github.com/rcarriga/nvim-notify) or any notifier plugin (optional)
 
 ## Installation
 lazy:
 ```lua
 {
     "suvasanket/oz.nvim",
-    -- event = "VeryLazy",
-    -- dependencies = {
-    --     "rcarriga/nvim-notify", -- optional
-    --     "j-hui/fidget.nvim", -- optional
-    -- },
     opts = {},
 }
 ```
@@ -36,6 +29,7 @@ lazy:
 
 ```lua
 {
+    -- Global mappings
     mappings = {
         Term = "<leader>av", -- Open a prompt to execute a shell command in oz_term
         TermBang = "<leader>at", -- Open a prompt to execute a shell command in a tmux window or Neovim tab
@@ -44,7 +38,7 @@ lazy:
 
      -- oz_git options
      oz_git = {
-         remote_opt_exec = "background", -- |background,term|
+         win_type = "tab", -- window type of oz_git status, log buffer |tab, hor, vert|
          mappings = {
              toggle_pick = "<C-P>",
              unpick_all = "<C-S-P>",
@@ -90,7 +84,7 @@ lazy:
              entry_exec = {
                  method = "term", -- |background, term|
                  use_fullpath = true, -- Use the full path of the entry
-                 lead_prefix = ":", -- char use to specify any lead args/cmds
+                 tail_prefix = ":", -- char use to separte lead(LHS) and tail(RHS)
              },
              mappings = {
                  term = "<global>", -- Execute a shell command using oz_term | by default uses global keys(<leader>av)
