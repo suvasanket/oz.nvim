@@ -1,18 +1,11 @@
 local M = {}
-
-local api = vim.api
-local fn = vim.fn
 local g_util = require("oz.git.util")
-
--- ============================================================================
--- Private Helpers
--- ============================================================================
 
 local function run_git(args, cwd, input)
 	local cmd = { "git", "-C", cwd, "--no-pager" }
 	vim.list_extend(cmd, args)
 
-	local output = fn.systemlist(cmd, input)
+	local output = vim.fn.systemlist(cmd, input)
 	if vim.v.shell_error ~= 0 then
 		return nil, table.concat(output, "\n")
 	end
@@ -31,13 +24,13 @@ local function get_git_info(bufnr, opts)
 		}
 	end
 
-	local filepath = api.nvim_buf_get_name(bufnr)
+	local filepath = vim.api.nvim_buf_get_name(bufnr)
 	if filepath == "" then
 		return nil, "Buffer has no filepath"
 	end
 
-	filepath = fn.resolve(filepath)
-	local cwd = fn.fnamemodify(filepath, ":h")
+	filepath = vim.fn.resolve(filepath)
+	local cwd = vim.fn.fnamemodify(filepath, ":h")
 
 	local git_root = g_util.get_project_root()
 	if not git_root then
@@ -224,8 +217,13 @@ local function apply_operation(op, bufnr, start_line, end_line, opts)
 	end
 
 	-- 3. Apply
-	local apply_args = { "apply", "--cached", "--unidiff-zero", "--whitespace=nowarn" }
-	if op == "unstage" then
+	local apply_args = { "apply", "--unidiff-zero", "--whitespace=nowarn" }
+	if op == "stage" then
+		table.insert(apply_args, 2, "--cached")
+	elseif op == "unstage" then
+		table.insert(apply_args, 2, "--cached")
+		table.insert(apply_args, "--reverse")
+	elseif op == "restore" then
 		table.insert(apply_args, "--reverse")
 	end
 	table.insert(apply_args, "-")
@@ -237,16 +235,12 @@ local function apply_operation(op, bufnr, start_line, end_line, opts)
 	end
 
 	-- Reload buffer to sync with disk if it's the current file
-	if bufnr == 0 or bufnr == api.nvim_get_current_buf() then
-		api.nvim_command("checktime")
+	if bufnr == 0 or bufnr == vim.api.nvim_get_current_buf() then
+		vim.api.nvim_command("checktime")
 	end
 
 	return true, nil
 end
-
--- ============================================================================
--- Public API
--- ============================================================================
 
 ---
 --- Stage lines in range
@@ -270,6 +264,18 @@ end
 ---@return string|nil error_message
 function M.unstage_range(bufnr, start_line, end_line, opts)
 	return apply_operation("unstage", bufnr, start_line, end_line, opts)
+end
+
+---
+--- Restore lines in range (discard changes in working tree)
+---@param bufnr number|nil Buffer number (0 for current)
+---@param start_line number Start line number (1-based)
+---@param end_line number End line number (1-based)
+---@param opts table|nil Optional overrides {root=..., rel_path=...}
+---@return boolean success
+---@return string|nil error_message
+function M.restore_range(bufnr, start_line, end_line, opts)
+	return apply_operation("restore", bufnr, start_line, end_line, opts)
 end
 
 return M

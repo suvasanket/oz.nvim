@@ -42,19 +42,6 @@ end
 ---@return boolean
 local function subcmd_exec(args_tbl, args_str)
 	local cmd = args_tbl[1]
-
-	if util.str_in_tbl(args_str, editor_req_cmds) then
-		vim.api.nvim_create_autocmd("FileType", {
-			pattern = { "gitrebase", "gitcommit", "gitconfig" },
-			callback = function(event)
-				vim.bo.bufhidden = "delete"
-				if vim.bo.ft == "gitrebase" then -- set some cool keymaps for rebase buffer
-					wizard.rebase_buf_mappigs(event.buf)
-				end
-			end,
-		})
-	end
-
 	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "ls-remote", "submodule", "svn" }
 	local interactive_cmd = { "add -p", "add -i", "reset -p", "commit -p", "checkout -p" }
 

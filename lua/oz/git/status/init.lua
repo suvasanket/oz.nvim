@@ -120,8 +120,8 @@ local function generate_sections()
 	end
 
 	-- 2. Branch Section
-	local _, branch_res = shell.run_command({ "git", "rev-parse", "--abbrev-ref", "HEAD" }, root_path)
-	local current_branch = branch_res[1] or "HEAD"
+	local ok, branch_res = shell.run_command({ "git", "branch", "--show-current" }, root_path)
+	local current_branch = (ok and branch_res[1]) or "HEAD"
 	M.state.current_branch = current_branch
 	new_sections.branch.header = "Branch: " .. current_branch
 
