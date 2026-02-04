@@ -1,5 +1,5 @@
 # Oz.nvim
-A Neovim plugin collection to turbocharge everyday shell-related workflow.
+Essential plugin kit for software developers
 
 [oz_git showcase](https://github.com/user-attachments/assets/58229a8d-04a0-43a9-806d-8f175162f1b0)
 <details>
@@ -158,14 +158,10 @@ vim.o.grepprg = "rg --vimgrep -u -S"
 
 ### oz\_git
 - The important, huge portion of this plugin and my attempt at creating a git client.
-- Unlike other standard Git clients, this one relies on a number of third-party dependencies.
-	- oz\_git has very little diffing capabilities, for more you should use [diffview.nvim](https://github.com/sindrets/diffview.nvim?tab=readme-ov-file).
-    - [neovim-remote](https://github.com/mhinz/neovim-remote) is a temporary dependency until Neovim’s native remote adds ['wait'](https://neovim.io/doc/user/remote.html#_2.-missing-functionality) support in future release.
-    - Tip: use plugins like [minidiff](https://github.com/echasnovski/mini.diff?tab=readme-ov-file) or [gitsigns](https://github.com/lewis6991/gitsigns.nvim) to view changes in the signcolumn and stage or unstage hunks right from your buffer.
 #### commands
 - `:Git`, `:G`: heavily inspired from [fugitive](https://github.com/tpope/vim-fugitive) but with different philosophy and features.
     - By default when you run a git command its **async**(as usual) and smart.
-    - `Git` without args will open the **status** buffer.
+    - `Git` without args will open the **status** buffer, heavily inspired from **magit**.
     - I’ve aimed to make this self-explanatory, but if anything’s unclear, please check the docs(which ~~might~~ will be available in future).
 - `:Gwrite`, `:Gw`: save the current file and stage the changes in the Git repository.
     - to *rename* or *move* the current file pass the path as arg.
