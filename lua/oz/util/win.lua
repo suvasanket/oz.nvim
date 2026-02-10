@@ -6,7 +6,7 @@ local unique_ids = {}
 ---@param opts {win_type: string, buf_name: string, content: table, callback: function}
 ---@return integer
 ---@return integer
-local function create_window(opts)
+local function create_win_util(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	if opts.buf_name then
 		local existing = vim.fn.bufnr("^" .. opts.buf_name .. "$")
@@ -38,7 +38,7 @@ end
 
 --- create win
 ---@param unique_id string
----@param opts {content: table, reuse: boolean, win_type: string, callback: function}
+---@param opts {buf_name: string, content: table, reuse: boolean, win_type: string, callback: function}
 function M.create_win(unique_id, opts)
 	local win_buf_id = unique_ids[unique_id]
 	local reuse = opts.reuse
@@ -63,7 +63,7 @@ function M.create_win(unique_id, opts)
 			end
 		end
 	else
-		local win, buf = create_window(opts)
+		local win, buf = create_win_util(opts)
 		vim.api.nvim_create_autocmd({ "BufDelete", "BufHidden" }, {
 			buffer = buf,
 			callback = function()
