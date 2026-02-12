@@ -1,5 +1,4 @@
 local M = {}
-local manager = require("oz.term.manager")
 
 local function highlight(buf)
 	local util = require("oz.term.util")
@@ -15,6 +14,9 @@ local function highlight(buf)
 	end)
 
 	vim.schedule(function()
+		if not vim.api.nvim_buf_is_valid(buf) then
+			return
+		end
 		local win = vim.fn.bufwinid(buf)
 		if win ~= -1 then
 			vim.api.nvim_win_call(win, function()
@@ -41,11 +43,9 @@ local function highlight(buf)
 		vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
 		local efm = table.concat(util.EFM_PATTERNS, ",") .. ",%f" -- all the efm and only file
-		local old_cwd = vim.fn.getcwd()
-		local changed_dir = pcall(vim.api.nvim_set_current_dir, oz_cwd)
+		local readable_cache = {}
 
 		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-		local readable_cache = {}
 
 		for i, line in ipairs(lines) do
 			if line ~= "" and #line < 1000 then
@@ -59,72 +59,93 @@ local function highlight(buf)
 						break
 					end
 
-					-- Check if this specific chunk is a valid location according to EFM
-					local sub_qf = vim.fn.getqflist({ lines = { text }, efm = efm })
-					local sub_entry = sub_qf.items and sub_qf.items[1]
+					-- Fast path: if it contains : or (, it might be an EFM match
+					local maybe_efm = text:find("[:(]") ~= nil
+					local full_path = text
 
-					if sub_entry and sub_entry.valid == 1 then
-						local filename = sub_entry.filename
-						if (not filename or filename == "") and sub_entry.bufnr > 0 then
-							filename = vim.api.nvim_buf_get_name(sub_entry.bufnr)
+					if maybe_efm then
+						-- Only call getqflist if it looks like an EFM match to save performance
+						local sub_qf = vim.fn.getqflist({ lines = { text }, efm = efm })
+						local sub_entry = sub_qf.items and sub_qf.items[1]
+
+						if sub_entry and sub_entry.valid == 1 then
+							full_path = sub_entry.filename
+							if (not full_path or full_path == "") and sub_entry.bufnr > 0 then
+								full_path = vim.api.nvim_buf_get_name(sub_entry.bufnr)
+							end
+						end
+					end
+
+					if full_path and full_path ~= "" then
+						if not (full_path:match("^/") or full_path:match("^%a:")) then
+							full_path = oz_cwd .. "/" .. full_path
 						end
 
-						if filename and filename ~= "" then
-							local full_path = filename
-							if not (full_path:match("^/") or full_path:match("^%a:")) then
-								full_path = oz_cwd .. "/" .. full_path
-							end
-
-							if util.is_readable(full_path, readable_cache) then
-								vim.api.nvim_buf_add_highlight(buf, ns, "@attribute", i - 1, start_pos, end_pos)
-							end
+						if util.is_readable(full_path, readable_cache) then
+							vim.api.nvim_buf_add_highlight(buf, ns, "@attribute", i - 1, start_pos, end_pos)
 						end
 					end
 					start_idx = end_pos
 				end
 			end
 		end
-
-		if changed_dir then
-			pcall(vim.api.nvim_set_current_dir, old_cwd)
-		end
 	end)
 end
 
-local function ft_init(cmd)
-	vim.api.nvim_create_autocmd("FileType", {
-		pattern = "oz_term",
-		group = vim.api.nvim_create_augroup("oz_term_setup", { clear = true }),
-		callback = function(ev)
-			local buf = ev.buf
-			-- window-local stuff should be deferred
-			vim.schedule(function()
-				local win = vim.fn.bufwinid(buf)
-				if win ~= -1 then
-					vim.wo[win].number = false
-					vim.wo[win].relativenumber = false
-					vim.wo[win].signcolumn = "no"
-					vim.wo[win].wrap = false
-					vim.wo[win].spell = false
-					vim.wo[win].list = false
-					vim.wo[win].winbar = string.format("$ %s", cmd)
-				end
-				highlight(buf)
-				require("oz.term.keymaps").setup(buf)
-			end)
-		end,
-	})
-	return "oz_term"
+local function apply_win_styling(win, buf)
+	if not vim.api.nvim_win_is_valid(win) or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	local cmd = vim.b[buf].oz_cmd or ""
+	local wo = vim.wo[win]
+	wo.number = false
+	wo.relativenumber = false
+	wo.signcolumn = "no"
+	wo.wrap = false
+	wo.spell = false
+	wo.list = false
+	wo.winbar = string.format("$ %s", cmd)
 end
+
+local group = vim.api.nvim_create_augroup("oz_term_setup", { clear = true })
+
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "oz_term",
+	group = group,
+	callback = function(ev)
+		local buf = ev.buf
+		highlight(buf)
+		require("oz.term.keymaps").setup(buf)
+		vim.schedule(function()
+			local win = vim.fn.bufwinid(buf)
+			if win ~= -1 then
+				apply_win_styling(win, buf)
+			end
+		end)
+	end,
+})
+
+vim.api.nvim_create_autocmd("BufWinEnter", {
+	pattern = "*",
+	group = group,
+	callback = function(ev)
+		if vim.bo[ev.buf].filetype == "oz_term" then
+			local win = vim.api.nvim_get_current_win()
+			apply_win_styling(win, ev.buf)
+		end
+	end,
+})
 
 --- run
 ---@param cmd string
----@param opts {cwd: string, stdin: string}|nil
+---@param opts {cwd: string, stdin: string, hidden: boolean}|nil
 function M.run(cmd, opts)
 	if not cmd or cmd == "" then
 		return
 	end
+	cmd = vim.fn.expandcmd(cmd)
 	opts = opts or {}
+	local manager = require("oz.term.manager")
 	local target_id = manager.get_target_id()
 	local target_inst = target_id and manager.instances[target_id]
 	local reuse_win = nil
@@ -155,85 +176,97 @@ function M.run(cmd, opts)
 
 	local start_time = (vim.uv or vim.loop).hrtime()
 
-	-- create a new window
-	require("oz.util.win").create_win("oz_term", {
-		win_type = "botright",
-		reuse = reuse_win ~= nil,
-		content = {},
-		callback = function(buf_id, win_id)
-			if reuse_win and target_id and target_inst then
-				local old_buf = target_inst.buf
-				manager.instances[target_id] = nil
-				if old_buf and vim.api.nvim_buf_is_valid(old_buf) then
-					vim.schedule(function()
-						pcall(vim.api.nvim_buf_delete, old_buf, { force = true })
-					end)
-				end
+	local terminal_buf, job_id
+
+	local function setup_terminal(buf, win_id)
+		vim.api.nvim_buf_call(buf, function()
+			if opts.cwd then
+				pcall(vim.cmd, "lcd " .. vim.fn.fnameescape(opts.cwd))
 			end
 
-			vim.api.nvim_win_call(win_id, function()
-				if opts.cwd then
-					pcall(vim.cmd, "lcd " .. vim.fn.fnameescape(opts.cwd))
-				end
+			if win_id then
 				vim.cmd("terminal " .. cmd)
+				job_id = vim.b[buf].terminal_job_id
+			else
+				job_id = vim.fn.termopen(cmd)
+			end
 
-				local buf = vim.api.nvim_get_current_buf()
-				local job_id = vim.b[buf].terminal_job_id
+			vim.api.nvim_buf_set_name(buf, buf_name)
+			vim.b[buf].oz_cmd = cmd
+			vim.b[buf].oz_cwd = oz_cwd
+			vim.bo[buf].filetype = "oz_term"
 
-				vim.api.nvim_buf_set_name(buf, buf_name)
-				vim.b[buf].oz_cmd = cmd
-				vim.b[buf].oz_cwd = oz_cwd
-				vim.bo[buf].filetype = ft_init(cmd)
-
-				-- Listen for OSC 7 directory changes
-				vim.api.nvim_create_autocmd("TermRequest", {
-					buffer = buf,
-					callback = function(ev)
-						local val, n = string.gsub(ev.data.sequence, "\027]7;file://[^/]*", "")
-						if n > 0 then
-							local dir = val
-							if vim.fn.isdirectory(dir) ~= 0 then
-								vim.b[ev.buf].oz_cwd = dir
-							end
+			-- Listen for OSC 7 directory changes
+			vim.api.nvim_create_autocmd("TermRequest", {
+				buffer = buf,
+				callback = function(ev)
+					local val, n = string.gsub(ev.data.sequence, "\027]7;file://[^/]*", "")
+					if n > 0 then
+						local dir = val
+						if vim.fn.isdirectory(dir) ~= 0 then
+							vim.b[ev.buf].oz_cwd = dir
 						end
-					end,
-				})
+					end
+				end,
+			})
 
-				manager.register_instance(id, {
-					buf = buf,
-					win = win_id,
-					job_id = job_id,
-					job_active = true,
-				})
+			manager.register_instance(id, {
+				buf = buf,
+				win = win_id,
+				job_id = job_id,
+				job_active = true,
+			})
+		end)
+	end
+
+	if opts.hidden then
+		terminal_buf = vim.api.nvim_create_buf(false, true)
+		setup_terminal(terminal_buf, nil)
+	else
+		-- create a new window
+		require("oz.util.win").create_win("oz_term", {
+			win_type = "botright",
+			reuse = reuse_win ~= nil,
+			content = {},
+			callback = function(buf_id, win_id)
+				if reuse_win and target_id and target_inst then
+					local old_buf = target_inst.buf
+					manager.instances[target_id] = nil
+					if old_buf and vim.api.nvim_buf_is_valid(old_buf) then
+						vim.schedule(function()
+							pcall(vim.api.nvim_buf_delete, old_buf, { force = true })
+						end)
+					end
+				end
+
+				terminal_buf = vim.api.nvim_get_current_buf()
+				setup_terminal(terminal_buf, win_id)
 
 				-- Delete scratch buffer
-				if buf ~= buf_id then
+				if terminal_buf ~= buf_id then
 					pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
 				end
-			end)
-		end,
-	})
-
-	local buf = vim.api.nvim_get_current_buf()
-	local job_id = vim.b[buf].terminal_job_id
+			end,
+		})
+	end
 
 	-- Update job status when terminal finishes
 	vim.api.nvim_create_autocmd("TermClose", {
-		buffer = buf,
+		buffer = terminal_buf,
 		once = true,
 		callback = function(ev)
 			local end_time = (vim.uv or vim.loop).hrtime()
 			local duration = (end_time - start_time) / 1e9
 			local status = vim.v.event.status
-			local terminal_buf = ev.buf
-			local final_oz_cwd = vim.b[terminal_buf].oz_cwd
+			local t_buf = ev.buf
+			local final_oz_cwd = vim.b[t_buf].oz_cwd
 
 			if manager.instances[id] then
 				manager.instances[id].job_active = false
 			end
 
 			-- Capture lines before deleting buffer
-			local lines = vim.api.nvim_buf_get_lines(terminal_buf, 0, -1, false)
+			local lines = vim.api.nvim_buf_get_lines(t_buf, 0, -1, false)
 
 			-- Clean up trailing empty lines
 			while #lines > 0 and lines[#lines] == "" do
@@ -275,8 +308,8 @@ function M.run(cmd, opts)
 				end
 
 				-- Finally delete the old terminal buffer
-				if vim.api.nvim_buf_is_valid(terminal_buf) then
-					vim.api.nvim_buf_delete(terminal_buf, { force = true })
+				if vim.api.nvim_buf_is_valid(t_buf) then
+					vim.api.nvim_buf_delete(t_buf, { force = true })
 				end
 			end)
 		end,

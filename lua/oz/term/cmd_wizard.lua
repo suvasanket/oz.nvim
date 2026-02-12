@@ -1,6 +1,4 @@
 local M = {}
-local util = require("oz.util")
-local cache = require("oz.caching")
 
 function M.detect_compiler(ft)
 	-- Try common suffix variations dynamically
@@ -21,8 +19,7 @@ function M.detect_compiler(ft)
 end
 
 local function setprojectCMD(project_path, file, ft, cmd)
-	local key = [[{project_path}${ft}]]
-	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+	local key = string.format("%s$%s", project_path, ft)
 
 	-- if more than one file name in cmd
 	local filenames = {} -- we can use file name in future
@@ -30,20 +27,19 @@ local function setprojectCMD(project_path, file, ft, cmd)
 		table.insert(filenames, filename)
 	end
 	if #filenames == 1 then
-		if cmd:find(file) then
-			cmd = cmd:gsub(file, "{filename}")
+		if cmd:find(file, 1, true) then
+			cmd = cmd:gsub(vim.pesc(file), "{filename}")
 		end
 	end
 
-	cache.set_data(key, cmd, "data")
+	require("oz.caching").set_data(key, cmd, "data")
 end
 
 local function getprojectCMD(project_path, file, ft)
-	local key = [[{project_path}${ft}]]
-	key = key:gsub("{project_path}", project_path):gsub("{ft}", ft)
+	local key = string.format("%s$%s", project_path, ft)
 
-	local out = cache.get_data(key, "data")
-	if out and out:find("{filename}") then
+	local out = require("oz.caching").get_data(key, "data")
+	if out and out:find("{filename}", 1, true) then
 		out = out:gsub("{filename}", file)
 	end
 	return out
@@ -53,11 +49,11 @@ local function setftCMD(file, ft, cmd)
 	if file:match("%.") then
 		file = vim.fn.fnamemodify(file, ":r")
 	end
-	if cmd:find(file) then
-		cmd = cmd:gsub(file, "{filename}")
+	if cmd:find(file, 1, true) then
+		cmd = cmd:gsub(vim.pesc(file), "{filename}")
 	end
 
-	cache.set_data(ft, cmd, "ft")
+	require("oz.caching").set_data(ft, cmd, "ft")
 end
 
 local function getftCMD(file, ft)
@@ -65,9 +61,9 @@ local function getftCMD(file, ft)
 		file = vim.fn.fnamemodify(file, ":r")
 	end
 
-	local output = cache.get_data(ft, "ft")
+	local output = require("oz.caching").get_data(ft, "ft")
 
-	if output and output:find("{filename}") then
+	if output and output:find("{filename}", 1, true) then
 		output = output:gsub("{filename}", file)
 	end
 	return output
@@ -124,6 +120,7 @@ function M.cmd_func(type, func)
 	local current_file = vim.fn.expand("%")
 	local ft = vim.bo.filetype
 	local shebang = M.detect_shebang()
+	local util = require("oz.util")
 	local project_path = util.GetProjectRoot() -- may return nil
 	-- p: 1
 	if not shebang then
@@ -149,11 +146,10 @@ function M.cmd_func(type, func)
 			end
 
 			-- check if its a valid cmd or not
-			-- if vim.fn.executable(input:match("^%s*@?([%w/%.-]+)")) == 1 then
 			if cmd ~= input and project_path then
 				setprojectCMD(project_path, current_file, ft, input)
 			end
-			if input:find(current_file) then
+			if input:find(current_file, 1, true) then
 				if project_path then
 					setprojectCMD(project_path, current_file, ft, input)
 				else
@@ -165,7 +161,7 @@ function M.cmd_func(type, func)
 			util.Notify("Term requires at least one command to start.", "warn", "oz_term")
 		end
 	else
-        vim.api.nvim_feedkeys(string.format(": %s %s %s", type, shebang, current_file), "n", false)
+		vim.api.nvim_feedkeys(string.format(": %s %s %s", type, shebang, current_file), "n", false)
 	end
 end
 

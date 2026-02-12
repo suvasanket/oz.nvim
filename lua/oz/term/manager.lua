@@ -126,7 +126,7 @@ end
 
 --- run with arg util
 ---@param cmd string
----@param opts {cwd: string, stdin: string}
+---@param opts {cwd: string, stdin: string, hidden: boolean}
 function M.run_with_arg(cmd, opts)
 	if cmd and cmd ~= "" then
 		require("oz.term.executor").run(cmd, opts)

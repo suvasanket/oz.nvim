@@ -1,11 +1,11 @@
 local M = {}
-local manager = require("oz.term.manager")
 
 M.cached_cmd = nil
 M.term_cmd_ft = nil
 
 local function term_cmd_init()
 	local function complete(arg_lead)
+		local manager = require("oz.term.manager")
 		local ids = {}
 		for id, _ in pairs(manager.instances) do
 			local sid = tostring(id)
@@ -17,31 +17,32 @@ local function term_cmd_init()
 	end
 
 	vim.api.nvim_create_user_command("Term", function(args)
-		local opts = {}
+		local opts = { hidden = args.bang }
 		-- args
 		if args.args and #args.args > 0 then
 			M.cached_cmd = args.args
 			M.term_cmd_ft = vim.bo.ft
-			manager.run_with_arg(args.args, opts)
+			require("oz.term.manager").run_with_arg(args.args, opts)
 		else
-			require("oz.term.cmd_assist").cmd_func("Term", function(user_input)
+            local type = args.bang and "Term!" or "Term"
+			require("oz.term.cmd_wizard").cmd_func(type, function(user_input)
 				M.cached_cmd = user_input
 				M.term_cmd_ft = vim.bo.ft
-				manager.run_with_arg(user_input, opts)
+				require("oz.term.manager").run_with_arg(user_input, opts)
 			end)
 		end
 	end, { nargs = "*", bang = true, desc = "oz_term", complete = "shellcmd" })
 
 	vim.api.nvim_create_user_command("TermToggle", function(args)
-		manager.toggle(args.args ~= "" and args.args or nil)
+		require("oz.term.manager").toggle(args.args ~= "" and args.args or nil)
 	end, { nargs = "?", complete = complete, desc = "toggle oz_term" })
 
 	vim.api.nvim_create_user_command("TermClose", function(args)
-		manager.close(args.args ~= "" and args.args or nil)
+		require("oz.term.manager").close(args.args ~= "" and args.args or nil)
 	end, { nargs = "?", complete = complete, desc = "close oz_term" })
 end
 
-function M.Term_init(config)
+function M.Term_init(_)
 	term_cmd_init()
 end
 
@@ -49,12 +50,18 @@ function M.run_in_term(cmd, dir)
 	local opts = { cwd = dir }
 	M.cached_cmd = cmd
 	M.term_cmd_ft = vim.bo.ft
-	manager.run_with_arg(cmd, opts)
+	require("oz.term.manager").run_with_arg(cmd, opts)
 end
 
--- Export manager functions for convenience
-M.toggle_term = manager.toggle
-M.close_term = manager.close
-M.run_with_arg = manager.run_with_arg
+-- Export manager functions for convenience (lazy-loaded)
+M.toggle_term = function(...)
+	return require("oz.term.manager").toggle(...)
+end
+M.close_term = function(...)
+	return require("oz.term.manager").close(...)
+end
+M.run_with_arg = function(...)
+	return require("oz.term.manager").run_with_arg(...)
+end
 
 return M
