@@ -1,18 +1,10 @@
 local M = {}
 
-local mappings = require("oz.mappings")
-
 --- Default configs:
 local defaults = {
-	mappings = {
-		Term = "<leader>ao",
-		TermBang = "<leader>at",
-		Rerun = "<leader>ar",
-	},
-
 	-- Git
 	oz_git = {
-        win_type = "tab",
+        win_type = "botright",
 		mappings = {
 			toggle_pick = "<C-P>",
 			unpick_all = "<C-S-P>",
@@ -25,7 +17,6 @@ local defaults = {
 		mappings = {
 			open_entry = "<cr>",
 			add_to_quickfix = "<C-q>",
-			open_in_compile_mode = "t",
 			rerun = "r",
 			quit = "q",
 			show_keybinds = "g?",
@@ -44,13 +35,6 @@ local defaults = {
 	},
 
 	integration = {
-		-- compile-mode integration
-		compile_mode = {
-			mappings = {
-				open_in_oz_term = "t",
-				show_keybinds = "g?",
-			},
-		},
 		-- oil integration
 		oil = {
 			entry_exec = {
@@ -59,8 +43,6 @@ local defaults = {
 				tail_prefix = ":", -- split LHS RHS
 			},
 			mappings = {
-				term = "<global>",
-				compile = "<global>",
 				entry_exec = "<C-G>",
 				show_keybinds = "g?", -- override existing g?
 			},
@@ -95,11 +77,6 @@ function M.setup(opts)
 	-- Merge user-provided options with defaults
 	opts = opts or {}
 	M.config = vim.tbl_deep_extend("force", defaults, opts)
-
-	-- Initialize mappings
-	vim.schedule(function()
-		M.mappings_init()
-	end)
 
 	-- Initialize oz git
 	if M.config.oz_git then
@@ -145,16 +122,6 @@ function M.setup(opts)
 		end
 	end
 
-	-- Initialize compile-mode integration
-	if M.config.integration.compile_mode then
-		vim.api.nvim_create_autocmd("FileType", {
-			pattern = "compilation",
-			callback = function()
-				require("oz.integration.compile").compile_init(M.config.integration.compile_mode)
-			end,
-		})
-	end
-
 	-- Initialize oil integration
 	if M.config.integration.oil then
 		vim.api.nvim_create_autocmd("FileType", {
@@ -170,24 +137,6 @@ function M.setup(opts)
 		vim.fn.timer_start(800, function()
 			require("oz.qf").cache_efm()
 		end)
-	end
-end
-
-function M.mappings_init()
-	local map_configs = M.config.mappings
-	-- TermBang key
-	if map_configs.TermBang then
-		mappings.termbangkey_init(map_configs.TermBang)
-	end
-
-	-- Term key
-	if map_configs.Term then
-		mappings.termkey_init(map_configs.Term)
-	end
-
-	-- Rerunner
-	if map_configs.Rerun then
-		mappings.rerunner_init(map_configs.Rerun)
 	end
 end
 

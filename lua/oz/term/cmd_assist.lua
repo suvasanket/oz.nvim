@@ -165,7 +165,7 @@ function M.cmd_func(type, func)
 			util.Notify("Term requires at least one command to start.", "warn", "oz_term")
 		end
 	else
-		vim.api.nvim_feedkeys(":" .. type .. " " .. shebang .. " " .. current_file, "n", false)
+        vim.api.nvim_feedkeys(string.format(": %s %s %s", type, shebang, current_file), "n", false)
 	end
 end
 

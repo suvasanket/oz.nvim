@@ -263,7 +263,7 @@ function M.GitStatus()
 	M.state.sections = generate_sections()
 	M.state.in_conflict = is_conflict(M.state.sections)
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
-	local win_type = require("oz.git").user_config.win_type or "tab"
+	local win_type = require("oz.git").user_config.win_type or "botright"
 
 	vim.fn.sign_define("OzGitStatusExpanded", { text = M.icons.expanded, texthl = "ozInactivePrompt" })
 	vim.fn.sign_define("OzGitStatusCollapsed", { text = M.icons.collapsed, texthl = "ozInactivePrompt" })

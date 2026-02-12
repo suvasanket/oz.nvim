@@ -82,9 +82,9 @@ function M.toggle(id)
 		vim.api.nvim_win_close(inst.win, true)
 		inst.win = nil
 	else
-		vim.cmd("botright split | resize 12")
-		vim.api.nvim_set_current_buf(inst.buf)
+		vim.cmd("botright split")
 		inst.win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(inst.win, inst.buf)
 	end
 end
 
@@ -124,8 +124,13 @@ function M.next_id()
 	return id
 end
 
+--- run with arg util
+---@param cmd string
+---@param opts {cwd: string, stdin: string}
 function M.run_with_arg(cmd, opts)
-	require("oz.term.executor").run(cmd, opts)
+	if cmd and cmd ~= "" then
+		require("oz.term.executor").run(cmd, opts)
+	end
 end
 
 return M

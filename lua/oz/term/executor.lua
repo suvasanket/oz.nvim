@@ -110,14 +110,20 @@ local function ft_init(cmd)
 					vim.wo[win].winbar = string.format("$ %s", cmd)
 				end
 				highlight(buf)
+				require("oz.term.keymaps").setup(buf)
 			end)
-
-			require("oz.term.keymaps").setup(buf)
 		end,
 	})
+	return "oz_term"
 end
 
+--- run
+---@param cmd string
+---@param opts {cwd: string, stdin: string}|nil
 function M.run(cmd, opts)
+	if not cmd or cmd == "" then
+		return
+	end
 	opts = opts or {}
 	local target_id = manager.get_target_id()
 	local target_inst = target_id and manager.instances[target_id]
@@ -128,8 +134,6 @@ function M.run(cmd, opts)
 			reuse_win = target_inst.win
 		end
 	end
-
-	ft_init(cmd)
 
 	-- Always create a new instance
 	local id = manager.next_id()
@@ -151,54 +155,67 @@ function M.run(cmd, opts)
 
 	local start_time = (vim.uv or vim.loop).hrtime()
 
-	-- Open split or reuse window and start terminal using standard :term
-	if reuse_win and target_id and target_inst then
-		vim.api.nvim_set_current_win(reuse_win)
-		local old_buf = target_inst.buf
-		manager.instances[target_id] = nil
-		if old_buf and vim.api.nvim_buf_is_valid(old_buf) then
-			vim.schedule(function()
-				pcall(vim.api.nvim_buf_delete, old_buf, { force = true })
-			end)
-		end
-	else
-		vim.cmd("hor 12 new")
-	end
-
-	if opts.cwd then
-		pcall(vim.cmd, "lcd " .. vim.fn.fnameescape(opts.cwd))
-	end
-	vim.cmd("terminal " .. cmd)
-
-	local buf = vim.api.nvim_get_current_buf()
-	local win = vim.api.nvim_get_current_win()
-	local job_id = vim.b[buf].terminal_job_id
-
-	vim.api.nvim_buf_set_name(buf, buf_name)
-	vim.b[buf].oz_cmd = cmd
-	vim.b[buf].oz_cwd = oz_cwd
-	vim.bo[buf].filetype = "oz_term"
-
-	-- Listen for OSC 7 directory changes
-	vim.api.nvim_create_autocmd("TermRequest", {
-		buffer = buf,
-		callback = function(ev)
-			local val, n = string.gsub(ev.data.sequence, "\027]7;file://[^/]*", "")
-			if n > 0 then
-				local dir = val
-				if vim.fn.isdirectory(dir) ~= 0 then
-					vim.b[ev.buf].oz_cwd = dir
+	-- create a new window
+	require("oz.util.win").create_win("oz_term", {
+		win_type = "botright",
+		reuse = reuse_win ~= nil,
+		content = {},
+		callback = function(buf_id, win_id)
+			if reuse_win and target_id and target_inst then
+				local old_buf = target_inst.buf
+				manager.instances[target_id] = nil
+				if old_buf and vim.api.nvim_buf_is_valid(old_buf) then
+					vim.schedule(function()
+						pcall(vim.api.nvim_buf_delete, old_buf, { force = true })
+					end)
 				end
 			end
+
+			vim.api.nvim_win_call(win_id, function()
+				if opts.cwd then
+					pcall(vim.cmd, "lcd " .. vim.fn.fnameescape(opts.cwd))
+				end
+				vim.cmd("terminal " .. cmd)
+
+				local buf = vim.api.nvim_get_current_buf()
+				local job_id = vim.b[buf].terminal_job_id
+
+				vim.api.nvim_buf_set_name(buf, buf_name)
+				vim.b[buf].oz_cmd = cmd
+				vim.b[buf].oz_cwd = oz_cwd
+				vim.bo[buf].filetype = ft_init(cmd)
+
+				-- Listen for OSC 7 directory changes
+				vim.api.nvim_create_autocmd("TermRequest", {
+					buffer = buf,
+					callback = function(ev)
+						local val, n = string.gsub(ev.data.sequence, "\027]7;file://[^/]*", "")
+						if n > 0 then
+							local dir = val
+							if vim.fn.isdirectory(dir) ~= 0 then
+								vim.b[ev.buf].oz_cwd = dir
+							end
+						end
+					end,
+				})
+
+				manager.register_instance(id, {
+					buf = buf,
+					win = win_id,
+					job_id = job_id,
+					job_active = true,
+				})
+
+				-- Delete scratch buffer
+				if buf ~= buf_id then
+					pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
+				end
+			end)
 		end,
 	})
 
-	manager.register_instance(id, {
-		buf = buf,
-		win = win,
-		job_id = job_id,
-		job_active = true,
-	})
+	local buf = vim.api.nvim_get_current_buf()
+	local job_id = vim.b[buf].terminal_job_id
 
 	-- Update job status when terminal finishes
 	vim.api.nvim_create_autocmd("TermClose", {

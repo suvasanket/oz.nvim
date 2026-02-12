@@ -23,6 +23,12 @@ local function term_cmd_init()
 			M.cached_cmd = args.args
 			M.term_cmd_ft = vim.bo.ft
 			manager.run_with_arg(args.args, opts)
+		else
+			require("oz.term.cmd_assist").cmd_func("Term", function(user_input)
+				M.cached_cmd = user_input
+				M.term_cmd_ft = vim.bo.ft
+				manager.run_with_arg(user_input, opts)
+			end)
 		end
 	end, { nargs = "*", bang = true, desc = "oz_term", complete = "shellcmd" })
 

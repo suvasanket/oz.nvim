@@ -72,7 +72,8 @@ local function oil_buf_mappings(config, g_mappings)
 
 	util.Map("n", config.mappings.entry_exec, function()
 		local oil_cwd = oil.get_current_dir()
-		local input = util.UserInput("Command:")
+		local input = util.UserInput("Command:", nil, "shellcmd")
+
 		if input and input ~= "" then
 			local cmd = config.entry_exec.use_fullpath
 					and split_input(input, get_cur_entry(), config.entry_exec.tail_prefix)

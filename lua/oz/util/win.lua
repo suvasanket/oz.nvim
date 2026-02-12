@@ -28,9 +28,11 @@ local function create_win_util(opts)
 		vim.api.nvim_buf_delete(temp_buf, { force = true })
 	end
 
-	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, opts.content)
+	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, opts.content or {})
 
-	opts.callback(buf_id, win_id)
+	if opts.callback then
+		opts.callback(buf_id, win_id)
+	end
 	vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
 
 	return win_id, buf_id
@@ -39,39 +41,60 @@ end
 --- create win
 ---@param unique_id string
 ---@param opts {buf_name: string, content: table, reuse: boolean, win_type: string, callback: function}
+---@return integer win_id
+---@return integer buf_id
 function M.create_win(unique_id, opts)
 	local win_buf_id = unique_ids[unique_id]
 	local reuse = opts.reuse
 
-	-- if not reuse then remove the buffer
+	-- if not reuse then remove the buffer only if it's not visible
 	if not reuse and win_buf_id then
 		if vim.api.nvim_buf_is_valid(win_buf_id.buf_id) then
-			vim.api.nvim_buf_delete(win_buf_id.buf_id, { force = true })
+			local wins = vim.fn.win_findbuf(win_buf_id.buf_id)
+			if #wins == 0 then
+				vim.api.nvim_buf_delete(win_buf_id.buf_id, { force = true })
+			end
 		end
 	end
 
 	-- if win_buf_id exist then re-use that else create one
 	if reuse and win_buf_id then
 		local win_id = win_buf_id.win_id
-		local buf_id = win_buf_id.buf_id
-		if vim.api.nvim_win_is_valid(win_id) or vim.api.nvim_buf_is_valid(buf_id) then
-			if opts.content then
-				vim.api.nvim_set_current_win(win_id)
+		if vim.api.nvim_win_is_valid(win_id) then
+			vim.api.nvim_set_current_win(win_id)
+			local buf_id = vim.api.nvim_win_get_buf(win_id)
+			if opts.content and vim.api.nvim_buf_is_valid(buf_id) then
 				vim.api.nvim_buf_set_option(buf_id, "modifiable", true)
 				vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, opts.content)
 				vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
 			end
+
+			if opts.callback then
+				opts.callback(buf_id, win_id)
+			end
+
+			-- The callback might have changed the buffer (e.g. terminal)
+			local actual_buf = vim.api.nvim_win_get_buf(win_id)
+			unique_ids[unique_id] = { win_id = win_id, buf_id = actual_buf }
+
+			return win_id, actual_buf
 		end
-	else
-		local win, buf = create_win_util(opts)
-		vim.api.nvim_create_autocmd({ "BufDelete", "BufHidden" }, {
-			buffer = buf,
-			callback = function()
-				unique_ids[unique_id] = nil
-			end,
-		})
-		unique_ids[unique_id] = { win_id = win, buf_id = buf }
 	end
+
+	local win, buf = create_win_util(opts)
+	-- Re-fetch buffer in case callback changed it
+	local actual_buf = vim.api.nvim_win_get_buf(win)
+
+	vim.api.nvim_create_autocmd("WinClosed", {
+		pattern = tostring(win),
+		callback = function()
+			if unique_ids[unique_id] and unique_ids[unique_id].win_id == win then
+				unique_ids[unique_id] = nil
+			end
+		end,
+	})
+	unique_ids[unique_id] = { win_id = win, buf_id = actual_buf }
+	return win, actual_buf
 end
 
 --- Create a floating window
