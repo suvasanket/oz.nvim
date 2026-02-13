@@ -5,7 +5,7 @@ local function open_entry(file)
 	if not util.is_readable(file, {}) then
 		return false
 	end
-	vim.cmd.wincmd("k")
+	vim.cmd.wincmd("t")
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
 	return true
 end

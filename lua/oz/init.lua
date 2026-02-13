@@ -1,10 +1,11 @@
 local M = {}
 
---- Default configs:
+--- You should not touch the config ever ---
+--- Default config ---
 local defaults = {
 	-- Git
 	oz_git = {
-        win_type = "botright",
+		win_type = "botright",
 		mappings = {
 			toggle_pick = "<C-P>",
 			unpick_all = "<C-S-P>",
@@ -13,20 +14,17 @@ local defaults = {
 
 	-- all oz_term options
 	oz_term = {
-		bufhidden_behaviour = "prompt", -- |prompt, hide, quit|
-		mappings = {
-			open_entry = "<cr>",
-			add_to_quickfix = "<C-q>",
-			rerun = "r",
-			quit = "q",
-			show_keybinds = "g?",
-		},
+		efm = { "%f:%l:%c: %m" },
+		root_prefix = "@",
 	},
 
 	-- Make
 	oz_make = {
 		override_make = false, -- override the default :make
 		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
+		efm = {
+			-- python = "%f:%l:%c: %m",
+		},
 	},
 
 	-- Grep
@@ -47,11 +45,6 @@ local defaults = {
 				show_keybinds = "g?", -- override existing g?
 			},
 		},
-	},
-
-	-- error_formats :help errorformat
-	efm = {
-		cache_efm = true,
 	},
 }
 
@@ -130,13 +123,6 @@ function M.setup(opts)
 				require("oz.integration.oil").oil_init(M.config.integration.oil, M.config.mappings)
 			end,
 		})
-	end
-
-	-- Initialize cache_efm
-	if M.config.efm.cache_efm then
-		vim.fn.timer_start(800, function()
-			require("oz.qf").cache_efm()
-		end)
 	end
 end
 

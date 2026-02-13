@@ -1,7 +1,7 @@
 local M = {}
 local util = require("oz.util")
 local arg_parser = require("oz.util.parse_args")
-local qf = require("oz.qf")
+local efm = require("oz.make.efm")
 local cache = require("oz.caching")
 local win = require("oz.util.win")
 local progress = require("oz.util.progress")
@@ -106,8 +106,11 @@ local function get_build_command(project_root)
 end
 
 -- make err win buffer mappings
-local function make_err_buf_mappings(buf_id)
-	util.Map("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "close" })
+local function make_err_buf_mappings(buf_id, cmd, dir)
+	util.Map("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "Close" })
+	util.Map("n", "t", function()
+		require("oz.term").run_in_term(cmd, dir)
+	end, { buffer = buf_id, desc = "Run in term" })
 	util.Map("n", "<cr>", function()
 		-- jump to file
 		local ok = pcall(vim.cmd, "normal! gF")
@@ -120,18 +123,23 @@ local function make_err_buf_mappings(buf_id)
 			if entry_buf == buf_id then
 				return
 			end
-			vim.cmd.wincmd("k")
+			vim.cmd.wincmd("t")
 			vim.api.nvim_set_current_buf(entry_buf)
 
 			pcall(vim.api.nvim_win_set_cursor, 0, pos)
 		else
 			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<cr>", true, false, true), "n", false)
 		end
-	end, { buffer = buf_id, desc = "open the entry." })
+	end, { buffer = buf_id, desc = "Open the entry." })
+
+	-- Help
+	vim.keymap.set("n", "g?", function()
+		require("oz.util.help_keymaps").show_maps({})
+	end, { buffer = buf_id, desc = "Show all available keymaps" })
 end
 
 -- show err in a wind
-local function make_err_win(lines)
+local function make_err_win(lines, cmd, dir)
 	win.create_win("make_err", {
 		content = lines,
 		win_type = "bot 7",
@@ -150,7 +158,7 @@ local function make_err_win(lines)
 
 			-- mappings
 			vim.fn.timer_start(100, function()
-				make_err_buf_mappings(buf_id)
+				make_err_buf_mappings(buf_id, cmd, dir)
 			end)
 		end,
 	})
@@ -165,23 +173,27 @@ local function inside_dir(dir)
 end
 
 function M.Make_func(arg_str, dir)
+	dir = dir or vim.fn.getcwd()
 	local cmd_tbl = arg_parser.parse_args(arg_str)
-	-- local make_cmd = m_util.detect_makeprg(vim.fn.expand("%"))
 	local make_cmd = vim.o.makeprg
 	if make_cmd == "make" then
-		local detected_cmd = get_build_command(util.GetProjectRoot())
+		local detected_cmd = get_build_command(dir or util.GetProjectRoot())
 		if detected_cmd and make_cmd ~= detected_cmd then
-			-- vim.o.makeprg = detected_cmd
 			make_cmd = detected_cmd
 		end
 	end
 
-	table.insert(cmd_tbl, 1, make_cmd)
+	local make_cmd_tbl = arg_parser.parse_args(make_cmd)
+	for i = #make_cmd_tbl, 1, -1 do
+		table.insert(cmd_tbl, 1, make_cmd_tbl[i])
+	end
 
 	local output = {}
+	local current_efm = vim.bo.errorformat
+	local current_ft = vim.bo.ft
 
 	-- progress stuff
-	local pro_title = table.concat(cmd_tbl, "")
+	local pro_title = table.concat(cmd_tbl, " ")
 	local u_id = util.generate_unique_id()
 	progress.start_progress(u_id, { title = pro_title, fidget_lsp = "oz_make" })
 
@@ -213,7 +225,7 @@ function M.Make_func(arg_str, dir)
 				message = { "Build completed successfully", "Error occured while building" },
 			})
 
-			qf.capture_lines_to_qf(output, vim.bo.ft, true)
+			efm.capture_lines_to_qf(output, current_ft, M.config.efm, true, current_efm, dir)
 
 			if all_contains("warning") or all_contains("warn") then
 				util.echoprint("Warning found: do :copen to see", "healthWarning")
@@ -227,7 +239,7 @@ function M.Make_func(arg_str, dir)
 				if exit_code ~= 0 then
 					util.Notify("Consult :help efm, then set error format.", "warn", "oz_make")
 					if #output > 0 then
-						make_err_win(output)
+						make_err_win(output, pro_title, dir)
 					end
 				end
 			end
@@ -235,7 +247,11 @@ function M.Make_func(arg_str, dir)
 	})
 
 	if not ok or job_id <= 0 then
-		util.Notify("Cannot execute make cmd", "error", "oz_make")
+		util.Notify("Cannot create the job", "error", "oz_make")
+		progress.stop_progress(u_id, {
+			title = pro_title,
+			message = { "Build completed successfully", "Error occured while building" },
+		})
 		return
 	end
 end
@@ -281,6 +297,7 @@ function M.makeprg_autosave()
 end
 
 function M.oz_make_init(config)
+	M.config = config
 	-- Make cmd
 	vim.api.nvim_create_user_command("Make", function(arg)
 		-- run make in cwd
