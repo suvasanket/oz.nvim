@@ -146,6 +146,11 @@ function M.setup(buf)
 			require("oz.term.executor").run(cmd)
 		end
 	end, { buffer = buf, silent = true, desc = "Rerun command" })
+
+	-- Help
+	vim.keymap.set("n", "g?", function()
+		require("oz.util.help_keymaps").show_maps({})
+	end, { buffer = buf, desc = "Show all available keymaps" })
 end
 
 return M

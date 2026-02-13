@@ -223,7 +223,7 @@ function M.run(cmd, opts)
 		terminal_buf = vim.api.nvim_create_buf(false, true)
 		setup_terminal(terminal_buf, nil)
 	else
-		-- create a new window
+		-- create a new window or reuse existing
 		require("oz.util.win").create_win("oz_term", {
 			win_type = "botright",
 			reuse = reuse_win ~= nil,
@@ -239,11 +239,17 @@ function M.run(cmd, opts)
 					end
 				end
 
-				terminal_buf = vim.api.nvim_get_current_buf()
+				if reuse_win then
+					terminal_buf = vim.api.nvim_create_buf(false, true)
+					vim.api.nvim_win_set_buf(win_id, terminal_buf)
+				else
+					terminal_buf = vim.api.nvim_get_current_buf()
+				end
+
 				setup_terminal(terminal_buf, win_id)
 
-				-- Delete scratch buffer
-				if terminal_buf ~= buf_id then
+				-- Delete scratch buffer created by create_win if it's different
+				if terminal_buf ~= buf_id and vim.api.nvim_buf_is_valid(buf_id) then
 					pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
 				end
 			end,
