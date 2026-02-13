@@ -1,0 +1,110 @@
+*oz_git.txt*  Git integration for oz-nvim.
+
+==============================================================================
+INTRODUCTION                                                *oz-git-intro*
+
+The Git module of oz-nvim provides a powerful and intuitive interface for
+managing your Git repositories within Neovim. It includes a comprehensive
+status window, commit logs, blame, browsing, and more.
+
+==============================================================================
+COMMANDS                                                    *oz-git-commands*
+
+:Git [args]                                                 *:Git*
+:G [args]                                                   *:G*
+    The primary Git command. When called without arguments, it opens the
+    |oz-git-status| window.
+    When called with arguments, it executes the corresponding git command.
+    Special features:
+    - Command wizard for common mistakes (e.g., missing upstream).
+    - `:Git grep`: Runs git grep and populates the quickfix list.
+    - `:Git help <cmd>`: Opens the git man page for <cmd>.
+    - Progressive output for remote commands like `push`, `pull`, `fetch`.
+
+:GitLog [args]                                              *:GitLog*
+    Opens the |oz-git-log| window. Optional arguments are passed to `git log`.
+
+:Gread [range]                                              *:Gread*
+:Gr [range]                                                 *:Gr*
+    Undoes unstaged changes. If a [range] is provided, only that range is
+    restored.
+
+:Gwrite [file]                                              *:Gwrite*
+:Gw [file]                                                  *:Gw*
+    Stages the current file or [file]. If a range is selected, stages only
+    that range. If [file] is different from current file, performs `git mv`.
+
+:GBrowse [path]                                             *:GBrowse*
+    Opens the current file or [path] in your remote repository's web interface
+    (e.g., GitHub, GitLab).
+
+:GBlame [file]                                              *:GBlame*
+    Opens a blame buffer for the current file or [file].
+
+:Gcw [message]                                              *:Gcw*
+:GitCommitWip [message]                                     *:Gcw*
+    Creates a Work-In-Progress (WIP) commit. If the last commit was also a
+    WIP, it amends it.
+
+==============================================================================
+GIT STATUS WINDOW                                           *oz-git-status*
+
+Opened via `:Git` or `:G`. This window provides an overview of your repository's
+current state, organized into sections (Staged, Unstaged, Untracked, Stashes).
+Inspired by Magit.
+
+Keymaps:
+    <Enter>     Open file under cursor.
+    s           Stage file or selection.
+    u           Unstage file or selection.
+    X           Discard changes in file or selection.
+    K           Untrack file.
+    R           Rename file.
+    c           Open Commit menu.
+    d           Open Diff menu.
+    b           Open Branch menu.
+    P           Open Push menu.
+    p           Open Pull menu.
+    f           Open Fetch menu.
+    Z           Open Stash menu.
+    r           Open Reset menu.
+    m           Open Merge menu.
+    gl          Open full commit log (|oz-git-log|).
+    gL          Open log for object under cursor.
+    x           Open Conflict menu (unlocks on conflict).
+    g?          Show all available keymaps.
+
+==============================================================================
+GIT LOG WINDOW                                              *oz-git-log*
+
+Opened via `:GitLog` or `gl` from the status buffer. Displays a list of
+commits with their hashes, authors, and messages.
+
+Keymaps:
+    <Enter>     Show commit details.
+    c           Open Commit Actions menu (squash, fixup, extend, amend).
+    d           Open Diff Actions menu (diff vs commit, working, branch, stash).
+    r           Open Rebase menu.
+    R           Open Reset menu.
+    a           Open Cherry-pick menu.
+    v           Open Revert menu.
+    g?          Show all available keymaps.
+
+==============================================================================
+CONFIGURATION                                               *oz-git-config*
+
+The Git module can be configured via the `oz_git` table in `setup()`:
+
+>lua
+    oz_git = {
+        -- Window type for status and log buffers.
+        -- Supported: "tab", "hor", "vert", "botright" (default)
+        win_type = "botright",
+        mappings = {
+            toggle_pick = "<C-P>", -- key to pick/unpick in status/log
+            unpick_all = "<C-S-P>",
+        },
+    }
+<
+
+vim:tw=78:ts=8:noet:ft=help:norl:

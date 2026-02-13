@@ -1,0 +1,69 @@
+*oz_term.txt*  Enhanced terminal management for oz-nvim.
+
+==============================================================================
+INTRODUCTION                                                *oz-term-intro*
+
+The Term module of oz-nvim provides an enhanced terminal interface for
+executing shell commands. It features interactive command history, context-aware
+suggestions, and deep integration with Neovim's quickfix list.
+
+==============================================================================
+COMMANDS                                                    *oz-term-commands*
+
+:Term [args]                                                *:Term*
+:Term! [args]                                               *:Term!*
+    Executes [args] in a new oz-term buffer.
+    - If no [args] are provided, it opens a command wizard for selection.
+    - Using `!` runs the command in the background (hidden).
+    - Supports command-line completion for shell commands.
+    - Commands starting with `@` (e.g., `:Term @make`) are executed from the
+      project root.
+
+:TermToggle [id]                                            *:TermToggle*
+    Toggles the visibility of the oz-term buffer with the given [id].
+    If no [id] is provided, it toggles the most recent terminal.
+
+:TermClose [id]                                             *:TermClose*
+    Closes the oz-term buffer with the given [id] and kills the associated job.
+    If no [id] is provided, it closes the current or most recent terminal.
+
+==============================================================================
+KEYMAPS                                                     *oz-term-keymaps*
+
+In an oz-term buffer, the following keymaps are available by default:
+
+    <Enter>     Jump to the file/line under the cursor. Supports various
+                error formats and also opens URLs.
+    <C-q>       Grab all locations (errors, warnings, etc.) from the terminal
+                output and populate the quickfix list.
+    q           Close the terminal buffer. Prompts for confirmation if a job
+                is still active.
+    r           Rerun the command that was executed in this buffer.
+
+Global mappings (must be configured in |oz-nvim-setup|):
+    Term        Open a prompt to execute a shell command.
+    TermBang    Open a prompt to execute a shell command in the background.
+    Rerun       Re-execute the previous command.
+
+==============================================================================
+CONFIGURATION                                               *oz-term-config*
+
+The Term module can be configured via the `oz_term` table in `setup()`:
+
+>lua
+    oz_term = {
+        -- Behavior when terminal buffer is hidden
+        -- Supported: "prompt", "hide", "quit"
+        bufhidden_behaviour = "prompt",
+
+        mappings = {
+            open_entry = "<cr>",
+            add_to_quickfix = "<C-q>",
+            rerun = "r",
+            quit = "q",
+            show_keybinds = "g?",
+        },
+    }
+<
+
+vim:tw=78:ts=8:noet:ft=help:norl:

@@ -1,1 +1,126 @@
- vim:tw=78:ts=8:noet:ft=help:norl:
+*oz-nvim.txt*  A comprehensive Neovim plugin for Git, Terminal, and more.
+
+==============================================================================
+INTRODUCTION                                                *oz-nvim-intro*
+
+oz-nvim is a modular Neovim plugin designed to enhance your workflow by
+integrating Git, Terminal management, and common build tools directly into
+your editor.
+
+The plugin is structured into several modules:
+
+- Git: Comprehensive Git integration (status, log, blame, browse, etc.)
+- Term: Enhanced terminal management.
+- Make: Improved :make command with autosave and custom output.
+- Grep: Enhanced :grep command with quickfix integration.
+- Oil: Integration with oil.nvim.
+
+==============================================================================
+CONTENTS                                                    *oz-nvim-contents*
+
+1. Introduction.............................................|oz-nvim-intro|
+2. Installation.............................................|oz-nvim-install|
+3. Setup & Configuration....................................|oz-nvim-setup|
+4. Modules..................................................|oz-nvim-modules|
+   - Git....................................................|oz-git|
+   - Term...................................................|oz-term|
+   - Make...................................................|oz-make|
+   - Grep...................................................|oz-grep|
+   - Oil Integration........................................|oz-oil|
+5. Credits..................................................|oz-nvim-credits|
+
+==============================================================================
+INSTALLATION                                                *oz-nvim-install*
+
+Using |lazy.nvim|:
+>lua
+    {
+        'suvasanketrout/oz-nvim',
+        dependencies = { 'stevearc/oil.nvim' }, -- optional for oil integration
+        config = function()
+            require('oz').setup({
+                -- configuration goes here
+            })
+        end
+    }
+<
+==============================================================================
+SETUP & CONFIGURATION                                       *oz-nvim-setup*
+
+The plugin is initialized by calling `require('oz').setup(opts)`.
+
+Default configuration:
+>lua
+    local defaults = {
+        -- Git configuration
+        oz_git = {
+            win_type = "botright",
+            mappings = {
+                toggle_pick = "<C-P>",
+                unpick_all = "<C-S-P>",
+            },
+        },
+
+        -- Terminal configuration
+        oz_term = {
+            efm = {},
+        },
+
+        -- Make configuration
+        oz_make = {
+            override_make = false,    -- override the default :make
+            autosave_makeprg = true,  -- auto save project scoped makeprg
+        },
+
+        -- Grep configuration
+        oz_grep = {
+            override_grep = true,     -- override the default :grep
+        },
+
+        -- Integrations
+        integration = {
+            oil = {
+                entry_exec = {
+                    method = "term",       -- |background, term|
+                    use_fullpath = true,   -- false: only file or dir name
+                    tail_prefix = ":",     -- split LHS RHS
+                },
+                mappings = {
+                    entry_exec = "<C-G>",
+                    show_keybinds = "g?",  -- override existing g?
+                },
+            },
+        },
+
+        -- Error formats
+        efm = {
+            cache_efm = true,
+        },
+    }
+<
+==============================================================================
+MODULES                                                     *oz-nvim-modules*
+
+The plugin consists of the following modules, each documented in its own file:
+
+GIT                                                         *oz-git*
+Comprehensive Git integration. See |oz_git.txt| for details.
+
+TERM                                                        *oz-term*
+Enhanced terminal management. See |oz_term.txt| for details.
+
+MAKE                                                        *oz-make*
+Improved make integration. See |oz_make.txt| for details.
+
+GREP                                                        *oz-grep*
+Enhanced grep integration. See |oz_grep.txt| for details.
+
+OIL                                                         *oz-oil*
+Integration with oil.nvim. See |oz_oil.txt| for details.
+
+==============================================================================
+CREDITS                                                     *oz-nvim-credits*
+
+Developed by Suva Sanket Rout.
+
+vim:tw=78:ts=8:noet:ft=help:norl:

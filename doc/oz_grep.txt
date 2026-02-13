@@ -1,0 +1,48 @@
+*oz_grep.txt*  Enhanced grep integration for oz-nvim.
+
+==============================================================================
+INTRODUCTION                                                *oz-grep-intro*
+
+The Grep module of oz-nvim provides an asynchronous interface for searching
+text within your project. It automatically uses `rg` (ripgrep) if available,
+falling back to `grep`.
+
+==============================================================================
+COMMANDS                                                    *oz-grep-commands*
+
+:Grep [args]                                                *:Grep*
+:Grep! [args]                                               *:Grep!*
+    Asynchronously searches for a pattern.
+    - By default, searches from the project root.
+    - Using `!` explicitly searches in the current working directory.
+    - If a range is visually selected, `:Grep` searches for the selection.
+    - Supports relative paths and Vim filename modifiers (e.g., `%`).
+    - All results are added to the quickfix list.
+
+    Examples:
+    - :'<,'>Grep: searches for the selection in the whole project.
+    - `:Grep my_function`: Search for "my_function" in the project.
+    - `:Grep! "TODO" .`: Search for "TODO" in the current directory.
+    - `:Grep "pattern" %:h`: Search in the directory of the current file.
+
+==============================================================================
+CONFIGURATION                                               *oz-grep-config*
+
+The Grep module can be configured via the `oz_grep` table in `setup()`:
+
+>lua
+    oz_grep = {
+        -- If true, redirects the default :grep to :Grep
+        override_grep = true,
+    }
+<
+
+The program used for searching is determined by the `grepprg` option.
+If `grepprg` is not set, oz-nvim will prefer `rg` over `grep`.
+
+Example to use ripgrep with specific flags:
+>lua
+    vim.o.grepprg = "rg --vimgrep -u -S"
+<
+
+vim:tw=78:ts=8:noet:ft=help:norl:

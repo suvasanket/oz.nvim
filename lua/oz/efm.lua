@@ -1,5 +1,5 @@
 local M = {}
-local p = require("oz.caching")
+local cache = require("oz.caching")
 local ft_efm_json = "ft_efm"
 
 -- efm patterns
@@ -35,7 +35,7 @@ local language_patterns = {
 ---@param filetype string
 ---@return table
 local function parse_lines(lines, filetype)
-	local cached_efm = p.get_data(filetype, ft_efm_json)
+	local cached_efm = cache.get_data(filetype, ft_efm_json)
 	if cached_efm or custom_error_formats[filetype] then
 		local efm_format = cached_efm or custom_error_formats[filetype]
 		local opts = { lines = lines, efm = efm_format }
@@ -116,7 +116,7 @@ function M.cache_efm()
 			local errorformat = vim.o.errorformat
 			local ft = vim.bo.ft
 			if ft then
-				p.set_data(ft, errorformat, ft_efm_json)
+				cache.set_data(ft, errorformat, ft_efm_json)
 			end
 		end,
 	})
