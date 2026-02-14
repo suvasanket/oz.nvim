@@ -1,12 +1,22 @@
 local M = {}
 local util = require("oz.term.util")
 
-local function open_entry(file)
+local function open_entry(file, oz_cwd, lnum, col)
+	if not (file:match("^/") or file:match("^%a:")) then
+		file = oz_cwd .. "/" .. file
+	end
 	if not util.is_readable(file, {}) then
 		return false
 	end
 	vim.cmd.wincmd("t")
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
+
+	if lnum or col then
+		local target_lnum = lnum and lnum > 0 and lnum or 1
+		local target_col = col and col > 0 and col or 1
+		vim.api.nvim_win_set_cursor(0, { target_lnum, target_col - 1 })
+	end
+
 	return true
 end
 
@@ -34,18 +44,12 @@ local function try_jump_file(buf, line)
 		return false
 	end
 
-	if not (filename:match("^/") or filename:match("^%a:")) then
-		filename = oz_cwd .. "/" .. filename
-	end
-
-	if not open_entry(filename) then
+	local valid_path = util.find_valid_path(filename, oz_cwd)
+	if not valid_path then
 		return false
 	end
 
-	local lnum = entry.lnum > 0 and entry.lnum or 1
-	local col = entry.col > 0 and entry.col or 1
-	vim.api.nvim_win_set_cursor(0, { lnum, col - 1 })
-	return true
+	return open_entry(valid_path, oz_cwd, entry.lnum, entry.col)
 end
 
 local function try_open_url(line)
@@ -62,9 +66,15 @@ local function try_open_url(line)
 	return true
 end
 
-local function try_cword()
+local function try_cword(buf)
+	local oz_cwd = util.get_oz_cwd(buf)
 	local file = vim.fn.expand("<cfile>")
-	if not file or not open_entry(file) then
+	if not file then
+		return false
+	end
+
+	local valid_path = util.find_valid_path(file, oz_cwd)
+	if not valid_path or not open_entry(valid_path, oz_cwd) then
 		return false
 	end
 	return true
@@ -82,7 +92,6 @@ local function grab_to_qf(buf)
 	end
 
 	local items = {}
-	local readable_cache = {}
 	for _, item in ipairs(qf.items or {}) do
 		if item.valid == 1 then
 			local filename = item.filename
@@ -91,13 +100,9 @@ local function grab_to_qf(buf)
 			end
 
 			if filename and filename ~= "" then
-				local full_path = filename
-				if not (full_path:match("^/") or full_path:match("^%a:")) then
-					full_path = oz_cwd .. "/" .. full_path
-				end
-
-				if util.is_readable(full_path, readable_cache) then
-					item.filename = full_path
+				local valid_path = util.find_valid_path(filename, oz_cwd)
+				if valid_path then
+					item.bufnr = vim.fn.bufnr(valid_path)
 					table.insert(items, item)
 				end
 			end
@@ -108,14 +113,14 @@ local function grab_to_qf(buf)
 		vim.fn.setqflist(items, "r")
 		vim.cmd("copen")
 	else
-		vim.notify("No valid locations found in terminal output.", vim.log.levels.INFO)
+		vim.notify("No valid locations found in stdout.", vim.log.levels.INFO)
 	end
 end
 
 function M.setup(buf)
 	vim.keymap.set("n", "<CR>", function()
 		local line = vim.api.nvim_get_current_line()
-		if try_jump_file(buf, line) or try_cword() or try_open_url(line) then
+		if try_jump_file(buf, line) or try_cword(buf) or try_open_url(line) then
 			return
 		end
 		vim.notify("No entry found under cursor.", vim.log.levels.INFO)

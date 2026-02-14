@@ -159,7 +159,13 @@ function M.run(cmd, opts)
 	-- Always create a new instance
 	local id = manager.next_id()
 	local buf_name = "oz_term://" .. id
-	local start_cwd = opts.cwd or (vim.uv or vim.loop).cwd()
+	local start_cwd = opts.cwd or vim.fn.getcwd()
+	if not (start_cwd:match("^/") or start_cwd:match("^%a:")) then
+		start_cwd = vim.fn.fnamemodify(start_cwd, ":p")
+	end
+	if start_cwd:sub(-1) == "/" or start_cwd:sub(-1) == "\\" then
+		start_cwd = start_cwd:sub(1, -2)
+	end
 	local oz_cwd = start_cwd
 
 	-- Handle "cd path && cmd" or "cd path; cmd"
@@ -181,7 +187,7 @@ function M.run(cmd, opts)
 	local function setup_terminal(buf, win_id)
 		vim.api.nvim_buf_call(buf, function()
 			if opts.cwd then
-				pcall(vim.cmd, "lcd " .. vim.fn.fnameescape(opts.cwd))
+				pcall(vim.cmd, "lcd " .. vim.fn.fnameescape(start_cwd))
 			end
 
 			if win_id then
