@@ -168,7 +168,8 @@ end
 ---@param content string
 ---@param level string|nil
 ---@param title string|nil
-function M.Notify(content, level, title)
+---@param once boolean|nil
+function M.Notify(content, level, title, once)
 	title = title or "Info"
 
 	local level_map = {
@@ -179,7 +180,11 @@ function M.Notify(content, level, title)
 		trace = vim.log.levels.TRACE,
 	}
 	level = level_map[level] or vim.log.levels.INFO
-	vim.notify(content, level, { title = title })
+    if once then
+        vim.notify_once(content, level, { title = title })
+    else
+        vim.notify(content, level, { title = title })
+    end
 end
 
 --- prompt

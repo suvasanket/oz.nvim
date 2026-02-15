@@ -148,7 +148,8 @@ local function handle_gread(opts)
 			if ok then
 				util.Notify("Restored lines " .. opts.line1 .. "-" .. opts.line2, "info", "oz_git")
 			else
-				util.Notify("Failed to restore lines: " .. (err or "unknown"), "error", "oz_git")
+				-- util.Notify("Failed to restore lines: " .. (err or "unknown"), "error", "oz_git")
+				util.Notify("[[WIP :(]] err: " .. (err or "unknown"), "error", "oz_git")
 			end
 			return
 		end

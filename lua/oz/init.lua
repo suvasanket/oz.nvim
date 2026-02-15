@@ -25,6 +25,10 @@ local defaults = {
 		efm = {
 			-- python = "%f:%l:%c: %m",
 		},
+		transient_mappings = {
+			kill_job = "<C-x>",
+			toggle_output = "<C-d>",
+		},
 	},
 
 	-- Grep
