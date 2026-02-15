@@ -22,9 +22,6 @@ local defaults = {
 	oz_make = {
 		override_make = false, -- override the default :make
 		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
-		efm = {
-			-- python = "%f:%l:%c: %m",
-		},
 		transient_mappings = {
 			kill_job = "<C-x>",
 			toggle_output = "<C-d>",

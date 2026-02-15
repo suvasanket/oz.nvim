@@ -1,8 +1,6 @@
 local M = {}
 local util = require("oz.util")
 
-M.previous_makeprg = vim.o.makeprg
-
 function M.oz_make_init(config)
 	M.config = config
 
@@ -42,7 +40,7 @@ function M.oz_make_init(config)
 
 	-- auto save makeprg
 	if config.autosave_makeprg then
-		require("oz.make.auto").makeprg_autosave(M.previous_makeprg)
+		require("oz.make.auto").makeprg_autosave()
 	end
 end
 

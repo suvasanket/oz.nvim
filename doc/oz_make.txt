@@ -16,11 +16,16 @@ COMMANDS                                                    *oz-make-commands*
     - By default, runs from the project root.
     - Using `!` runs from the current working directory.
     - Automatically detects build systems (Makefile, Cargo, npm, etc.) if
-      `makeprg` is set to the default "make".
+      local makeprg is empty.
     - Populates the quickfix list with errors and warnings.
+    - If a build fails (non-zero exit code) and no quickfix entries are
+      found, the output window is displayed.
+
+:MakeKill                                                   *:MakeKill*
+    Kills the currently running `:Make` job.
 
 :AutoMake [action]                                          *:AutoMake*
-    Automatically runs `:Make` when files are saved.
+    Toggles an automatic `:Make` execution when files are saved.
     Actions:
     - `file`: Watches the current file only.
     - `filetype`: Watches all files of the current filetype.
@@ -30,30 +35,58 @@ COMMANDS                                                    *oz-make-commands*
 ==============================================================================
 KEYMAPS                                                     *oz-make-keymaps*
 
-When a build fails and an error window is opened, the following keymaps
-are available:
+Transient Keymaps                                           *oz-make-transient*
+-----------------
+While a build job is running, these keys are available globally to manage
+the active process. They are automatically cleared once the build finishes.
 
-    <Enter>     Jump to the file and line associated with the error.
-    q           Close the error window.
+    <C-x>       Kill the currently running build job.
+    <C-d>       Toggle the build output window to see progress in real-time.
+
+Output Window Keymaps                                       *oz-make-out-win*
+---------------------
+When the build output window (`makeout_win`) is opened, the following
+keymaps are available within that buffer:
+
+    <Enter>     Jump to the file and line under the cursor(less powerfull).
+    q           Close the output window.
+    t           Run the full build command in a terminal (using `oz.term`).
+    A           Add/Save a custom Error Format (EFM) for the current
+                filetype or project. This is useful when the build output
+                is not being correctly parsed into the quickfix list.
+    g?          Show all available keymaps.
 
 ==============================================================================
 CONFIGURATION                                               *oz-make-config*
 
 The Make module can be configured via the `oz_make` table in `setup()`:
-    - autosave_makeprg: enables user to set a makeprg per-project by doing
-    :set makeprg=<cmd> and oz_make will remember the cmd and reuse for
-    building the specific project without requiring user to touch the config
-    at all.
 
+    - override_make: If true, redirects the default `:make` to `:Make`.
+    - autosave_makeprg: Automatically saves and restores the `makeprg`
+      setting on a per-project basis.
+    - transient_mappings: Temporary keymaps active only while a build job
+      is running.
+        - `kill_job`: Key to kill the running job (Default: `<C-x>`).
+        - `toggle_output`: Key to toggle the build output window (Default: `<C-d>`).
+
+Example configuration:
 >lua
     oz_make = {
-        -- If true, redirects the default :make to :Make
         override_make = false,
-
-        -- If true, automatically saves and restores the `makeprg`
-        -- setting on a per-project basis.
         autosave_makeprg = true,
+        transient_mappings = {
+            kill_job = "<C-x>",
+            toggle_output = "<C-d>",
+        },
     }
 <
+
+==============================================================================
+ERROR FORMATS                                               *oz-make-efm*
+
+oz-nvim includes default error formats for many languages. You can override
+or add new ones using the `A` keymap in the output window. Custom EFMs are
+cached per-project or per-filetype.
+
 
 vim:tw=78:ts=8:noet:ft=help:norl:

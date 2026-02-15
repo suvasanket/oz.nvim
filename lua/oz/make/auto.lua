@@ -4,17 +4,21 @@ local cache = require("oz.caching")
 
 local json_name = "makeprg"
 local automake_id
+local session_makeprg = {}
 
-local function inside_dir(dir)
-	if not dir then
-		return
+--- get makeprg
+---@param project_root string
+function M.get_makeprg(project_root)
+	local res = session_makeprg[project_root]
+	if not res then
+		res = cache.get_data(project_root, json_name) or vim.o.makeprg
+        session_makeprg[project_root] = res
 	end
-	local current_file = vim.fn.expand("%:p")
-	return current_file:find(dir, 1, true) == 1 -- Check if it starts with target_dir
+    return res
 end
 
 -- auto save makeprg
-function M.makeprg_autosave(previous_makeprg)
+function M.makeprg_autosave()
 	-- get if option changed
 	vim.api.nvim_create_autocmd("OptionSet", {
 		pattern = "makeprg",
@@ -23,32 +27,9 @@ function M.makeprg_autosave(previous_makeprg)
 			local project_root = util.GetProjectRoot()
 			if project_root then
 				cache.set_data(project_root, current_val, json_name)
+				session_makeprg[project_root] = current_val
 			end
 		end,
-	})
-
-	-- dynamic set makeprg
-	local function set_makeprg()
-		local project_root = util.GetProjectRoot()
-		if inside_dir(project_root) then
-			local makeprg_cmd = cache.get_data(project_root, json_name)
-			if makeprg_cmd then
-				vim.o.makeprg = makeprg_cmd
-			end
-		else
-			vim.o.makeprg = previous_makeprg
-		end
-	end
-	vim.api.nvim_create_autocmd("DirChanged", {
-		callback = function()
-			set_makeprg()
-		end,
-	})
-	vim.api.nvim_create_autocmd("CmdLineEnter", {
-		callback = function()
-			set_makeprg()
-		end,
-		once = true,
 	})
 end
 
