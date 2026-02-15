@@ -114,6 +114,9 @@ function M.create_floating_window(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
+	-- Ensure transparent highlight group exists
+	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
+
 	local win_opts = {
 		relative = "editor",
 		width = width,
@@ -121,7 +124,7 @@ function M.create_floating_window(opts)
 		row = row,
 		col = col,
 		style = "minimal",
-		border = "rounded",
+		border = { " ", " ", " ", " ", " ", " ", " ", " " },
 		title = " " .. title .. " ",
 		title_pos = "center",
 		footer = opts.footer,
@@ -129,6 +132,12 @@ function M.create_floating_window(opts)
 	}
 
 	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
+	vim.api.nvim_win_set_option(win_id, "winblend", 20)
+	vim.api.nvim_win_set_option(
+		win_id,
+		"winhighlight",
+		"NormalFloat:StatusLine,FloatBorder:OzTransparent,FloatTitle:StatusLine"
+	)
 
 	return win_id, buf_id
 end
@@ -146,10 +155,8 @@ function M.create_bottom_overlay(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
-	-- We want a window at the bottom, full width.
-	-- We use a border to show the title, but we can customize the characters to look like a top-only line if needed,
-	-- or just use "single" which is clean.
-	-- To make it "from the bottom", row should be lines - height.
+	-- Ensure transparent highlight group exists
+	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
 	local row = vim.o.lines - height - 2 -- -2 for statusline and cmdline space roughly
 
 	local win_opts = {
@@ -159,7 +166,7 @@ function M.create_bottom_overlay(opts)
 		row = row,
 		col = 0,
 		style = "minimal",
-		border = { "─", "─", " ", " ", " ", " ", " ", " " }, -- Top border only
+		border = { " ", " ", "", "", "", "", "", "" }, -- Top border only
 		title = " " .. title .. " ",
 		title_pos = "left",
 	}
@@ -167,7 +174,12 @@ function M.create_bottom_overlay(opts)
 	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
 
 	-- Set local options for "minimal" feel
-	vim.api.nvim_win_set_option(win_id, "winblend", 0)
+	vim.api.nvim_win_set_option(win_id, "winblend", 2)
+	vim.api.nvim_win_set_option(
+		win_id,
+		"winhighlight",
+		"NormalFloat:StatusLine,FloatBorder:OzTransparent,FloatTitle:StatusLine"
+	)
 
 	return win_id, buf_id
 end
