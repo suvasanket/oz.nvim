@@ -174,17 +174,17 @@ function M.show_maps(args)
 	end
 
 	-- Build Render Lines
-	local render_lines = {}
+	local render_lines = { "" } -- Initial padding line
 	for _, group in ipairs(groups) do
 		if group.title then
-			table.insert(render_lines, string.format("%%#HeaderName#%s", group.title))
+			table.insert(render_lines, string.format(" %%#HeaderName#%s", group.title))
 		end
 
 		local items = group.items
 		local num_rows = math.ceil(#items / num_cols)
 
 		for r = 1, num_rows do
-			local line_parts = {}
+			local line_parts = { " " } -- Left padding
 			for c = 1, num_cols do
 				local idx = (c - 1) * num_rows + r
 				if idx <= #items then
@@ -199,9 +199,11 @@ function M.show_maps(args)
 		table.insert(render_lines, "")
 	end
 
-	-- Remove trailing empty line
+	-- Remove trailing empty line and add final padding line
 	if render_lines[#render_lines] == "" then
-		table.remove(render_lines)
+		render_lines[#render_lines] = "" -- Ensure it stays for padding
+	else
+		table.insert(render_lines, "")
 	end
 
 	-- 5. Create Window with Height Constraint
@@ -227,15 +229,18 @@ function M.show_maps(args)
 		-- Highlight keys
 		vim.cmd([=[syntax match KeyName /\(\[[^]]\+\] \+\)\@<=\S\+/]=])
 		vim.cmd("highlight link KeyName @attribute")
-
-		vim.cmd([=[syntax match HeaderName /^%#HeaderName#.*/ contains=IGNORE]=])
-		vim.cmd([=[syntax match Title /^\S.*/]=])
 	end)
 
-	-- Clean up header markers
+	-- Clean up header markers and apply line highlights
 	local clean_lines = {}
-	for _, l in ipairs(render_lines) do
-		table.insert(clean_lines, (l:gsub("%%#HeaderName#", "")))
+	local ns = vim.api.nvim_create_namespace("oz_help_maps")
+	for i, l in ipairs(render_lines) do
+		local is_header = l:find("%%#HeaderName#") ~= nil
+		local line_text = l:gsub("%%#HeaderName#", "")
+		table.insert(clean_lines, line_text)
+		if is_header then
+			vim.api.nvim_buf_add_highlight(buf_id, ns, "Title", i - 1, 0, -1)
+		end
 	end
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, clean_lines)
 
@@ -307,9 +312,9 @@ function M.show_menu(title, items)
 	end
 
 	local function render()
-		local render_lines = {}
+		local render_lines = { "" } -- Top padding
 		local highlight_queue = {} -- {group, line, col_start, col_end}
-		local line_idx = 0
+		local line_idx = 1 -- Start after top padding
 
 		-- Helper to layout
 		local max_width = 0
@@ -349,8 +354,8 @@ function M.show_menu(title, items)
 
 		for _, group in ipairs(processed_groups) do
 			if group.title then
-				table.insert(render_lines, group.title)
-				table.insert(highlight_queue, { "Title", line_idx, 0, -1 })
+				table.insert(render_lines, " " .. group.title) -- Horizontal padding
+				table.insert(highlight_queue, { "Title", line_idx, 1, -1 })
 				line_idx = line_idx + 1
 			end
 
@@ -358,8 +363,8 @@ function M.show_menu(title, items)
 			local num_rows = math.ceil(#items_list / num_cols)
 
 			for r = 1, num_rows do
-				local line_parts = {}
-				local current_len = 0
+				local line_parts = { " " } -- Left padding
+				local current_len = 1
 				for c = 1, num_cols do
 					local idx = (c - 1) * num_rows + r
 					if idx <= #items_list then
@@ -378,14 +383,13 @@ function M.show_menu(title, items)
 							flag_hl = "Boolean"
 						end
 
-						-- Find positions (naive find is safe enough here as keys are distinct in the formatted string)
-						-- Entry Text: " -s  --signoff    Desc"
+						-- Find positions
 						local s_key = part:find(vim.pesc(entry.key_display))
 						if s_key then
 							local e_key = s_key + #entry.key_display
 							table.insert(
 								highlight_queue,
-								{ key_hl, line_idx, current_len + s_key - 1, current_len + e_key }
+								{ key_hl, line_idx, current_len + s_key - 1, current_len + e_key - 1 }
 							)
 						end
 
@@ -395,7 +399,7 @@ function M.show_menu(title, items)
 								local e_name = s_name + #entry.item.name
 								table.insert(
 									highlight_queue,
-									{ flag_hl, line_idx, current_len + s_name - 1, current_len + e_name }
+									{ flag_hl, line_idx, current_len + s_name - 1, current_len + e_name - 1 }
 								)
 							end
 						end
@@ -409,6 +413,7 @@ function M.show_menu(title, items)
 			table.insert(render_lines, "") -- spacer
 			line_idx = line_idx + 1
 		end
+		table.insert(render_lines, "") -- Bottom padding
 
 		-- Window Creation / Update
 		if not win_id or not vim.api.nvim_win_is_valid(win_id) then
