@@ -43,8 +43,8 @@ local function show_picker(files, args)
 				if f == choice then
 					idx = i
 					break
+				end
 			end
-		end
 			start_visual_diff(choice, args, files, idx)
 		end
 	end)
@@ -66,7 +66,8 @@ function start_visual_diff(target_file, args, file_list, index)
 		return fallback_text(args)
 	end
 
-	local abs_target = vim.fs.normalize(vim.startswith(target_file, "/") and target_file or (root .. "/" .. target_file))
+	local abs_target =
+		vim.fs.normalize(vim.startswith(target_file, "/") and target_file or (root .. "/" .. target_file))
 	local rel_path = abs_target:sub(#root + 2)
 
 	-- Parse args for revisions
@@ -115,6 +116,9 @@ function start_visual_diff(target_file, args, file_list, index)
 	setup_diff_buf(lhs_buf, lhs_name .. ":" .. rel_path, lhs_content, ft)
 	vim.api.nvim_win_set_buf(0, lhs_buf)
 	local lhs_win = vim.api.nvim_get_current_win()
+	vim.api.nvim_set_option_value("number", true, { win = lhs_win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = lhs_win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = lhs_win })
 	vim.cmd("diffthis")
 
 	-- RHS
@@ -129,6 +133,9 @@ function start_visual_diff(target_file, args, file_list, index)
 		vim.api.nvim_win_set_buf(0, rhs_buf)
 	end
 	local rhs_win = vim.api.nvim_get_current_win()
+	vim.api.nvim_set_option_value("number", true, { win = rhs_win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = rhs_win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = rhs_win })
 	vim.cmd("diffthis")
 
 	local is_closing = false
@@ -346,24 +353,37 @@ function M.resolve_three_way()
 	-- Top-Left (Ours)
 	local ours_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(ours_win, ours_buf)
+	vim.api.nvim_set_option_value("number", true, { win = ours_win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = ours_win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = ours_win })
 	vim.cmd("diffthis")
 
 	-- Top-Mid (Base)
 	vim.cmd("rightbelow vsplit")
 	local base_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(base_win, base_buf)
+	vim.api.nvim_set_option_value("number", true, { win = base_win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = base_win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = base_win })
 	vim.cmd("diffthis")
 
 	-- Top-Right (Theirs)
 	vim.cmd("rightbelow vsplit")
 	local theirs_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(theirs_win, theirs_buf)
+	vim.api.nvim_set_option_value("number", true, { win = theirs_win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = theirs_win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = theirs_win })
 	vim.cmd("diffthis")
 
 	-- Bottom (Work)
 	vim.cmd("botright split")
 	local result_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(result_win, work_buf)
+	vim.api.nvim_set_option_value("number", true, { win = result_win })
+	vim.api.nvim_set_option_value("relativenumber", false, { win = result_win })
+	vim.api.nvim_set_option_value("signcolumn", "no", { win = result_win })
+	vim.api.nvim_set_option_value("foldcolumn", "0", { win = result_win })
 	vim.cmd("diffthis")
 	vim.cmd("resize 15")
 
@@ -412,11 +432,11 @@ function M.resolve_three_way()
 				if line:match("^>>>>>>>") then
 					end_line = i
 					break
-			elseif line:match("^<<<<<<<") and i ~= start_line then
-				break
+				elseif line:match("^<<<<<<<") and i ~= start_line then
+					break
+				end
 			end
 		end
-	end
 
 		if start_line and end_line then
 			vim.cmd(start_line .. "," .. end_line .. "diffget " .. buf_from)

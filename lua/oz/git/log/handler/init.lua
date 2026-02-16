@@ -6,6 +6,7 @@ local modules = {
     "oz.git.log.handler.reset",
     "oz.git.log.handler.revert",
     "oz.git.log.handler.quick_action",
+    "oz.git.log.handler.switch",
 }
 
 local handlers = {}
