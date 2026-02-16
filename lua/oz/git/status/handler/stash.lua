@@ -74,7 +74,7 @@ function M.snapshot()
 	s_util.run_n_refresh("Git stash push -m 'Snapshot'")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",

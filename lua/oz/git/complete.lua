@@ -35,7 +35,13 @@ local function get_tbl(cur_arg, tbl)
 	return matches
 end
 
+local flag_cache = {}
+
 local function get_cmdflags(command)
+	if flag_cache[command] then
+		return flag_cache[command]
+	end
+
 	local handle = io.popen("git " .. command .. " -h 2>&1")
 	if not handle then
 		return {}
@@ -56,6 +62,7 @@ local function get_cmdflags(command)
 		end
 	end
 
+	flag_cache[command] = flags
 	return flags
 end
 

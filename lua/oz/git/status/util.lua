@@ -85,9 +85,9 @@ function M.render(buf)
 		state.line_map[#lines + 1] = nil -- Clear map for removed line
 	end
 
-	vim.api.nvim_buf_set_option(buf, "modifiable", true)
+	vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-	vim.api.nvim_buf_set_option(buf, "modifiable", false)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 
 	-- Place Signs
 	for _, sign in ipairs(signs_to_place) do
@@ -97,7 +97,8 @@ function M.render(buf)
 	-- Apply Highlights
 	vim.api.nvim_buf_clear_namespace(buf, ns_id, 0, -1)
 
-	for lnum, data in pairs(state.line_map) do
+	local line_map = state.line_map
+	for lnum, data in pairs(line_map) do
 		local row = lnum - 1 -- 0-based
 		if data.type == "header" then
 			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusHeading", row, 0, -1)

@@ -28,7 +28,6 @@ function M.get_selected_hash()
 		local start_line = vim.fn.line("v")
 		local end_line = vim.fn.line(".")
 		lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-		-- vim.api.nvim_input("<Esc>") -- FIXME
 	end
 
 	for _, line in ipairs(lines) do
@@ -140,15 +139,15 @@ end
 function M.refresh_buf(passive)
 	if passive then
 		local lines = generate_content()
-		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", true)
+		vim.api.nvim_set_option_value("modifiable", true, { buf = M.log_buf })
 		vim.api.nvim_buf_set_lines(M.log_buf, 0, -1, false, lines)
-		vim.api.nvim_buf_set_option(M.log_buf, "modifiable", false)
+		vim.api.nvim_set_option_value("modifiable", false, { buf = M.log_buf })
 	else
 		local pos = vim.api.nvim_win_get_cursor(0)
 		M.commit_log({ from = M.comming_from })
 		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
-	pcall(vim.cmd.checktime())
+	pcall(vim.cmd.checktime)
 end
 
 -- commit log

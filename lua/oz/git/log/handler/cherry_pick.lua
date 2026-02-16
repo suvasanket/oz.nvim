@@ -24,6 +24,7 @@ function M.handle_cherrypick(flags)
 		clear_all_picked()
 	else
 		local hash = get_selected_hash()
+		util.exit_visual()
 		if #hash == 1 then
 			input = util.inactive_input(":Git cherry-pick", args .. " -x " .. hash[1])
 		elseif #hash == 2 then
@@ -53,7 +54,7 @@ function M.skip()
     run_n_refresh("Git cherry-pick --skip")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",

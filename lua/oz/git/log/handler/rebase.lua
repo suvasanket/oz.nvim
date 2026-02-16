@@ -57,7 +57,7 @@ function M.edit_todo()
     run_n_refresh("Git rebase --edit-todo")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",

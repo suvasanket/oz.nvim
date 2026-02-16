@@ -5,7 +5,7 @@ local M = {}
 local defaults = {
 	-- Git
 	oz_git = {
-		win_type = "botright",
+		win_type = "bot",
 		mappings = {
 			toggle_pick = "<C-P>",
 			unpick_all = "<C-S-P>",

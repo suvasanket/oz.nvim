@@ -36,7 +36,7 @@ local function sync_cursor(source_buf, target_buf)
 		buffer = source_buf,
 		callback = function()
 			if vim.api.nvim_buf_is_valid(source_buf) then -- TODO error at l:20 when unmodified changes(temp fix)
-				if not vim.api.nvim_buf_get_option(source_buf, "modified") then
+				if not vim.api.nvim_get_option_value("modified", { buf = source_buf }) then
 					M.update_cursor(source_buf, target_buf)
 				end
 			else

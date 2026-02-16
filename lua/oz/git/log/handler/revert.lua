@@ -24,6 +24,7 @@ function M.handle_revert(flags)
 		clear_all_picked()
 	else
 		local commits = get_selected_hash()
+		util.exit_visual()
 		if #commits == 1 then
 			str = commits[1]
 		elseif #commits == 2 then
@@ -67,7 +68,7 @@ function M.abort()
     run_n_refresh("Git revert --abort")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",

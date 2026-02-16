@@ -14,81 +14,138 @@ COMMANDS                                                    *oz-git-commands*
 :G [args]                                                   *:G*
     The primary Git command. When called without arguments, it opens the
     |oz-git-status| window.
-    When called with arguments, it executes the corresponding git command.
+    When called with arguments, it executes the corresponding git command
+    asynchronously.
     Special features:
-    - Command wizard for common mistakes (e.g., missing upstream).
-    - `:Git grep`: Runs git grep and populates the quickfix list.
-    - `:Git help <cmd>`: Opens the git man page for <cmd>.
-    - Progressive output for remote commands like `push`, `pull`, `fetch`.
+    - Command wizard: Automatically suggests corrections for common git errors
+      (e.g., missing upstream, typo in command). Suggestions appear in the
+      command line for easy execution.
+    - `:Git grep`: Runs git grep and populates the quickfix list for navigation.
+    - `:Git help <cmd>`: Opens the git man page for <cmd> in a Neovim buffer.
+    - Progressive output: Displays real-time progress for long-running remote
+      commands like `push`, `pull`, `fetch`.
+    - Integrated Editor: Commands that require an editor (like `commit` or
+      `rebase -i`) will use the current Neovim instance.
 
 :GitLog [args]                                              *:GitLog*
-    Opens the |oz-git-log| window. Optional arguments are passed to `git log`.
+    Opens the |oz-git-log| window. Optional arguments are passed directly
+    to `git log`. You can use it to filter by author, date, or path.
 
 :Gread [range]                                              *:Gread*
 :Gr [range]                                                 *:Gr*
-    Undoes unstaged changes. If a [range] is provided, only that range is
-    restored.
+    Restores the current file to its state in the index (undoes unstaged
+    changes). If a [range] is provided (e.g., in visual mode), only that
+    range is restored using partial patching logic.
 
 :Gwrite [file]                                              *:Gwrite*
 :Gw [file]                                                  *:Gw*
-    Stages the current file or [file]. If a range is selected, stages only
-    that range. If [file] is different from current file, performs `git mv`.
+    Stages the current file. If [file] is provided and different from the
+    current file, it performs a `git mv`. If a range is selected, only those
+    lines are staged.
 
 :GBrowse [path]                                             *:GBrowse*
     Opens the current file or [path] in your remote repository's web interface
-    (e.g., GitHub, GitLab).
+    (GitHub, GitLab, Bitbucket, etc.). It intelligently handles relative
+    paths and different remote URL formats (SSH, HTTPS).
 
 :GBlame [file]                                              *:GBlame*
-    Opens a blame buffer for the current file or [file].
+    Opens a vertical blame buffer for the current file. The blame window
+    syncs its cursor with the main buffer and provides highlights for
+    hashes and dates. Pressing <Enter> on a hash shows the commit details.
 
 :Gcw [message]                                              *:Gcw*
 :GitCommitWip [message]                                     *:Gcw*
-    Creates a Work-In-Progress (WIP) commit. If the last commit was also a
-    WIP, it amends it.
+    Creates a "Work-In-Progress" (WIP) commit. If the previous commit was
+    also a WIP, it automatically amends it, keeping your history clean
+    while you work.
 
 ==============================================================================
 GIT STATUS WINDOW                                           *oz-git-status*
 
-Opened via `:Git` or `:G`. This window provides an overview of your repository's
-current state, organized into sections (Staged, Unstaged, Untracked, Stashes).
-Inspired by Magit.
+Opened via `:Git` or `:G`. The status window provides a Magit-inspired
+overview of your repository.
+
+Sections:
+    - Branch: Shows current branch and its relation to upstream (ahead/behind).
+    - Staged: Files ready to be committed.
+    - Unstaged: Modified files not yet staged.
+    - Untracked: New files not in git.
+    - Stashes: List of stashed changes.
+    - Worktrees: List of active git worktrees.
 
 Keymaps:
-    <Enter>     Open file under cursor.
-    s           Stage file or selection.
-    u           Unstage file or selection.
-    X           Discard changes in file or selection.
-    K           Untrack file.
-    R           Rename file.
-    c           Open Commit menu.
-    d           Open Diff menu.
-    b           Open Branch menu.
-    P           Open Push menu.
-    p           Open Pull menu.
-    f           Open Fetch menu.
-    Z           Open Stash menu.
-    r           Open Reset menu.
-    m           Open Merge menu.
+    <Enter>     Open file under cursor in a split.
+    <Tab>       Jump to next section header.
+    <S-Tab>     Jump to previous section header.
+    s           Stage file or visual selection.
+    u           Unstage file or visual selection.
+    X           Discard changes in file or selection (Hard reset for file).
+    K           Untrack file (removes from index but keeps on disk).
+    R           Rename file (triggers `git mv`).
+    c           Open Commit menu (amend, extend, reword, fixup, squash).
+    d           Open Diff menu (staged, unstaged, vs HEAD, vs branch).
+    b           Open Branch menu (checkout, new, delete, rename, upstream).
+    P           Open Push menu (to upstream, to remote, with force).
+    p           Open Pull menu (from upstream, from remote, with rebase).
+    f           Open Fetch menu (all, prune, tags).
+    Z           Open Stash menu (save, pop, apply, drop, snapshot).
+    r           Open Rebase menu (interactive, continue, skip, abort).
+    m           Open Merge menu (branch, squash, abort).
+    U           Open Reset menu (soft, mixed, hard, keep).
+    w           Open Worktree menu (add, remove, move, lock).
+    x           Open Conflict menu (only visible during merge conflicts).
     gl          Open full commit log (|oz-git-log|).
     gL          Open log for object under cursor.
-    x           Open Conflict menu (unlocks on conflict).
     g?          Show all available keymaps.
 
 ==============================================================================
 GIT LOG WINDOW                                              *oz-git-log*
 
-Opened via `:GitLog` or `gl` from the status buffer. Displays a list of
-commits with their hashes, authors, and messages.
+Opened via `:GitLog` or `gl` from the status buffer.
 
 Keymaps:
-    <Enter>     Show commit details.
-    c           Open Commit Actions menu (squash, fixup, extend, amend).
-    d           Open Diff Actions menu (diff vs commit, working, branch, stash).
-    r           Open Rebase menu.
-    R           Open Reset menu.
+    <Enter>     Show commit details (`git show`).
+    c           Open Commit Actions (squash, fixup, extend, amend).
+    d           Open Diff Actions (vs commit, working, branch, stash).
+    r           Open Rebase menu (interactive, continue, abort).
+    R           Open Reset menu (soft, mixed, hard).
     a           Open Cherry-pick menu.
     v           Open Revert menu.
+    <C-P>       "Pick" a hash to use in a future command (Magit-style picking).
     g?          Show all available keymaps.
+
+==============================================================================
+API & HOOKS                                                 *oz-git-api*
+
+on_job_exit({id}, {opts})                                   *oz.git.on_job_exit*
+
+You can register callbacks that execute whenever a `:Git` job finishes. This
+is useful for automating tasks or integrating with other plugins.
+
+Parameters:
+    {id}        A unique string identifier for the callback.
+    {opts}      A table with:
+                - callback: function(result)
+                    The `result` table contains:
+                    - exit_code: (number)
+                    - stdout: (table of lines)
+                    - stderr: (table of lines)
+                    - args: (table) The parsed arguments of the git command.
+                - once: (boolean, optional) If true, the hook is removed
+                        after one execution.
+
+Example: Automatically run a linter after every branch change.
+>lua
+    require("oz.git").on_job_exit("post_checkout_lint", {
+        callback = function(res)
+            -- Check if the command was 'checkout' or 'switch'
+            if res.exit_code == 0 and (res.args[1] == "checkout" or res.args[1] == "switch") then
+                print("Branch changed, running linter...")
+                -- run your linter here
+            end
+        end
+    })
+<
 
 ==============================================================================
 CONFIGURATION                                               *oz-git-config*
@@ -97,9 +154,9 @@ The Git module can be configured via the `oz_git` table in `setup()`:
 
 >lua
     oz_git = {
-        -- Window type for status and log buffers.
-        -- Supported: "tab", "hor", "vert", "botright" (default)
-        win_type = "botright",
+        -- window layout
+        -- you can use: "tab", "hor", "vert", "bot", "top" (default)
+        win_type = "bot",
         mappings = {
             toggle_pick = "<C-P>", -- key to pick/unpick in status/log
             unpick_all = "<C-S-P>",

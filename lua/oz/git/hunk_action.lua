@@ -236,7 +236,7 @@ local function apply_operation(op, bufnr, start_line, end_line, opts)
 
 	-- Reload buffer to sync with disk if it's the current file
 	if bufnr == 0 or bufnr == vim.api.nvim_get_current_buf() then
-		vim.api.nvim_command("checktime")
+        pcall(vim.cmd.checktime)
 	end
 
 	return true, nil

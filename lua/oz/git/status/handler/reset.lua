@@ -7,6 +7,8 @@ function M.reset(args)
 	local files = s_util.get_file_under_cursor(true)
 	local branch = s_util.get_branch_under_cursor()
 
+	util.exit_visual()
+
 	local cmd_args = args or ""
 
 	if #files > 0 then
@@ -33,7 +35,7 @@ function M.undo_orig_head()
 	s_util.run_n_refresh("Git reset ORIG_HEAD")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Reset",

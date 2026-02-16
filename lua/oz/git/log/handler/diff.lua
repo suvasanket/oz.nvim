@@ -77,6 +77,7 @@ end
 local diff_range_hash = {}
 function M.diff_range()
 	local hashes = get_selected_hash()
+	util.exit_visual()
 	if #hashes > 1 then
 		vim.cmd("Git diff " .. hashes[1] .. ".." .. hashes[#hashes])
 	elseif #hashes == 1 then
@@ -89,7 +90,7 @@ function M.diff_range()
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Native Diff",

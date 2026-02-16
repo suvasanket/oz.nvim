@@ -254,7 +254,7 @@ function M.refresh_buf(passive)
 	s_util.render(M.status_buf)
 	require("oz.git.status.keymaps").keymaps_init(M.status_buf)
 	pcall(vim.api.nvim_win_set_cursor, 0, pos)
-	pcall(vim.cmd.checktime())
+	pcall(vim.cmd.checktime)
 end
 
 function M.GitStatus()
@@ -275,9 +275,18 @@ function M.GitStatus()
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id
 			M.status_win = win_id
-			vim.cmd(
-				[[setlocal ft=oz_git signcolumn=yes listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
-			)
+			-- Buffer-local options
+			vim.api.nvim_set_option_value("filetype", "oz_git", { buf = buf_id })
+			vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
+			vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf_id })
+
+			-- Window-local options
+			vim.api.nvim_set_option_value("signcolumn", "yes", { win = win_id })
+			vim.api.nvim_set_option_value("listchars", "", { win = win_id })
+			vim.api.nvim_set_option_value("number", false, { win = win_id })
+			vim.api.nvim_set_option_value("relativenumber", false, { win = win_id })
+			vim.api.nvim_set_option_value("wrap", false, { win = win_id })
+
 			vim.opt_local.fillchars:append({ eob = " " })
 			s_util.render(buf_id)
 			vim.fn.timer_start(10, function()

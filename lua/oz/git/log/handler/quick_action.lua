@@ -128,7 +128,7 @@ function M.go_status()
 	vim.cmd("Git")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	buf_id = buf
 	-- quick actions
 	util.Map("n", "q", M.quit, { buffer = buf, desc = "Close git log buffer." })
@@ -170,11 +170,6 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 							group = key_grp,
 							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 							no_empty = true,
-							on_open = function()
-								vim.schedule(function()
-									util.inactive_echo("press ctrl-f to search section")
-								end)
-							end,
 						})
 					end,
 					desc = "Show all available keymaps",

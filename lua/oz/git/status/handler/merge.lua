@@ -15,7 +15,7 @@ function M.merge_branch(flags)
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	-- Merge mappings
 	local m_opts = {
 		{

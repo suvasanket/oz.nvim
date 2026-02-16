@@ -407,4 +407,11 @@ function M.open_in_split(path)
 	vim.cmd("aboveleft split " .. vim.fn.fnameescape(path))
 end
 
+--- Exit visual mode
+function M.exit_visual()
+	if vim.api.nvim_get_mode().mode:match("[vV]") then
+		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+	end
+end
+
 return M

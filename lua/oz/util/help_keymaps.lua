@@ -213,7 +213,7 @@ function M.show_maps(args)
 
 	local win_id, buf_id = win_util.create_bottom_overlay({
 		content = render_lines,
-		title = args.title or "Keymaps",
+		title = args.title or "Available Keymaps",
 		height = win_height,
 	})
 

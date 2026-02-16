@@ -256,8 +256,17 @@ function M.open_oz_git_win(lines, cmd)
 			M.oz_git_buf = buf_id
 			M.oz_git_win = win_id
 
-			-- opts
-			vim.cmd([[setlocal ft=oz_git signcolumn=no listchars= nonumber norelativenumber nowrap nomodifiable]])
+			-- Buffer-local options
+			vim.api.nvim_set_option_value("filetype", "oz_git", { buf = buf_id })
+			vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
+
+			-- Window-local options
+			vim.api.nvim_set_option_value("signcolumn", "no", { win = win_id })
+			vim.api.nvim_set_option_value("listchars", "", { win = win_id })
+			vim.api.nvim_set_option_value("number", false, { win = win_id })
+			vim.api.nvim_set_option_value("relativenumber", false, { win = win_id })
+			vim.api.nvim_set_option_value("wrap", false, { win = win_id })
+
 			vim.opt_local.fillchars:append({ eob = " " })
 
 			-- async

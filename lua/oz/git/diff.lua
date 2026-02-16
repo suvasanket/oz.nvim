@@ -22,7 +22,7 @@ local function fallback_text(args)
 	local ok, lines = shell.run_command({ "git", "diff", unpack(args) })
 	if ok then
 		oz_git_win.open_oz_git_win(lines, "diff " .. table.concat(args, " "))
-		vim.api.nvim_set_option_value("filetype", "diff", { scope = "local" })
+		vim.api.nvim_set_option_value("filetype", "diff", { buf = 0 })
 	end
 end
 

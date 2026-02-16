@@ -131,7 +131,7 @@ local function handle_gwrite(opts)
 			local ok = pcall(vim.cmd, "w", file_name)
 			if ok then
 				main.after_exec_complete(function()
-					vim.cmd("checktime")
+                    pcall(vim.cmd.checktime)
 				end)
 				vim.cmd("Git mv " .. old_name .. " " .. file_name)
 			end

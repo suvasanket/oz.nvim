@@ -119,7 +119,7 @@ function M.prune()
 	end)
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Actions",

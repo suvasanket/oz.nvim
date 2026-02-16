@@ -245,7 +245,7 @@ function M.run_git_job(args)
 			-- run exec complete callbacks --
 			vim.fn.timer_start(100, function()
 				for id, cbt in pairs(exit_callbacks) do
-					cbt.cb({ exit_code = code, stdout = std_out, stderr = std_err })
+					cbt.cb({ exit_code = code, stdout = std_out, stderr = std_err, args = args_table })
 					if cbt.once then
 						exit_callbacks[id] = nil
 					end
