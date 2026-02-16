@@ -155,7 +155,6 @@ function M.create_bottom_overlay(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
-	-- Ensure transparent highlight group exists
 	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
 	local row = vim.o.lines - height - 2 -- -2 for statusline and cmdline space roughly
 
@@ -166,7 +165,7 @@ function M.create_bottom_overlay(opts)
 		row = row,
 		col = 0,
 		style = "minimal",
-		border = { " ", " ", "", "", "", "", "", "" }, -- Top border only
+		border = { " ", " ", "", "", "", "", "", "" },
 		title = ("  %s  "):format(title),
 		title_pos = "left",
 		zindex = 1000,

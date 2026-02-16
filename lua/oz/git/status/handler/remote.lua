@@ -41,22 +41,28 @@ function M.add_update()
 					2 -- Default to No
 				)
 				if ans == 1 then
-					git.after_exec_complete(function(code)
-						if code == 0 then
-							util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
-							refresh() -- Refresh status potentially
-						end
-					end)
+					git.on_job_exit("remote_set_url", {
+						callback = function(ev)
+							if ev.exit_code == 0 then
+								util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
+								refresh() -- Refresh status potentially
+							end
+						end,
+						once = true,
+					})
 					vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
 				end
 			else
 				-- Add new remote
-				git.after_exec_complete(function(code)
-					if code == 0 then
-						util.Notify("Added new remote '" .. remote_name .. "'.", nil, "oz_git")
-						refresh() -- Refresh status potentially
-					end
-				end)
+				git.on_job_exit("remote_add", {
+					callback = function(ev)
+						if ev.exit_code == 0 then
+							util.Notify("Added new remote '" .. remote_name .. "'.", nil, "oz_git")
+							refresh() -- Refresh status potentially
+						end
+					end,
+					once = true,
+				})
 				vim.cmd("G remote add " .. remote_name .. " " .. remote_url)
 			end
 		else

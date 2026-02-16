@@ -269,12 +269,14 @@ function M.get_stash_under_cursor()
 	return {}
 end
 
+---@param cmd string cmd to run
 function M.run_n_refresh(cmd)
-	git.after_exec_complete(function()
-		vim.schedule(function()
+	git.on_job_exit("status_refresh", {
+		once = true,
+		callback = function()
 			require("oz.git.status").refresh_buf()
-		end)
-	end)
+		end,
+	})
 	vim.cmd(cmd)
 	util.inactive_echo(":" .. cmd)
 end
