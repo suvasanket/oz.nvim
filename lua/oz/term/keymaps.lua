@@ -148,9 +148,19 @@ function M.setup(buf)
 	vim.keymap.set("n", "r", function()
 		local cmd = vim.b[buf].oz_cmd
 		if cmd then
-			require("oz.term.executor").run(cmd)
+			require("oz.term.executor").run(cmd, { cwd = vim.b[buf].oz_cwd })
 		end
 	end, { buffer = buf, silent = true, desc = "Rerun command" })
+
+	vim.keymap.set("n", "e", function()
+		local cmd = vim.b[buf].oz_cmd
+		if cmd then
+			local input = require("oz.util").inactive_input(":Term ", cmd, "shellcmd")
+			if input then
+				require("oz.term.executor").run(input, { cwd = vim.b[buf].oz_cwd })
+			end
+		end
+	end, { buffer = buf, silent = true, desc = "Edit command" })
 
 	-- Help
 	vim.keymap.set("n", "g?", function()

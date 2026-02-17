@@ -137,8 +137,8 @@ vim.api.nvim_create_autocmd("BufWinEnter", {
 })
 
 --- run
----@param cmd string
----@param opts {cwd: string, stdin: string, hidden: boolean}|nil
+---@param cmd string shell cmd
+---@param opts {cwd: string, stdin: string, hidden: boolean}? runs the cmd then put the stdout into a buffer
 function M.run(cmd, opts)
 	if not cmd or cmd == "" then
 		return
