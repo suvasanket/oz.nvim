@@ -68,9 +68,9 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 	}
-	util.Map("n", "m", function()
-		require("oz.util.help_keymaps").show_menu("Merge Actions", m_opts)
-	end, { buffer = buf, desc = "Merge Actions", nowait = true })
+	vim.keymap.set("n", "m", function()
+		util.show_menu("Merge Actions", m_opts)
+	end, { buffer = buf, desc = "Merge Actions", nowait = true, silent = true })
 end
 
 return M

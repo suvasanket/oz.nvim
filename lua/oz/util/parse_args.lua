@@ -1,21 +1,8 @@
 local M = {}
 
---- expand_expressions
----@param str string
----@return string
-function M.expand_expressions(str)
-	local pattern = "%%[:%w]*"
-
-	local expanded_str = string.gsub(str, pattern, function(exp)
-		return vim.fn.expand(exp)
-	end)
-
-	return expanded_str
-end
-
---- parse_args
----@param argstring string
----@return table
+--- Parse a command string into a table of arguments, handling quotes and key=value pairs.
+--- @param argstring string The string to parse.
+--- @return string[] A table of parsed arguments.
 function M.parse_args(argstring)
 	local args = {}
 	local i = 1

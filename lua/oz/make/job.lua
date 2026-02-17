@@ -1,8 +1,6 @@
 local M = {}
 local util = require("oz.util")
-local arg_parser = require("oz.util.parse_args")
 local efm = require("oz.make.efm")
-local progress = require("oz.util.progress")
 
 M.current_job_id = nil
 M.jobs = {}
@@ -24,7 +22,7 @@ function M.Make_func(arg_str, dir, config)
 	end
 
 	dir = dir or vim.fn.getcwd()
-	local cmd_tbl = arg_parser.parse_args(arg_str)
+	local cmd_tbl = util.parse_args(arg_str)
 	local make_cmd = require("oz.make.auto").get_makeprg(dir)
 
 	if vim.bo.makeprg == "" then
@@ -34,7 +32,7 @@ function M.Make_func(arg_str, dir, config)
 		end
 	end
 
-	local make_cmd_tbl = arg_parser.parse_args(make_cmd)
+	local make_cmd_tbl = util.parse_args(make_cmd)
 	for i = #make_cmd_tbl, 1, -1 do
 		table.insert(cmd_tbl, 1, make_cmd_tbl[i])
 	end
@@ -44,7 +42,7 @@ function M.Make_func(arg_str, dir, config)
 	-- progress stuff
 	local pro_title = table.concat(cmd_tbl, " ")
 	local u_id = util.generate_unique_id()
-	progress.start_progress(u_id, { title = pro_title, fidget_lsp = "oz_make" })
+	util.start_progress(u_id, { title = pro_title, fidget_lsp = "oz_make" })
 
 	-- Start the job
 	local ok, job_id = pcall(vim.fn.jobstart, cmd_tbl, {
@@ -90,7 +88,7 @@ function M.Make_func(arg_str, dir, config)
 			end
 
 			-- progress stuff
-			progress.stop_progress(u_id, {
+			util.stop_progress(u_id, {
 				exit_code = exit_code,
 				title = pro_title,
 				message = { "Build completed successfully", "Error occured while building" },
@@ -116,13 +114,13 @@ function M.Make_func(arg_str, dir, config)
 		if mappings then
 			local msg_parts = {}
 			if mappings.kill_job then
-				util.Map("n", mappings.kill_job, M.kill_make_job, { desc = "[oz_make]Kill make job" })
+				vim.keymap.set("n", mappings.kill_job, M.kill_make_job, { desc = "[oz_make]Kill make job", silent = true })
 				table.insert(msg_parts, string.format("%s: cancel", mappings.kill_job))
 			end
 			if mappings.toggle_output then
-				util.Map("n", mappings.toggle_output, function()
+				vim.keymap.set("n", mappings.toggle_output, function()
 					require("oz.make.win").makeout_win(output, pro_title, dir)
-				end, { desc = "[oz_make]Toggle output" })
+				end, { desc = "[oz_make]Toggle output", silent = true })
 				table.insert(msg_parts, string.format("%s: show output", mappings.toggle_output))
 			end
 
@@ -132,7 +130,7 @@ function M.Make_func(arg_str, dir, config)
 		end
 	elseif not ok or job_id <= 0 then
 		util.Notify("Incorrect makeprg: " .. make_cmd, "error", "oz_make")
-		progress.stop_progress(u_id, {
+		util.stop_progress(u_id, {
 			title = pro_title,
 			message = { "Build completed successfully", "Error occured while building" },
 		})

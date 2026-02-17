@@ -91,11 +91,11 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "u", function()
-		require("oz.util.help_keymaps").show_menu("Revert Actions", options)
-	end, { buffer = buf, desc = "Revert Actions", nowait = true })
+	vim.keymap.set("n", "u", function()
+		util.show_menu("Revert Actions", options)
+	end, { buffer = buf, desc = "Revert Actions", nowait = true, silent = true })
 
-	util.Map("x", "u", M.handle_revert, { buffer = buf, desc = "Revert selection" })
+	vim.keymap.set("x", "u", M.handle_revert, { buffer = buf, desc = "Revert selection", silent = true })
 end
 
 return M

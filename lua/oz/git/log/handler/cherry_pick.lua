@@ -77,11 +77,11 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "p", function()
-		require("oz.util.help_keymaps").show_menu("Cherry Pick Actions", options)
-	end, { buffer = buf, desc = "Cherry Pick Actions", nowait = true })
+	vim.keymap.set("n", "p", function()
+		util.show_menu("Cherry Pick Actions", options)
+	end, { buffer = buf, desc = "Cherry Pick Actions", nowait = true, silent = true })
 
-	util.Map("x", "p", M.handle_cherrypick, { buffer = buf, desc = "Cherry-pick selection" })
+	vim.keymap.set("x", "p", M.handle_cherrypick, { buffer = buf, desc = "Cherry-pick selection", silent = true })
 end
 
 return M

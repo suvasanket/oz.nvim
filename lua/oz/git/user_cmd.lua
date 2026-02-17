@@ -1,6 +1,5 @@
 local M = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
 local g_util = require("oz.git.util")
 
 local main
@@ -21,7 +20,7 @@ local function handle_g(opts)
 			main.run_git_job(opts.args)
 		else
 			require("oz.git.status").GitStatus()
-			vim.api.nvim_set_hl(0, "ozHelpEcho", { fg = "#606060" })
+			util.setup_hls({ "ozHelpEcho" })
 			vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
 		end
 	elseif opts.args and (opts.args:find("init") or opts.args:find("clone")) then
@@ -48,7 +47,7 @@ end
 local function handle_gcw(opts)
 	if g_util.if_in_git() then
 		local arg, num, command = opts.fargs[1], nil, nil
-		local last_commit = shell.shellout_str("git log -1 --format=%s")
+		local last_commit = util.shellout_str("git log -1 --format=%s")
 
 		if last_commit:lower():match("^wip[:]?%s*") then
 			num = last_commit:match("#(%d+)")
@@ -67,7 +66,7 @@ local function handle_gcw(opts)
 		if arg then
 			new_commit = ([[%s %s]]):format(new_commit, arg)
 		else
-			local staged_files = shell.shellout_str("git diff --name-only --cached")
+			local staged_files = util.shellout_str("git diff --name-only --cached")
 			if staged_files ~= "" then
 				local files = {}
 				for file in staged_files:gmatch("([^\n]+)") do
@@ -131,7 +130,7 @@ local function handle_gwrite(opts)
 			local ok = pcall(vim.cmd, "w", file_name)
 			if ok then
 				main.after_exec_complete(function()
-                    pcall(vim.cmd.checktime)
+					pcall(vim.cmd.checktime)
 				end)
 				vim.cmd("Git mv " .. old_name .. " " .. file_name)
 			end
@@ -156,7 +155,7 @@ local function handle_gread(opts)
 
 		local file = opts.args
 		if file == "" then
-			local files = shell.shellout_tbl("git diff --name-only HEAD")
+			local files = util.shellout_tbl("git diff --name-only HEAD")
 			file = find_substring(vim.fn.expand("%:p"), files)
 		else
 			vim.cmd("edit " .. file)

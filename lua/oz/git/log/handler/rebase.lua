@@ -82,9 +82,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "r", function()
-		require("oz.util.help_keymaps").show_menu("Rebase Actions", options)
-	end, { buffer = buf, desc = "Rebase Actions", nowait = true })
+	vim.keymap.set("n", "r", function()
+		util.show_menu("Rebase Actions", options)
+	end, { buffer = buf, desc = "Rebase Actions", nowait = true, silent = true })
 end
 
 return M

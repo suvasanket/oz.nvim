@@ -1,11 +1,12 @@
 local M = {}
-local util = require("oz.term.util")
+local util = require("oz.util")
+local term_util = require("oz.term.util")
 
 local function open_entry(file, oz_cwd, lnum, col)
 	if not (file:match("^/") or file:match("^%a:")) then
 		file = oz_cwd .. "/" .. file
 	end
-	if not util.is_readable(file, {}) then
+	if not term_util.is_readable(file, {}) then
 		return false
 	end
 	vim.cmd.wincmd("t")
@@ -21,11 +22,11 @@ local function open_entry(file, oz_cwd, lnum, col)
 end
 
 local function try_jump_file(buf, line)
-	local oz_cwd = util.get_oz_cwd(buf)
+	local oz_cwd = term_util.get_oz_cwd(buf)
 	local old_cwd = vim.fn.getcwd()
 
 	local changed = pcall(vim.api.nvim_set_current_dir, oz_cwd)
-	local qf = vim.fn.getqflist({ lines = { line }, efm = table.concat(util.EFM_PATTERNS, ",") })
+	local qf = vim.fn.getqflist({ lines = { line }, efm = table.concat(term_util.EFM_PATTERNS, ",") })
 	if changed then
 		pcall(vim.api.nvim_set_current_dir, old_cwd)
 	end
@@ -44,7 +45,7 @@ local function try_jump_file(buf, line)
 		return false
 	end
 
-	local valid_path = util.find_valid_path(filename, oz_cwd)
+	local valid_path = term_util.find_valid_path(filename, oz_cwd)
 	if not valid_path then
 		return false
 	end
@@ -53,7 +54,7 @@ local function try_jump_file(buf, line)
 end
 
 local function try_open_url(line)
-	local url = vim.fn.matchstr(line, util.URL_PATTERN)
+	local url = vim.fn.matchstr(line, term_util.URL_PATTERN)
 	if url == "" then
 		return false
 	end
@@ -67,13 +68,13 @@ local function try_open_url(line)
 end
 
 local function try_cword(buf)
-	local oz_cwd = util.get_oz_cwd(buf)
+	local oz_cwd = term_util.get_oz_cwd(buf)
 	local file = vim.fn.expand("<cfile>")
 	if not file then
 		return false
 	end
 
-	local valid_path = util.find_valid_path(file, oz_cwd)
+	local valid_path = term_util.find_valid_path(file, oz_cwd)
 	if not valid_path or not open_entry(valid_path, oz_cwd) then
 		return false
 	end
@@ -81,12 +82,12 @@ local function try_cword(buf)
 end
 
 local function grab_to_qf(buf)
-	local oz_cwd = util.get_oz_cwd(buf)
+	local oz_cwd = term_util.get_oz_cwd(buf)
 	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
 	local old_cwd = vim.fn.getcwd()
 	local changed = pcall(vim.api.nvim_set_current_dir, oz_cwd)
-	local qf = vim.fn.getqflist({ lines = lines, efm = table.concat(util.EFM_PATTERNS, ",") })
+	local qf = vim.fn.getqflist({ lines = lines, efm = table.concat(term_util.EFM_PATTERNS, ",") })
 	if changed then
 		pcall(vim.api.nvim_set_current_dir, old_cwd)
 	end
@@ -100,7 +101,7 @@ local function grab_to_qf(buf)
 			end
 
 			if filename and filename ~= "" then
-				local valid_path = util.find_valid_path(filename, oz_cwd)
+				local valid_path = term_util.find_valid_path(filename, oz_cwd)
 				if valid_path then
 					item.bufnr = vim.fn.bufnr(valid_path)
 					table.insert(items, item)
@@ -155,7 +156,7 @@ function M.setup(buf)
 	vim.keymap.set("n", "e", function()
 		local cmd = vim.b[buf].oz_cmd
 		if cmd then
-			local input = require("oz.util").inactive_input(":Term ", cmd, "shellcmd")
+			local input = util.inactive_input(":Term ", cmd, "shellcmd")
 			if input then
 				require("oz.term.executor").run(input, { cwd = vim.b[buf].oz_cwd })
 			end
@@ -164,7 +165,7 @@ function M.setup(buf)
 
 	-- Help
 	vim.keymap.set("n", "g?", function()
-		require("oz.util.help_keymaps").show_maps({})
+        util.show_maps({})
 	end, { buffer = buf, desc = "Show all available keymaps" })
 end
 

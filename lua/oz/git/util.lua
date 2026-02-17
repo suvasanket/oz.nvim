@@ -1,20 +1,17 @@
+--- @class oz.git.util
 local M = {}
 local original_mappings = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
 
+--- Check if a path is inside a Git work tree.
+--- @param path? string
+--- @return boolean
 function M.if_in_git(path)
-	local ok, output = shell.run_command({ "git", "rev-parse", "--is-inside-work-tree" }, path)
-
-	if ok then
-		if output[1]:find("true") then
-			return true
-		else
-			return false
-		end
-	end
+	return util.if_in_git(path)
 end
 
+--- Jump to a string in the current buffer.
+--- @param str string
 function M.goto_str(str)
 	local saved_pos = vim.fn.getpos(".")
 	vim.cmd("keepjumps normal! gg")
@@ -25,6 +22,11 @@ function M.goto_str(str)
 	end
 end
 
+--- Temporarily remap a key.
+--- @param mode string
+--- @param lhs string
+--- @param new_rhs string|function
+--- @param opts? table
 function M.temp_remap(mode, lhs, new_rhs, opts)
 	opts = opts or {}
 	original_mappings[mode .. lhs] = {
@@ -35,6 +37,9 @@ function M.temp_remap(mode, lhs, new_rhs, opts)
 	vim.keymap.set(mode, lhs, new_rhs, opts)
 end
 
+--- Restore a temporarily remapped key.
+--- @param mode string
+--- @param lhs string
 function M.restore_mapping(mode, lhs)
 	local key = mode .. lhs
 	if original_mappings[key] then
@@ -49,9 +54,14 @@ function M.restore_mapping(mode, lhs)
 	end
 end
 
+--- Set a keymap.
+--- @param mode string|string[]
+--- @param lhs string|string[]
+--- @param rhs string|function
+--- @param opts? table
 function M.map(mode, lhs, rhs, opts)
 	local options = { silent = true, remap = false }
-	if #lhs ~= 1 then
+	if type(lhs) == "string" and #lhs ~= 1 then
 		options.nowait = true
 	end
 	if opts then
@@ -67,20 +77,14 @@ function M.map(mode, lhs, rhs, opts)
 	end
 end
 
+--- Check if a string contains a Git hash.
+--- @param text string
+--- @return boolean
 function M.str_contains_hash(text)
-	if type(text) ~= "string" then
-		return false
-	end
-
-	for hex_sequence in text:gmatch("(%x+)") do
-		local len = #hex_sequence -- Get the length of the found sequence
-		if (len >= 7 and len <= 12) or len == 40 or len == 64 then
-			return true
-		end
-	end
-	return false
+	return util.str_contains_hash(text)
 end
 
+--- Apply terminal highlighting for diffs.
 local function term_highlight()
 	vim.cmd("syntax clear")
 
@@ -93,6 +97,8 @@ local function term_highlight()
     ]])
 end
 
+--- Run a command in a terminal buffer.
+--- @param args {cmd: string, open_in?: string, on_exit_callback?: function}
 function M.run_term_cmd(args)
 	local editor_env = vim.fn.getenv("VISUAL")
 	if not args.cmd then
@@ -132,6 +138,10 @@ function M.run_term_cmd(args)
 	})
 end
 
+--- Create one or more user commands.
+--- @param commands string|string[]
+--- @param func string|function
+--- @param opts? table
 function M.User_cmd(commands, func, opts)
 	if type(commands) == "string" then
 		vim.api.nvim_create_user_command(commands, func, opts)
@@ -144,38 +154,30 @@ function M.User_cmd(commands, func, opts)
 	end
 end
 
+--- Get the Git project root.
+--- @return string|nil
 function M.get_project_root()
 	local state = require("oz.git").state
 	if state and state.root then
 		return state.root
 	end
 
-	local ok, path = shell.run_command({ "git", "rev-parse", "--show-toplevel" })
-	if ok and #path ~= 0 then
-		local joined_path = vim.trim(table.concat(path, " "))
+	local root = util.get_git_root()
+	if root then
 		if state then
-			state.root = joined_path
+			state.root = root
 		end
-
-		return joined_path
+		return root
 	else
 		return util.GetProjectRoot()
 	end
 end
 
---- get branches
----@param arg {loc: boolean|nil, rem: boolean|nil, all: boolean|nil}|nil
----@return table
+--- Get a list of branches.
+--- @param arg? {loc?: boolean, rem?: boolean}
+--- @return string[]
 function M.get_branch(arg)
-	local ref
-	if arg and arg.loc then
-		ref = "refs/heads"
-	elseif arg and arg.rem then
-		ref = "refs/remotes"
-	else
-		ref = "refs/heads refs/remotes"
-	end
-	return shell.shellout_tbl(string.format("git for-each-ref --format=%%(refname:short) %s", ref))
+	return util.get_branch(arg)
 end
 
 return M

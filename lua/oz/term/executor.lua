@@ -230,7 +230,7 @@ function M.run(cmd, opts)
 		setup_terminal(terminal_buf, nil)
 	else
 		-- create a new window or reuse existing
-		require("oz.util.win").create_win("oz_term", {
+		require("oz.util").create_win("oz_term", {
 			win_type = "botright",
 			reuse = reuse_win ~= nil,
 			content = {},

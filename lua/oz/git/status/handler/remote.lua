@@ -144,9 +144,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "M", function()
-		require("oz.util.help_keymaps").show_menu("Remote Actions", options)
-	end, { buffer = buf, desc = "Remote Actions", nowait = true })
+	vim.keymap.set("n", "M", function()
+		util.show_menu("Remote Actions", options)
+	end, { buffer = buf, desc = "Remote Actions", nowait = true, silent = true })
 end
 
 return M

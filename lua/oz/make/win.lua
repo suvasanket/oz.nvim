@@ -1,14 +1,13 @@
 local M = {}
 local util = require("oz.util")
-local win = require("oz.util.win")
 
 -- make err win buffer mappings
 local function make_err_buf_mappings(buf_id, cmd, dir)
-	util.Map("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "Close" })
-	util.Map("n", "t", function()
+	vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "Close", silent = true })
+	vim.keymap.set("n", "t", function()
 		require("oz.term").run_in_term(cmd, dir)
-	end, { buffer = buf_id, desc = "Run in term" })
-	util.Map("n", "A", function()
+	end, { buffer = buf_id, desc = "Run in term", silent = true })
+	vim.keymap.set("n", "A", function()
 		local cache = require("oz.caching")
 		local res = util.prompt("EFM scope", "&Filetype specific\n&Project specific", 1)
 		if not res or res == 0 then
@@ -33,8 +32,8 @@ local function make_err_buf_mappings(buf_id, cmd, dir)
 				util.Notify("Saved EFM for project", "info", "oz_make")
 			end
 		end
-	end, { buffer = buf_id, desc = "Add EFM" })
-	util.Map("n", "<cr>", function()
+	end, { buffer = buf_id, desc = "Add EFM", silent = true })
+	vim.keymap.set("n", "<cr>", function()
 		-- jump to file
 		local ok = pcall(vim.cmd, "normal! gF")
 
@@ -53,12 +52,12 @@ local function make_err_buf_mappings(buf_id, cmd, dir)
 		else
 			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<cr>", true, false, true), "n", false)
 		end
-	end, { buffer = buf_id, desc = "Open the entry." })
+	end, { buffer = buf_id, desc = "Open the entry.", silent = true })
 
 	-- Help
 	vim.keymap.set("n", "g?", function()
-		require("oz.util.help_keymaps").show_maps({})
-	end, { buffer = buf_id, desc = "Show all available keymaps" })
+        util.show_maps({})
+	end, { buffer = buf_id, desc = "Show all available keymaps", silent = true })
 end
 
 -- show err in a wind
@@ -78,7 +77,7 @@ function M.makeout_win(lines, cmd, dir)
 		return
 	end
 
-	local win_id, _ = win.create_win("makeout_win", {
+	local win_id, _ = util.create_win("makeout_win", {
 		content = lines,
 		win_type = "bot 7",
 		reuse = true,
@@ -108,7 +107,7 @@ function M.refresh_makeout_win(lines)
 		local buf = vim.api.nvim_win_get_buf(win_id)
 		local ok, name = pcall(vim.api.nvim_buf_get_var, buf, "oz_win_name")
 		if ok and name == "makeout_win" then
-			win.create_win("makeout_win", {
+			util.create_win("makeout_win", {
 				content = lines,
 				win_type = "bot 7",
 				reuse = true,

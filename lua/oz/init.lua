@@ -49,7 +49,7 @@ local defaults = {
 	},
 }
 
----check if start with cmd
+--- vim start with cmd
 ---@param cmds table
 ---@return boolean
 local function start_with_cmd(cmds)

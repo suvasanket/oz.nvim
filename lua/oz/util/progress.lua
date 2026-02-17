@@ -1,3 +1,4 @@
+--- @class oz.util.progress
 local M = {}
 local has_fidget = pcall(require, "fidget")
 local fidget = has_fidget and require("fidget.progress") or nil
@@ -11,7 +12,8 @@ local progress_percentage = 0
 local progress_update_timer = nil
 local progress_increment_value = 5
 
--- Update spinner animation
+--- Update spinner animation.
+--- @return string|nil The next frame of the spinner.
 local function update_spinner()
 	if not spinner_active then
 		return
@@ -20,7 +22,8 @@ local function update_spinner()
 	return spinner_frames[current_spinner_frame]
 end
 
--- Start progress increment timer
+--- Start progress increment timer.
+--- @param unique_id string The unique ID for this progress session.
 local function start_spinner_updates(unique_id)
 	if progress_update_timer then
 		return
@@ -39,36 +42,38 @@ local function start_spinner_updates(unique_id)
 
 	-- Start timer to increment progress
 	progress_update_timer = vim.loop.new_timer()
-	progress_update_timer:start(500, 500, function()
-		if not spinner_active then
-			if progress_update_timer then
-				progress_update_timer:stop()
-				progress_update_timer:close()
-				progress_update_timer = nil
+	if progress_update_timer then
+		progress_update_timer:start(500, 500, function()
+			if not spinner_active then
+				if progress_update_timer then
+					progress_update_timer:stop()
+					progress_update_timer:close()
+					progress_update_timer = nil
+				end
+				return
 			end
-			return
-		end
 
-		-- Increment progress but cap at 95% (save 100% for completion)
-		if progress_percentage < 95 then
-			progress_percentage = progress_percentage + progress_increment_value
+			-- Increment progress but cap at 95% (save 100% for completion)
+			if progress_percentage < 95 then
+				progress_percentage = progress_percentage + progress_increment_value
 
-			-- Update fidget progress
-			if fidget and fidget_handle then
-				vim.schedule(function()
-					fidget_handle:report({
-						percentage = progress_percentage,
-						message = "in progress...",
-					})
-				end)
+				-- Update fidget progress
+				if fidget and fidget_handle then
+					vim.schedule(function()
+						fidget_handle:report({
+							percentage = progress_percentage,
+							message = "in progress...",
+						})
+					end)
+				end
 			end
-		end
-	end)
+		end)
+	end
 end
 
--- Start spinner
----@param unique_id string
----@param opts {title: string, fidget_lsp: string, message: string}
+--- Start spinner or fidget progress.
+--- @param unique_id string
+---@param opts {title: string, fidget_lsp?: string, message?: string, manual?: boolean}
 function M.start_progress(unique_id, opts)
 	local msg = opts.message or "in progress..."
 	spinner_active = true
@@ -83,21 +88,23 @@ function M.start_progress(unique_id, opts)
 	else
 		-- Start spinner timer for echo area
 		local spiner_timer = vim.loop.new_timer()
-		M.progress_tbl[unique_id .. "_spinner_handle"] = spiner_timer
+		if spiner_timer then
+			M.progress_tbl[unique_id .. "_spinner_handle"] = spiner_timer
 
-		spiner_timer:start(0, 100, function()
-			if spinner_active then
-				local spinner = update_spinner()
-				vim.schedule(function()
-					vim.api.nvim_echo({
-						{ spinner, "@constant" },
-						{ (" %s %s (%s%%)"):format(opts.title, msg, progress_percentage) },
-					}, false, {})
-				end)
-			else
-				spiner_timer:stop()
-			end
-		end)
+			spiner_timer:start(0, 100, function()
+				if spinner_active then
+					local spinner = update_spinner()
+					vim.schedule(function()
+						vim.api.nvim_echo({
+							{ spinner, "@constant" },
+							{ (" %s %s (%s%%)"):format(opts.title, msg, progress_percentage) },
+						}, false, {})
+					end)
+				else
+					spiner_timer:stop()
+				end
+			end)
+		end
 	end
 
 	-- Start progress updates
@@ -106,10 +113,10 @@ function M.start_progress(unique_id, opts)
 	end
 end
 
--- Update progress manually
----@param unique_id string
----@param percentage number
----@param message string
+--- Update progress manually.
+--- @param unique_id string
+--- @param percentage number
+--- @param message string
 function M.update_progress(unique_id, percentage, message)
 	progress_percentage = percentage
 
@@ -122,9 +129,9 @@ function M.update_progress(unique_id, percentage, message)
 	end
 end
 
--- Stop spinner
----@param unique_id string
----@param opts {title: string, exit_code: integer, message: string[]}
+--- Stop spinner and show completion message.
+--- @param unique_id string
+---@param opts {title: string, exit_code: integer, message?: string[]}
 function M.stop_progress(unique_id, opts)
 	local msg = opts.message and (opts.exit_code == 0 and opts.message[1] or opts.message[2])
 		or (opts.exit_code == 0 and "completed successfully" or "failed")

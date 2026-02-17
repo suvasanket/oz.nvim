@@ -168,9 +168,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "w", function()
-		require("oz.util.help_keymaps").show_menu("Worktree Actions", options)
-	end, { buffer = buf, desc = "Worktree Actions", nowait = true })
+	vim.keymap.set("n", "w", function()
+		util.show_menu("Worktree Actions", options)
+	end, { buffer = buf, desc = "Worktree Actions", nowait = true, silent = true })
 end
 
 return M

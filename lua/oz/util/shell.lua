@@ -1,5 +1,9 @@
+--- @class oz.util.shell
 local M = {}
 
+--- Trim empty strings from the beginning and end of a table.
+--- @param tbl string[] The table of strings.
+--- @return string[] The trimmed table.
 local function trim_empty_strings(tbl)
 	local start = 1
 	while start <= #tbl and tbl[start] == "" do
@@ -19,12 +23,12 @@ local function trim_empty_strings(tbl)
 	return result
 end
 
----Run shellcmd
----@param cmd string|table
----@param cwd string|nil
----@param opts {trim_off: boolean}|nil
----@return boolean
----@return string[]
+--- Run a shell command and return the result.
+--- @param cmd string|string[] The command to execute.
+--- @param cwd? string Optional working directory.
+--- @param opts? {trim_off: boolean} Optional options.
+--- @return boolean success True if the command exited with code 0.
+--- @return string[] output The command output (stdout or stderr).
 function M.run_command(cmd, cwd, opts)
 	local stdout_lines = {}
 	local stderr_lines = {}
@@ -40,14 +44,17 @@ function M.run_command(cmd, cwd, opts)
 		stdout_buffered = true,
 		stderr_buffered = true,
 		on_stdout = function(_, data)
-			-- Filter out empty lines often added by jobstart/shell
-			for _, line in ipairs(data) do
-				table.insert(stdout_lines, line)
+			if data then
+				for _, line in ipairs(data) do
+					table.insert(stdout_lines, line)
+				end
 			end
 		end,
 		on_stderr = function(_, data)
-			for _, line in ipairs(data) do
-				table.insert(stderr_lines, line)
+			if data then
+				for _, line in ipairs(data) do
+					table.insert(stderr_lines, line)
+				end
 			end
 		end,
 		on_exit = function(_, code)
@@ -70,10 +77,13 @@ function M.run_command(cmd, cwd, opts)
 		end
 	else
 		return false, trim_empty_strings(stderr_lines)
-		-- return false, stderr_lines
 	end
 end
 
+--- Run a shell command and return the output as a trimmed string.
+--- @param str string|string[] The command string.
+--- @param cwd? string Optional working directory.
+--- @return string output The command output.
 function M.shellout_str(str, cwd)
 	local ok, output = M.run_command(str, cwd)
 	if ok then
@@ -84,6 +94,10 @@ function M.shellout_str(str, cwd)
 	end
 end
 
+--- Run a shell command and return the output as a table of lines.
+--- @param str string|string[] The command string.
+--- @param cwd? string Optional working directory.
+--- @return string[] output The command output as lines.
 function M.shellout_tbl(str, cwd)
 	local ok, output = M.run_command(str, cwd)
 	if ok then

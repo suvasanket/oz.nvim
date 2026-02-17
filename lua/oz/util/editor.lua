@@ -1,3 +1,4 @@
+--- @class oz.util.editor
 local M = {}
 
 -- 1. CONSTANTS & CONFIG
@@ -7,6 +8,8 @@ local GLOBAL_HANDLER_NAME = "OzGitEditorHandler" -- The global function name use
 -- 2. THE GHOST SCRIPT GENERATOR
 -- This generates the Lua code that the HEADLESS Git editor will run.
 --------------------------------------------------------------------------------
+--- Generate a temporary Lua script for the headless Neovim to use as a Git editor.
+--- @return string script_path Path to the generated script.
 local function generate_ghost_script()
 	local content = string.format(
 		[[
@@ -53,14 +56,18 @@ os.exit(0)
 
 	local script_path = os.tmpname() .. ".lua"
 	local f = io.open(script_path, "w")
-	f:write(content)
-	f:close()
+	if f then
+		f:write(content)
+		f:close()
+	end
 	return script_path
 end
 
 -- 3. THE RPC HANDLER
 -- This is exposed globally so the headless instance can call it.
 --------------------------------------------------------------------------------
+--- @param file_path string Path to the file to edit.
+--- @param wait_file_path string Path to the lockfile.
 _G[GLOBAL_HANDLER_NAME] = function(file_path, wait_file_path)
 	-- Schedule to prevent blocking the RPC channel
 	vim.schedule(function()
@@ -91,6 +98,9 @@ end
 -- 4. PUBLIC API
 -- Setup environment for IPC
 --------------------------------------------------------------------------------
+--- Setup the environment variables needed for Git IPC.
+--- @return table env Environment variables.
+--- @return function cleanup Cleanup function to remove temporary files.
 function M.setup_ipc_env()
 	local wait_file = os.tmpname()
 	local ghost_script = generate_ghost_script()

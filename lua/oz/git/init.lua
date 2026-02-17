@@ -3,8 +3,6 @@ local util = require("oz.util")
 local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
-local shell = require("oz.util.shell")
-local editor_ipc = require("oz.util.editor")
 
 local editor_req_cmds = {
 	"commit",
@@ -49,7 +47,7 @@ local function subcmd_exec(args_tbl, args_str)
 	-- Grep
 	if cmd == "grep" then
 		table.remove(args_tbl, 1)
-		local ok, out = shell.run_command({ "git", "grep", "-n", "--column", unpack(args_tbl) })
+		local ok, out = util.run_command({ "git", "grep", "-n", "--column", unpack(args_tbl) })
 		if ok then
 			vim.fn.setqflist({}, " ", {
 				lines = out,
@@ -116,16 +114,16 @@ local job_env = {}
 -- refresh any required buffers.
 ---@param passive boolean?
 function M.refresh_buf(passive)
-	local status_win = require("oz.git.status").status_win
-	local log_win = require("oz.git.log").log_win
+	local status_buf = require("oz.git.status").status_buf
+	local log_buf = require("oz.git.log").log_buf
 
-	if status_win and vim.api.nvim_win_is_valid(status_win) then
+	if status_buf and vim.api.nvim_buf_is_valid(status_buf) then
 		if passive then
 			require("oz.git.status").refresh_buf(true)
 		else
 			require("oz.git.status").refresh_buf()
 		end
-	elseif log_win and vim.api.nvim_win_is_valid(log_win) then
+	elseif log_buf and vim.api.nvim_buf_is_valid(log_buf) then
 		if passive then
 			require("oz.git.log").refresh_buf(true)
 		else
@@ -169,8 +167,8 @@ end
 --- Run Git cmd.
 ---@param args string
 function M.run_git_job(args)
-	args = util.args_parser().expand_expressions(args)
-	local args_table = util.args_parser().parse_args(args)
+	args = vim.fn.expandcmd(args)
+	local args_table = util.parse_args(args)
 
 	local suggestion = nil
 	local std_out = {}
@@ -184,7 +182,7 @@ function M.run_git_job(args)
 	local ipc_cleanup = nil
 
 	if util.str_in_tbl(args, editor_req_cmds) then
-		local env, cleanup = editor_ipc.setup_ipc_env()
+		local env, cleanup = util.setup_ipc_env()
 		current_job_env = vim.tbl_extend("force", job_env, env)
 		ipc_cleanup = cleanup
 	end

@@ -84,11 +84,11 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 	}
-	util.Map("n", "U", function()
-		require("oz.util.help_keymaps").show_menu("Reset Actions", options)
-	end, { buffer = buf, desc = "Reset Actions", nowait = true })
+	vim.keymap.set("n", "U", function()
+		util.show_menu("Reset Actions", options)
+	end, { buffer = buf, desc = "Reset Actions", nowait = true, silent = true })
 
-	util.Map("x", "U", M.reset, { buffer = buf, desc = "Reset selection" })
+	vim.keymap.set("x", "U", M.reset, { buffer = buf, desc = "Reset selection", silent = true })
 end
 
 return M

@@ -6,7 +6,7 @@ local util = require("oz.util")
 function M.quit()
 	vim.api.nvim_echo({ { "" } }, false, {})
 	if not pcall(vim.cmd.close) then
-		vim.cmd.blast()
+		pcall(vim.cmd.blast)
 	end
 end
 
@@ -78,19 +78,19 @@ function M.enter_key()
 end
 
 function M.setup_keymaps(buf, key_grp)
-	util.Map("n", "q", M.quit, { buffer = buf, desc = "Close git status buffer." })
-	util.Map("n", "<Tab>", function()
+	vim.keymap.set("n", "q", M.quit, { buffer = buf, desc = "Close git status buffer.", silent = true })
+	vim.keymap.set("n", "<Tab>", function()
 		s_util.jump_section(1)
-	end, { buffer = buf, desc = "Jump to next section." })
-	util.Map("n", "<S-Tab>", function()
+	end, { buffer = buf, desc = "Jump to next section.", silent = true })
+	vim.keymap.set("n", "<S-Tab>", function()
 		s_util.jump_section(-1)
-	end, { buffer = buf, desc = "Jump to previous section." })
-	util.Map("n", "<C-r>", status.refresh_buf, { buffer = buf, desc = "Refresh status buffer." })
-	util.Map("n", "-", function()
+	end, { buffer = buf, desc = "Jump to previous section.", silent = true })
+	vim.keymap.set("n", "<C-r>", status.refresh_buf, { buffer = buf, desc = "Refresh status buffer.", silent = true })
+	vim.keymap.set("n", "-", function()
 		util.set_cmdline("Git ")
 	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git." })
-	util.Map("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry under cursor." })
-	util.Map("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog" })
+	vim.keymap.set("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry under cursor.", silent = true })
+	vim.keymap.set("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog", silent = true })
 	key_grp["Quick actions"] = { "-", "<Tab>", "<S-Tab>", "<CR>", "I", "<C-R>", "q" }
 end
 

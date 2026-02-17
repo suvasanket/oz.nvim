@@ -1,7 +1,6 @@
 local M = {}
 
 local util = require("oz.util")
-local win = require("oz.util.win")
 
 --- cmd parser
 ---@param cmd string
@@ -84,7 +83,7 @@ end
 --- show win
 ---@param lines string[]
 local function grep_win(lines)
-	win.create_win("grep_err", {
+	util.create_win("grep_err", {
 		content = lines,
 		win_type = "bot 7",
 		callback = function(buf_id)

@@ -1,6 +1,5 @@
 local M = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
 local oz_git_win = require("oz.git.oz_git_win")
 local git_util = require("oz.git.util")
 
@@ -10,7 +9,7 @@ local function get_content(target)
 	if state.show_cache[target] then
 		return state.show_cache[target]
 	end
-	local ok, content = shell.run_command({ "git", "show", target })
+	local ok, content = util.run_command({ "git", "show", target })
 	if ok then
 		state.show_cache[target] = content
 		return content
@@ -19,7 +18,7 @@ local function get_content(target)
 end
 
 local function fallback_text(args)
-	local ok, lines = shell.run_command({ "git", "diff", unpack(args) })
+	local ok, lines = util.run_command({ "git", "diff", unpack(args) })
 	if ok then
 		oz_git_win.open_oz_git_win(lines, "diff " .. table.concat(args, " "))
 		vim.api.nvim_set_option_value("filetype", "diff", { buf = 0 })
@@ -227,7 +226,7 @@ function start_visual_diff(target_file, args, file_list, index)
 		-- Help
 		vim.keymap.set("n", "g?", function()
 			local leader = vim.g.mapleader or "\\"
-			require("oz.util.help_keymaps").show_maps({
+            util.show_maps({
 				group = {
 					["Diff"] = { "]f", "[f", leader .. "f", "gq", "gs", "gu" },
 				},
@@ -270,7 +269,7 @@ function M.diff(args)
 
 	-- Fetch file list for these args
 	local cmd = { "git", "diff", "--name-only", unpack(args) }
-	local ok, files = shell.run_command(cmd)
+	local ok, files = util.run_command(cmd)
 
 	if ok and #files > 0 then
 		if #files == 1 then
@@ -296,7 +295,7 @@ function M.resolve_three_way()
 	end
 
 	-- Auto-detect conflicted files
-	local ok, conflicted_files = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
+	local ok, conflicted_files = util.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
 	if not ok or #conflicted_files == 0 then
 		util.Notify("No conflicted files to resolve", "info", "oz_git")
 		return
@@ -477,7 +476,7 @@ function M.resolve_three_way()
 	-- Jump File
 	local function jump_file(direction)
 		local r_root = git_util.get_project_root()
-		local ok_j, out = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, r_root)
+		local ok_j, out = util.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, r_root)
 		if not ok_j or #out == 0 then
 			util.Notify("No conflicted files found.", "warn", "oz_git")
 			return
@@ -513,7 +512,7 @@ function M.resolve_three_way()
 
 	-- Pick File
 	vim.keymap.set("n", "<leader>e", function()
-		local ok_p, c_files = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
+		local ok_p, c_files = util.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
 		if not ok_p or #c_files == 0 then
 			util.Notify("No conflicted files found.", "warn", "oz_git")
 			close_merge()
@@ -533,7 +532,7 @@ function M.resolve_three_way()
 	-- Help
 	vim.keymap.set("n", "g?", function()
 		local leader = vim.g.mapleader or "\\"
-		require("oz.util.help_keymaps").show_maps({
+        util.show_maps({
 			group = {
 				["Resolution Actions"] = {
 					leader .. "1",

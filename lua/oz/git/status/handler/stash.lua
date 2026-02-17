@@ -110,9 +110,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "z", function()
-		require("oz.util.help_keymaps").show_menu("Stash Actions", options)
-	end, { buffer = buf, desc = "Stash Actions", nowait = true })
+	vim.keymap.set("n", "z", function()
+		util.show_menu("Stash Actions", options)
+	end, { buffer = buf, desc = "Stash Actions", nowait = true, silent = true })
 end
 
 return M

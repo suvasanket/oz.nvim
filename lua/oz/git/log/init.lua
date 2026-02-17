@@ -1,7 +1,5 @@
 local M = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
-local win = require("oz.util.win")
 
 M.log_win = nil
 M.log_buf = nil
@@ -13,8 +11,8 @@ M.grab_hashs = {}
 M.state = {}
 local user_set_args = nil
 
-local shellout_tbl = shell.shellout_tbl
-local run_cmd = shell.run_command
+local shellout_tbl = util.shellout_tbl
+local run_cmd = util.run_command
 
 -- get selected or current SHA under cursor
 ---@return table
@@ -47,33 +45,21 @@ end
 -- highlight
 local function log_buf_hl()
 	vim.cmd("syntax clear")
-
-	vim.cmd("syntax match ozgitlogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
-	vim.cmd("highlight default link ozgitlogCommitHash @attribute")
-
+	util.setup_hls({
+		{ ozgitlogCommitHash = "@attribute" },
+		{ ozGitLogTime = "Comment" },
+		"ozGitLogBranchName",
+		"ozGitLogHead",
+		"PathSeparator",
+	})
+    vim.cmd("syntax match ozgitlogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 	vim.cmd([[
-    syntax region ozGitLogBranchName start=/(/ end=/)/ contains=ALL
-    highlight ozGitLogBranchName guifg=#A390F0 guibg=NONE
-    ]])
-
-	vim.cmd([[
-    syntax match ozGitLogTime /\[.*\]/
-    highlight link ozGitLogTime Comment
-    ]])
-
-	vim.cmd([[
-    syntax match ozGitLogHead /HEAD -> \w\+/
-    highlight ozGitLogHead guifg=#A390F0 guibg=NONE gui=bold
-    ]])
-
-	vim.cmd([[
-    syntax match PathSeparator /\w\+\/\w\+/
-    highlight PathSeparator guifg=#99BC85 guibg=NONE gui=italic
-    ]])
-
-	vim.cmd([[
-    syntax match Comment /\*\w\+/ containedin=ALL
-    syntax match Comment /\zs\*\w\+\ze.\{-}\*\w\+/ skipwhite
+        syntax region ozGitLogBranchName start=/(/ end=/)/ contains=ALL
+        syntax match ozGitLogTime /\[.*\]/
+        syntax match ozGitLogHead /HEAD -> \w\+/
+        syntax match PathSeparator /\w\+\/\w\+/
+        syntax match Comment /\*\w\+/ containedin=ALL
+        syntax match Comment /\zs\*\w\+\ze.\{-}\*\w\+/ skipwhite
     ]])
 end
 
@@ -167,7 +153,7 @@ function M.commit_log(opts, args)
 	commit_log_lines = generate_content(level, args)
 
 	-- open log
-	win.create_win("log", {
+	util.create_win("log", {
 		content = commit_log_lines,
 		win_type = win_type,
 		buf_name = "OzGitLog",
@@ -181,10 +167,8 @@ function M.commit_log(opts, args)
 			)
 			vim.opt_local.fillchars:append({ eob = " " })
 
-			-- async component
-			vim.fn.timer_start(10, function()
-				log_buf_hl()
-			end)
+			-- hl and keymaps
+			log_buf_hl()
 			vim.fn.timer_start(100, function()
 				require("oz.git.log.keymaps").keymaps_init(buf_id)
 			end)

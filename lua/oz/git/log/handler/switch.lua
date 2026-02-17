@@ -59,7 +59,7 @@ function M.show_file_in_commit()
 						vim.api.nvim_set_option_value("signcolumn", "no", { win = win_id })
 						vim.api.nvim_set_option_value("foldcolumn", "0", { win = win_id })
 
-						util.Map("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "Close buffer" })
+						vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "Close buffer", silent = true })
 					end,
 				})
 			else
@@ -89,9 +89,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "s", function()
-		require("oz.util.help_keymaps").show_menu("Switch/Show Actions", options)
-	end, { buffer = buf, desc = "Switch/Show Actions", nowait = true })
+	vim.keymap.set("n", "s", function()
+		util.show_menu("Switch/Show Actions", options)
+	end, { buffer = buf, desc = "Switch/Show Actions", nowait = true, silent = true })
 end
 
 return M

@@ -93,9 +93,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "P", function()
-		require("oz.util.help_keymaps").show_menu("Push Actions", push_opts)
-	end, { buffer = buf, desc = "Push Actions", nowait = true })
+	vim.keymap.set("n", "P", function()
+		util.show_menu("Push Actions", push_opts)
+	end, { buffer = buf, desc = "Push Actions", nowait = true, silent = true })
 end
 
 return M
