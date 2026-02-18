@@ -132,15 +132,22 @@ function M.transient_cmd_complete()
 end
 
 --- Populate the command-line with a string and position the cursor at a marker (`|`).
---- @param str string The command string.
-function M.set_cmdline(str)
-	local cmdline = str:gsub("%%|", "")
-	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(":<C-U>" .. cmdline, true, false, true), "n", false)
-	local cursor_pos = str:find("%%|")
-	if cursor_pos then
-		vim.api.nvim_input(string.rep("<Left>", #str - cursor_pos))
+--- @param text string The command string.
+function M.set_cmdline(text)
+	local marker = "|"
+	local start_idx, end_idx = string.find(text, marker, 1, true)
+	local final_keys = ""
+
+	if start_idx then
+		local prefix = string.sub(text, 1, start_idx - 1)
+		local suffix = string.sub(text, end_idx + 1)
+		local back_moves = string.rep("<Left>", #suffix)
+		final_keys = ":" .. prefix .. suffix .. back_moves
+	else
+		final_keys = ":" .. text
 	end
-	M.transient_cmd_complete()
+	local escaped = vim.api.nvim_replace_termcodes(final_keys, true, false, true)
+	vim.api.nvim_feedkeys(escaped, "n", false)
 end
 
 return M
