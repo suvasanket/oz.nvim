@@ -35,10 +35,11 @@ In an oz-term buffer, the following keymaps are available by default:
     <Enter>     Jump to the file/line under the cursor. Supports various
                 error formats and also opens URLs.
     <C-q>       Grab all locations (errors, warnings, etc.) from the terminal
-                output and populate the quickfix list.
+		output and populate the quickfix list.
+    <C-r>       Rerun the command that was executed in this buffer.
     q           Close the terminal buffer. Prompts for confirmation if a job
                 is still active.
-    r           Rerun the command that was executed in this buffer.
+    r		Run the executed command in root of the project.
     e           Edit the command that was executed in this buffer.
 
 Global mappings (must be configured in |oz-nvim-setup|):

@@ -114,7 +114,7 @@ local function grab_to_qf(buf)
 		vim.fn.setqflist(items, "r")
 		vim.cmd("copen")
 	else
-		vim.notify("No valid locations found in stdout.", vim.log.levels.INFO)
+		util.Notify("No valid errors found in stdout.", "info", "oz_term")
 	end
 end
 
@@ -124,12 +124,12 @@ function M.setup(buf)
 		if try_jump_file(buf, line) or try_cword(buf) or try_open_url(line) then
 			return
 		end
-		vim.notify("No entry found under cursor.", vim.log.levels.INFO)
-	end, { buffer = buf, silent = true, desc = "Jump to location or open URL" })
+        util.Notify("No entry found under cursor.", "info", "oz_term")
+	end, { buffer = buf, silent = true, desc = "Visit location under cursor" })
 
 	vim.keymap.set("n", "<C-q>", function()
 		grab_to_qf(buf)
-	end, { buffer = buf, silent = true, desc = "Grab all locations to quickfix" })
+	end, { buffer = buf, silent = true, desc = "Grab all errors to quickfix" })
 
 	vim.keymap.set("n", "q", function()
 		local manager = require("oz.term.manager")
@@ -146,7 +146,7 @@ function M.setup(buf)
 		end
 	end, { buffer = buf, silent = true, desc = "Close terminal" })
 
-	vim.keymap.set("n", "r", function()
+	vim.keymap.set("n", "<C-r>", function()
 		local cmd = vim.b[buf].oz_cmd
 		if cmd then
 			require("oz.term.executor").run(cmd, { cwd = vim.b[buf].oz_cwd })
@@ -163,9 +163,18 @@ function M.setup(buf)
 		end
 	end, { buffer = buf, silent = true, desc = "Edit command" })
 
+	vim.keymap.set("n", "r", function()
+		local root = util.GetProjectRoot()
+		if not root then
+			util.Notify("No root found!, running in cwd", "error", "oz_term")
+			root = vim.fn.getcwd()
+		end
+		require("oz.term.executor").run(vim.b[buf].oz_cmd, { cwd = root })
+	end, { buffer = buf, silent = true, desc = "Run cmd in root of the project" })
+
 	-- Help
 	vim.keymap.set("n", "g?", function()
-        util.show_maps({})
+		util.show_maps({})
 	end, { buffer = buf, desc = "Show all available keymaps" })
 end
 

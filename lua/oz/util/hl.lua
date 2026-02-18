@@ -6,14 +6,17 @@ local _highlights = {}
 M.oz_highlights = {
 	ozHelpEcho = { fg = "#606060" },
 	ozInactivePrompt = { fg = "#757575" },
+	ozUrl = { fg = "#B8B5FF", undercurl = true, bold = true },
+
 	ozGitStatusHeading = { fg = "#ffffff", bold = true },
 	ozGitStatusBranchName = { link = "@attribute" },
-	ozgitlogCommitHash = { link = "@attribute" },
+	ozGitLogCommitHash = { link = "@attribute" },
 	ozGitLogBranchName = { fg = "#A390F0", bg = "NONE" },
 	ozGitLogTime = { link = "Comment" },
 	ozGitLogHead = { fg = "#A390F0", bg = "NONE", bold = true },
+
 	PathSeparator = { fg = "#99BC85", bg = "NONE", italic = true },
-	OzTransparent = { bg = "NONE", ctermbg = "NONE" },
+	ozTransparent = { bg = "NONE", ctermbg = "NONE" },
 	SpecialKey = { link = "Comment" },
 	KeyName = { link = "@attribute" },
 }

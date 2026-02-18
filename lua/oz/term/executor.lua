@@ -1,17 +1,17 @@
 local M = {}
 
 local function highlight(buf)
-	local util = require("oz.term.util")
+	local term_util = require("oz.term.util")
 	vim.api.nvim_buf_call(buf, function()
 		vim.cmd([[
             syntax clear
-            syntax match Label /^\(Exit code\|Time\):/
             syntax match Comment /^----------------------------------------$/
-            syntax match Comment /^Exit code: 0/
+            syntax match Comment /^\(Exit code:\|Time:\|Cwd:\).*/
             syntax match DiagnosticError /^Exit code: [^0]\d*/
-            syntax match Comment /^Time:.*/
         ]])
 	end)
+
+	require("oz.util").setup_hls({ "ozUrl" })
 
 	vim.schedule(function()
 		if not vim.api.nvim_buf_is_valid(buf) then
@@ -21,7 +21,7 @@ local function highlight(buf)
 		if win ~= -1 then
 			vim.api.nvim_win_call(win, function()
 				-- Highlight URLs
-				vim.fn.matchadd("@attribute", util.URL_PATTERN)
+				vim.fn.matchadd("ozUrl", term_util.URL_PATTERN)
 			end)
 		end
 
@@ -38,20 +38,22 @@ local function highlight(buf)
 		end
 
 		-- Highlight potential file locations using EFM and verifying existence
-		local oz_cwd = util.get_oz_cwd(buf)
+		local oz_cwd = term_util.get_oz_cwd(buf)
 		local ns = vim.api.nvim_create_namespace("oz_term_files")
 		vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
-		local efm = table.concat(util.EFM_PATTERNS, ",") .. ",%f" -- all the efm and only file
-		local readable_cache = {}
+		local efm = table.concat(term_util.EFM_PATTERNS, ",")
 
 		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+		local old_cwd = vim.fn.getcwd()
+		pcall(vim.api.nvim_set_current_dir, oz_cwd)
 
 		for i, line in ipairs(lines) do
 			if line ~= "" and #line < 1000 then
 				local start_idx = 0
 				while true do
-					local match = vim.fn.matchstrpos(line, util.PATH_PATTERN, start_idx)
+					local match = vim.fn.matchstrpos(line, term_util.PATH_PATTERN, start_idx)
 					local text = match[1]
 					local start_pos = match[2]
 					local end_pos = match[3]
@@ -61,34 +63,50 @@ local function highlight(buf)
 
 					-- Fast path: if it contains : or (, it might be an EFM match
 					local maybe_efm = text:find("[:(]") ~= nil
-					local full_path = text
+					local hl_group = "ozUrl"
+					local filename = text
 
 					if maybe_efm then
-						-- Only call getqflist if it looks like an EFM match to save performance
-						local sub_qf = vim.fn.getqflist({ lines = { text }, efm = efm })
+						-- Pass the rest of the line to catch diagnostic types
+						local line_rest = line:sub(start_pos + 1)
+						local sub_qf = vim.fn.getqflist({ lines = { line_rest }, efm = efm })
 						local sub_entry = sub_qf.items and sub_qf.items[1]
 
+						-- Fallback to just text if line_rest didn't match
+						if not sub_entry or sub_entry.valid ~= 1 then
+							sub_qf = vim.fn.getqflist({ lines = { text }, efm = efm })
+							sub_entry = sub_qf.items and sub_qf.items[1]
+						end
+
 						if sub_entry and sub_entry.valid == 1 then
-							full_path = sub_entry.filename
-							if (not full_path or full_path == "") and sub_entry.bufnr > 0 then
-								full_path = vim.api.nvim_buf_get_name(sub_entry.bufnr)
+							filename = sub_entry.filename
+							if (not filename or filename == "") and sub_entry.bufnr > 0 then
+								filename = vim.api.nvim_buf_get_name(sub_entry.bufnr)
+							end
+
+							if sub_entry.type ~= "" then
+								local type = sub_entry.type:lower()
+								if type == "e" then
+                                    hl_group = "DiagnosticUnderlineError"
+								elseif type == "w" then
+                                    hl_group = "DiagnosticUnderlineWarn"
+								end
 							end
 						end
 					end
 
-					if full_path and full_path ~= "" then
-						if not (full_path:match("^/") or full_path:match("^%a:")) then
-							full_path = oz_cwd .. "/" .. full_path
-						end
-
-						if util.is_readable(full_path, readable_cache) then
-							vim.api.nvim_buf_add_highlight(buf, ns, "@attribute", i - 1, start_pos, end_pos)
+					if filename and filename ~= "" then
+						local valid_path = term_util.find_valid_path(filename, oz_cwd)
+						if valid_path then
+							vim.api.nvim_buf_add_highlight(buf, ns, hl_group, i - 1, start_pos, end_pos)
 						end
 					end
 					start_idx = end_pos
 				end
 			end
 		end
+
+		pcall(vim.api.nvim_set_current_dir, old_cwd)
 	end)
 end
 
@@ -288,6 +306,7 @@ function M.run(cmd, opts)
 			table.insert(lines, "")
 			table.insert(lines, "----------------------------------------")
 			table.insert(lines, string.format("Exit code: %d", status))
+			table.insert(lines, string.format("Cwd: %s", vim.fn.fnamemodify(oz_cwd, ":~:.")))
 			table.insert(lines, string.format("Time: ~%.3fs", duration))
 
 			vim.schedule(function()

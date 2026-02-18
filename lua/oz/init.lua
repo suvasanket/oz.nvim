@@ -14,7 +14,7 @@ local defaults = {
 
 	-- all oz_term options
 	oz_term = {
-		efm = { "%f:%l:%c: %m" },
+		efm = { "%f:%l:%c: %trror: %m" },
 		root_prefix = "@",
 	},
 

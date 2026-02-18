@@ -1,4 +1,3 @@
---- @class oz.util.fs
 local M = {}
 
 --- Check if a path is readable (file or directory).

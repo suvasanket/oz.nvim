@@ -116,7 +116,7 @@ function M.create_floating_window(opts)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
 	-- Ensure transparent highlight group exists
-	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
+	vim.api.nvim_set_hl(0, "ozTransparent", { bg = "NONE", ctermbg = "NONE" })
 
 	local win_opts = {
 		relative = "editor",
@@ -137,7 +137,7 @@ function M.create_floating_window(opts)
 	vim.api.nvim_win_set_option(
 		win_id,
 		"winhighlight",
-		"NormalFloat:StatusLine,FloatBorder:OzTransparent,FloatTitle:StatusLine"
+		"NormalFloat:StatusLine,FloatBorder:ozTransparent,FloatTitle:StatusLine"
 	)
 
 	return win_id, buf_id
@@ -156,7 +156,7 @@ function M.create_bottom_overlay(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
-	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
+	vim.api.nvim_set_hl(0, "ozTransparent", { bg = "NONE", ctermbg = "NONE" })
 	local row = vim.o.lines - height - 2 -- -2 for statusline and cmdline space roughly
 
 	local win_opts = {
@@ -179,7 +179,7 @@ function M.create_bottom_overlay(opts)
 	vim.api.nvim_win_set_option(
 		win_id,
 		"winhighlight",
-		"NormalFloat:StatusLine,FloatBorder:OzTransparent,FloatTitle:StatusLine"
+		"NormalFloat:StatusLine,FloatBorder:ozTransparent,FloatTitle:StatusLine"
 	)
 
 	return win_id, buf_id
