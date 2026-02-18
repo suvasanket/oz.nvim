@@ -15,7 +15,7 @@ function M.merge_branch(flags)
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	-- Merge mappings
 	local m_opts = {
 		{
@@ -68,9 +68,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			},
 		},
 	}
-	util.Map("n", "m", function()
-		require("oz.util.help_keymaps").show_menu("Merge Actions", m_opts)
-	end, { buffer = buf, desc = "Merge Actions", nowait = true })
+	vim.keymap.set("n", "m", function()
+		util.show_menu("Merge Actions", m_opts)
+	end, { buffer = buf, desc = "Merge Actions", nowait = true, silent = true })
 end
 
 return M

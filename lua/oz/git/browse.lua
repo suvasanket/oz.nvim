@@ -1,10 +1,9 @@
 local M = {}
 local util = require("oz.util")
 local g_util = require("oz.git.util")
-local shell = require("oz.util.shell")
 
 local run_command = function(tbl, cwd)
-	local ok, out = shell.run_command(tbl, cwd)
+	local ok, out = util.run_command(tbl, cwd)
 	return ok, vim.trim(table.concat(out, "\n"))
 end
 
@@ -48,7 +47,7 @@ function M.browse(target_path)
 		util.Notify("Could not get the current branch.", "error", "oz_git")
 	end
 	local cur_remote_branch_ref =
-		shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", cur_local_branch))
+		util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", cur_local_branch))
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$")
 
 	-- 4. get remote url

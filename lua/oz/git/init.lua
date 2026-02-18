@@ -3,8 +3,6 @@ local util = require("oz.util")
 local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
-local shell = require("oz.util.shell")
-local editor_ipc = require("oz.util.editor")
 
 local editor_req_cmds = {
 	"commit",
@@ -49,7 +47,7 @@ local function subcmd_exec(args_tbl, args_str)
 	-- Grep
 	if cmd == "grep" then
 		table.remove(args_tbl, 1)
-		local ok, out = shell.run_command({ "git", "grep", "-n", "--column", unpack(args_tbl) })
+		local ok, out = util.run_command({ "git", "grep", "-n", "--column", unpack(args_tbl) })
 		if ok then
 			vim.fn.setqflist({}, " ", {
 				lines = out,
@@ -99,35 +97,33 @@ local function subcmd_exec(args_tbl, args_str)
 	return false
 end
 
--- callback to run after :Git cmd complete
-local exec_complete_callback = nil
-local exec_complete_callback_return = false
+-- callbacks to run after :Git cmd complete
+local exit_callbacks = {}
 --- callback func
----@param callback function
----@param ret boolean|nil
-function M.after_exec_complete(callback, ret)
-	if callback then
-		exec_complete_callback = callback
+---@param id string unique id for the callback
+---@param opts {callback: fun(result: {exit_code: number, stdout: string, stderr: string}), once: boolean?}
+function M.on_job_exit(id, opts)
+	if id and opts and opts.callback then
+		exit_callbacks[id] = { cb = opts.callback, once = opts.once }
 	end
-	exec_complete_callback_return = ret or false
 end
 
 -- ENV --
 local job_env = {}
 
 -- refresh any required buffers.
----@param passive boolean|nil
+---@param passive boolean?
 function M.refresh_buf(passive)
-	local status_win = require("oz.git.status").status_win
-	local log_win = require("oz.git.log").log_win
+	local status_buf = require("oz.git.status").status_buf
+	local log_buf = require("oz.git.log").log_buf
 
-	if status_win and vim.api.nvim_win_is_valid(status_win) then
+	if status_buf and vim.api.nvim_buf_is_valid(status_buf) then
 		if passive then
 			require("oz.git.status").refresh_buf(true)
 		else
 			require("oz.git.status").refresh_buf()
 		end
-	elseif log_win and vim.api.nvim_win_is_valid(log_win) then
+	elseif log_buf and vim.api.nvim_buf_is_valid(log_buf) then
 		if passive then
 			require("oz.git.log").refresh_buf(true)
 		else
@@ -171,59 +167,8 @@ end
 --- Run Git cmd.
 ---@param args string
 function M.run_git_job(args)
-	args = util.args_parser().expand_expressions(args)
-	local args_table = util.args_parser().parse_args(args)
-
-	local allowed_cmds = {
-		"add",
-		"am",
-		"archive",
-		"bisect",
-		"blame",
-		"branch",
-		"bundle",
-		"checkout",
-		"cherry-pick",
-		"clean",
-		"clone",
-		"commit",
-		"config",
-		"describe",
-		"diff",
-		"fetch",
-		"gc",
-		"grep",
-		"init",
-		"log",
-		"ls-files",
-		"ls-remote",
-		"ls-tree",
-		"merge",
-		"mv",
-		"notes",
-		"pull",
-		"push",
-		"rebase",
-		"reflog",
-		"remote",
-		"reset",
-		"restore",
-		"revert",
-		"rm",
-		"shortlog",
-		"show",
-		"stash",
-		"status",
-		"submodule",
-		"switch",
-		"tag",
-		"worktree",
-	}
-
-	if not vim.tbl_contains(allowed_cmds, args_table[1]) then
-		util.Notify("Command '" .. args_table[1] .. "' is not allowed or supported.", "error", "oz_git")
-		return
-	end
+	args = vim.fn.expandcmd(args)
+	local args_table = util.parse_args(args)
 
 	local suggestion = nil
 	local std_out = {}
@@ -237,7 +182,7 @@ function M.run_git_job(args)
 	local ipc_cleanup = nil
 
 	if util.str_in_tbl(args, editor_req_cmds) then
-		local env, cleanup = editor_ipc.setup_ipc_env()
+		local env, cleanup = util.setup_ipc_env()
 		current_job_env = vim.tbl_extend("force", job_env, env)
 		ipc_cleanup = cleanup
 	end
@@ -276,19 +221,10 @@ function M.run_git_job(args)
 			end
 
 			M.running_git_jobs[args_table[1]] = nil
-			-- run exec complete callbacks
-			if exec_complete_callback then
-				exec_complete_callback(code, std_out, std_err, suggestion)
-				exec_complete_callback = nil
-				if exec_complete_callback_return then
-					return
-				end
-			else
-				-- refresh
-				vim.schedule(function()
-					M.refresh_buf()
-				end)
-			end
+			-- refresh
+			vim.fn.timer_start(50, function()
+				M.refresh_buf()
+			end)
 
 			-- Show outputs.
 			if #std_out > 0 then
@@ -297,12 +233,22 @@ function M.run_git_job(args)
 				notify_or_open(std_err, args, code)
 			end
 
-			-- Suggestion.
+			-- wizard --
 			if suggestion then
 				vim.schedule(function()
 					util.set_cmdline(suggestion)
 				end)
 			end
+
+			-- run exec complete callbacks --
+			vim.fn.timer_start(100, function()
+				for id, cbt in pairs(exit_callbacks) do
+					cbt.cb({ exit_code = code, stdout = std_out, stderr = std_err, args = args_table })
+					if cbt.once then
+						exit_callbacks[id] = nil
+					end
+				end
+			end)
 		end,
 	})
 

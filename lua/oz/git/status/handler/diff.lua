@@ -117,7 +117,7 @@ function M.dv_diff_range()
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",
@@ -173,9 +173,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		})
 	end
 
-	util.Map("n", "d", function()
-		require("oz.util.help_keymaps").show_menu("Diff Actions", options)
-	end, { buffer = buf, desc = "Diff Actions", nowait = true })
+	vim.keymap.set("n", "d", function()
+		util.show_menu("Diff Actions", options)
+	end, { buffer = buf, desc = "Diff Actions", nowait = true, silent = true })
 end
 
 return M

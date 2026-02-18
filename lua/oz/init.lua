@@ -5,7 +5,7 @@ local M = {}
 local defaults = {
 	-- Git
 	oz_git = {
-		win_type = "botright",
+		win_type = "bot",
 		mappings = {
 			toggle_pick = "<C-P>",
 			unpick_all = "<C-S-P>",
@@ -14,7 +14,7 @@ local defaults = {
 
 	-- all oz_term options
 	oz_term = {
-		efm = { "%f:%l:%c: %m" },
+		efm = { "%f:%l:%c: %trror: %m" },
 		root_prefix = "@",
 	},
 
@@ -49,7 +49,7 @@ local defaults = {
 	},
 }
 
----check if start with cmd
+--- vim start with cmd
 ---@param cmds table
 ---@return boolean
 local function start_with_cmd(cmds)

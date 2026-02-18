@@ -1,7 +1,12 @@
+--- @class oz.util.tbl_monitor
 local M = {}
 
 local monitoring_timers = {}
 
+--- Start monitoring a table for changes and periodically execute callbacks.
+--- @param tbl any[] The table to monitor.
+--- @param options? {interval?: number, buf?: integer, on_active?: function, on_empty?: function}
+--- @return boolean True if monitoring started, false if already monitoring.
 M.start_monitoring = function(tbl, options)
 	options = options or {}
 	for _, m in ipairs(monitoring_timers) do
@@ -16,6 +21,10 @@ M.start_monitoring = function(tbl, options)
 	end
 
 	local timer = vim.loop.new_timer()
+	if not timer then
+		return false
+	end
+
 	local monitor = {
 		tbl = tbl,
 		buf = options.buf,
@@ -53,6 +62,9 @@ M.start_monitoring = function(tbl, options)
 	return true
 end
 
+--- Stop monitoring a specific table.
+--- @param tbl any[] The table to stop monitoring.
+--- @return boolean True if monitoring was found and stopped.
 M.stop_monitoring = function(tbl)
 	local found = false
 	for i = #monitoring_timers, 1, -1 do
@@ -66,6 +78,9 @@ M.stop_monitoring = function(tbl)
 	return found
 end
 
+--- Check if a specific table is being monitored.
+--- @param tbl any[] The table to check.
+--- @return boolean True if monitoring.
 M.is_monitoring = function(tbl)
 	for _, m in ipairs(monitoring_timers) do
 		if m.tbl == tbl then
@@ -75,6 +90,7 @@ M.is_monitoring = function(tbl)
 	return false
 end
 
+--- Stop all active table monitoring timers.
 M.stop_all_monitoring = function()
 	for _, m in ipairs(monitoring_timers) do
 		m.timer:stop()

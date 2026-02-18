@@ -1,6 +1,8 @@
+--- @class oz.util.help_keymaps
 local M = {}
 local win_util = require("oz.util.win")
-local util = require("oz.util")
+local ui_util = require("oz.util.ui")
+local misc = require("oz.util.misc")
 
 -- Module-level tracking for singleton behavior
 local key_help_win = nil
@@ -10,7 +12,7 @@ local menu_buf = nil
 local menu_prev_win = nil
 local original_guicursor = nil
 
--- Internal helper: Close existing window and buffer
+--- Internal helper: Close existing window and buffer.
 local function close_window()
 	if key_help_win and vim.api.nvim_win_is_valid(key_help_win) then
 		vim.api.nvim_win_close(key_help_win, true)
@@ -23,6 +25,7 @@ local function close_window()
 	key_help_buf = nil
 end
 
+--- Internal helper: Close the interactive menu.
 local function close_menu()
 	if menu_win and vim.api.nvim_win_is_valid(menu_win) then
 		vim.api.nvim_win_close(menu_win, true)
@@ -44,11 +47,11 @@ local function close_menu()
 	end
 end
 
--- helper: filter keys from user provided 'key'
+--- helper: filter keys from user provided 'key'
 ---@param tbl table
 ---@param str string
 ---@return table
----@return table
+---@return string[]
 local function filter_table(tbl, str)
 	local result = {}
 	local new_keys = {}
@@ -66,8 +69,8 @@ local function filter_table(tbl, str)
 	return result, new_keys
 end
 
---- show mappings
----@param args {title: string, key: string, group: table<string, string[]>, show_general: boolean}
+--- Display a window showing available keymaps.
+---@param args {title?: string, key?: string, group?: table<string, string[]>, show_general?: boolean, on_open?: function}
 function M.show_maps(args)
 	-- 1. Enforce Singleton: Close any existing instances
 	close_window()
@@ -213,7 +216,7 @@ function M.show_maps(args)
 
 	local win_id, buf_id = win_util.create_bottom_overlay({
 		content = render_lines,
-		title = args.title or "Keymaps",
+		title = args.title or "Available Keymaps",
 		height = win_height,
 	})
 
@@ -244,26 +247,30 @@ function M.show_maps(args)
 	end
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, clean_lines)
 
-	vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
-	vim.api.nvim_buf_set_option(buf_id, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(buf_id, "cursorline", false)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf_id })
+	vim.api.nvim_set_option_value("cursorline", false, { win = win_id })
 
 	-- 6. Keymaps and Interaction
 	-- Close maps
 	local opts = { nowait = true, noremap = true, silent = true, buffer = buf_id }
-	util.Map("n", { "q", "<C-c>", "<esc>" }, function()
+	misc.Map("n", { "q", "<C-c>", "<esc>" }, function()
 		M.close()
 		vim.api.nvim_echo({ { "" } }, false, {})
 	end, opts)
 
+	if args.on_open then
+		args.on_open()
+	end
+
 	vim.cmd("redraw")
 
-	require("oz.util").inactive_echo("press 'q' to close this window.")
+	ui_util.inactive_echo("press 'q' to close this window.")
 end
 
--- Show interactive menu
----@param title string
----@param items {key: string, desc: string, cb: function, type: string|nil, name: string|nil, default: boolean|nil}[]|{title: string, items: {key: string, desc: string, cb: function, type: string|nil, name: string|nil, default: boolean|nil}[]}[]
+--- Show an interactive menu for switches and actions.
+---@param title string The menu title.
+---@param items {key: string, desc: string, cb: function, type?: "switch"|"action", name?: string, default?: boolean}[]|{title: string, items: {key: string, desc: string, cb: function, type?: "switch"|"action", name?: string, default?: boolean}[]}[]
 function M.show_menu(title, items)
 	close_menu() -- Close any existing menu
 
@@ -424,9 +431,9 @@ function M.show_menu(title, items)
 			menu_win = win_id
 			menu_buf = buf_id
 		else
-			vim.api.nvim_buf_set_option(buf_id, "modifiable", true)
+			vim.api.nvim_set_option_value("modifiable", true, { buf = buf_id })
 			vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, render_lines)
-			vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
+			vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
 		end
 
 		-- Apply Highlights
@@ -489,7 +496,7 @@ function M.show_menu(title, items)
 	end
 end
 
--- Export public close function
+--- Close all help/menu windows.
 function M.close()
 	close_window()
 	close_menu()

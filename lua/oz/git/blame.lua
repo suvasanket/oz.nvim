@@ -1,6 +1,4 @@
 local M = {}
-local shell = require("oz.util.shell")
-local win = require("oz.util.win")
 local util = require("oz.util")
 
 local source_buf_autocmd_id, target_buf_autocmd_id, blame_buf, t_buf_write_autocmd_id
@@ -36,7 +34,7 @@ local function sync_cursor(source_buf, target_buf)
 		buffer = source_buf,
 		callback = function()
 			if vim.api.nvim_buf_is_valid(source_buf) then -- TODO error at l:20 when unmodified changes(temp fix)
-				if not vim.api.nvim_buf_get_option(source_buf, "modified") then
+				if not vim.api.nvim_get_option_value("modified", { buf = source_buf }) then
 					M.update_cursor(source_buf, target_buf)
 				end
 			else
@@ -72,14 +70,13 @@ end
 
 -- blame buf mappings
 local function blame_buf_maps(buf)
-	local map = util.Map
-	map("n", "q", "<cmd>close<cr>", { buffer = buf, desc = "Close blame buffer." })
+	vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, desc = "Close blame buffer.", silent = true })
 
-	map("n", "<cr>", function()
+	vim.keymap.set("n", "<cr>", function()
 		local line = vim.api.nvim_get_current_line()
 		local hash = line:match("^([^ ]+)")
 		vim.cmd("Git show " .. hash)
-	end, { buffer = buf, desc = "Show commit for current line." })
+	end, { buffer = buf, desc = "Show commit for current line.", silent = true })
 end
 
 local function autocmd_func(b_buf, t_file)
@@ -122,13 +119,13 @@ function M.open_blame_win(file)
 	-- local file_win = vim.fn.bufwinid(file_buf)
 	local file_cursor_pos = vim.api.nvim_win_get_cursor(0)
 
-	local ok, output = shell.run_command({ "git", "blame", file })
+	local ok, output = util.run_command({ "git", "blame", file })
 	if ok and #output > 0 then
 		output = format_blame_lines(output)
 
 		-- open blame win
 		local win_type = string.format("vert %s", #output[#output])
-		win.create_win("git_blame", {
+		util.create_win("git_blame", {
 			content = output,
 			win_type = win_type,
 			callback = function(buf_id, win_id)

@@ -27,7 +27,7 @@ function M.gitignore()
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Log",
@@ -77,7 +77,7 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 				{
 					key = "?",
 					cb = function()
-						require("oz.util.help_keymaps").show_maps({
+                        util.show_maps({
 							group = key_grp,
 							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 							no_empty = true,
@@ -107,9 +107,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "g", function()
-		require("oz.util.help_keymaps").show_menu("Goto", options)
-	end, { buffer = buf, desc = "Goto Actions", nowait = true })
+	vim.keymap.set("n", "g", function()
+        util.show_menu("Goto", options)
+	end, { buffer = buf, desc = "Goto Actions", nowait = true, silent = true })
 end
 
 return M

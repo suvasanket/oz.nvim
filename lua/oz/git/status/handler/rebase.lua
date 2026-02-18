@@ -28,7 +28,7 @@ function M.rebase_interactive(flags)
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local r_opts = {
 		{
 			title = "Switches",
@@ -89,9 +89,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			},
 		},
 	}
-	util.Map("n", "r", function()
-		require("oz.util.help_keymaps").show_menu("Rebase Actions", r_opts)
-	end, { buffer = buf, desc = "Rebase Actions", nowait = true })
+	vim.keymap.set("n", "r", function()
+		util.show_menu("Rebase Actions", r_opts)
+	end, { buffer = buf, desc = "Rebase Actions", nowait = true, silent = true })
 end
 
 return M

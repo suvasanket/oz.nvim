@@ -35,10 +35,12 @@ In an oz-term buffer, the following keymaps are available by default:
     <Enter>     Jump to the file/line under the cursor. Supports various
                 error formats and also opens URLs.
     <C-q>       Grab all locations (errors, warnings, etc.) from the terminal
-                output and populate the quickfix list.
+		output and populate the quickfix list.
+    <C-r>       Rerun the command that was executed in this buffer.
     q           Close the terminal buffer. Prompts for confirmation if a job
                 is still active.
-    r           Rerun the command that was executed in this buffer.
+    r		Run the executed command in root of the project.
+    e           Edit the command that was executed in this buffer.
 
 Global mappings (must be configured in |oz-nvim-setup|):
     Term        Open a prompt to execute a shell command.
@@ -49,20 +51,14 @@ Global mappings (must be configured in |oz-nvim-setup|):
 CONFIGURATION                                               *oz-term-config*
 
 The Term module can be configured via the `oz_term` table in `setup()`:
+    - efm: Strings of |errorformat|.
+    - root_prefix: Char which specifies the following command will run in the
+    root of the project.
 
 >lua
     oz_term = {
-        -- Behavior when terminal buffer is hidden
-        -- Supported: "prompt", "hide", "quit"
-        bufhidden_behaviour = "prompt",
-
-        mappings = {
-            open_entry = "<cr>",
-            add_to_quickfix = "<C-q>",
-            rerun = "r",
-            quit = "q",
-            show_keybinds = "g?",
-        },
+	efm = { "%f:%l:%c: %m" },
+	root_prefix = "@",
     }
 <
 

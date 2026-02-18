@@ -51,9 +51,9 @@ function M.setup_keymaps(buf)
 		)
 	end
 
-	util.Map("n", "x", function()
-		require("oz.util.help_keymaps").show_menu("Conflict Resolution", x_opts)
-	end, { buffer = buf, desc = "Conflict Resolution", nowait = true })
+	vim.keymap.set("n", "x", function()
+		util.show_menu("Conflict Resolution", x_opts)
+	end, { buffer = buf, desc = "Conflict Resolution", nowait = true, silent = true })
 end
 
 return M

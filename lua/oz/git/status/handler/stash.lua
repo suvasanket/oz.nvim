@@ -74,7 +74,7 @@ function M.snapshot()
 	s_util.run_n_refresh("Git stash push -m 'Snapshot'")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",
@@ -110,9 +110,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "z", function()
-		require("oz.util.help_keymaps").show_menu("Stash Actions", options)
-	end, { buffer = buf, desc = "Stash Actions", nowait = true })
+	vim.keymap.set("n", "z", function()
+		util.show_menu("Stash Actions", options)
+	end, { buffer = buf, desc = "Stash Actions", nowait = true, silent = true })
 end
 
 return M

@@ -4,22 +4,27 @@ local util = require("oz.util")
 local data_dir = vim.fn.stdpath("data")
 local uv = vim.loop
 
--- remove json
+--- Remove a JSON cache file.
+--- @param name string The name of the cache.
 function M.remove_oz_json(name)
 	local path = data_dir .. "/oz/" .. name .. ".json"
 	if vim.fn.filereadable(path) == 1 then
 		os.remove(path)
-		util.Notify("[cache]Cache removed: " .. name, "info", "oz_doctor")
+        util.Notify("[cache]Cache removed: " .. name, "info", "oz_doctor")
 	end
 end
 
--- ensure file exists
+--- Internal helper: Check if a file exists.
+--- @param filepath string
+--- @return boolean
 local function file_exists(filepath)
 	local stat = uv.fs_stat(filepath)
-	return stat and stat.type == "file"
+	return stat ~= nil and stat.type == "file"
 end
 
--- write to the file
+--- Internal helper: Write content to a file, creating directories if needed.
+--- @param full_path string
+--- @param content string
 local function write_to_file(full_path, content)
 	local dir_path = full_path:match("^(.*/)")
 
@@ -35,27 +40,26 @@ local function write_to_file(full_path, content)
 		create_dir(dir_path)
 	end
 
-	-- Write the content to the file
 	local file = io.open(full_path, "w")
 	if file then
 		file:write(content)
 		file:close()
 	else
-		util.Notify("[cache] Failed to open file.", "error", "oz_doctor")
+        util.Notify("[cache] Failed to open file.", "error", "oz_doctor")
 	end
 end
 
--- set data
+--- Set a value in a JSON cache.
+--- @param key string The key to set.
+--- @param value any The value to set (nil/empty string to remove).
+--- @param json_name string The name of the cache file.
 function M.set_data(key, value, json_name)
-	-- Ensure parent directory exists.
 	local json_file = data_dir .. "/oz/" .. json_name .. ".json"
 
-	-- delete empty value
 	if value == "" then
 		value = nil
 	end
 
-	-- Read the JSON file (if exists) or start with an empty table.
 	local data = {}
 	if file_exists(json_file) then
 		local f = io.open(json_file, "r")
@@ -71,24 +75,23 @@ function M.set_data(key, value, json_name)
 		end
 	end
 
-	-- Update the data with the provided key and value.
 	data[key] = value
-
-	-- Encode table back to JSON.
 	local new_content = vim.fn.json_encode(data)
-
-	-- Write back the content to file.
 	write_to_file(json_file, new_content)
 end
 
+--- Get a value from a JSON cache.
+--- @param key string The key to retrieve.
+--- @param json_name string The name of the cache file.
+--- @return any|nil The cached value.
 function M.get_data(key, json_name)
-	json_name = data_dir .. "/oz/" .. json_name .. ".json"
+	local full_path = data_dir .. "/oz/" .. json_name .. ".json"
 
-	if not file_exists(json_name) then
+	if not file_exists(full_path) then
 		return nil
 	end
 
-	local file = io.open(json_name, "r")
+	local file = io.open(full_path, "r")
 	if not file then
 		return nil
 	end
@@ -101,7 +104,7 @@ function M.get_data(key, json_name)
 	end
 
 	local ok, data = pcall(vim.fn.json_decode, content)
-	if not ok then
+	if not ok or type(data) ~= "table" then
 		return nil
 	end
 

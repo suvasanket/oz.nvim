@@ -79,7 +79,7 @@ function M.toggle_pick()
 			util.remove_from_tbl(grab_hashs, entry)
 			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
 		elseif grab_hashs[1] == entry then
-			util.tbl_monitor().stop_monitoring(grab_hashs)
+			util.stop_monitoring(grab_hashs)
 			for k in pairs(grab_hashs) do
 				grab_hashs[k] = nil
 			end
@@ -92,7 +92,7 @@ function M.toggle_pick()
 		-- pick
 		util.tbl_insert(grab_hashs, entry)
 
-		util.tbl_monitor().start_monitoring(grab_hashs, {
+		util.start_monitoring(grab_hashs, {
 			interval = 2000,
 			buf = buf_id,
 			on_active = function(t)
@@ -104,7 +104,7 @@ end
 
 function M.edit_picked()
 	if #grab_hashs ~= 0 then
-		util.tbl_monitor().stop_monitoring(grab_hashs)
+		util.stop_monitoring(grab_hashs)
 		util.set_cmdline("Git | " .. table.concat(grab_hashs, " "))
 		for k in pairs(grab_hashs) do
 			grab_hashs[k] = nil
@@ -128,25 +128,25 @@ function M.go_status()
 	vim.cmd("Git")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	buf_id = buf
 	-- quick actions
-	util.Map("n", "q", M.quit, { buffer = buf, desc = "Close git log buffer." })
+	vim.keymap.set("n", "q", M.quit, { buffer = buf, desc = "Close git log buffer.", silent = true })
 	-- increase
-	util.Map("n", ">", M.increase_log, { buffer = buf, desc = "Increase log level." })
+	vim.keymap.set("n", ">", M.increase_log, { buffer = buf, desc = "Increase log level.", silent = true })
 	-- decrease
-	util.Map("n", "<", M.decrease_log, { buffer = buf, desc = "Decrease log level." })
+	vim.keymap.set("n", "<", M.decrease_log, { buffer = buf, desc = "Decrease log level.", silent = true })
 	-- back
-	util.Map("n", "<C-o>", M.go_back, { buffer = buf, desc = "Go back." })
+	vim.keymap.set("n", "<C-o>", M.go_back, { buffer = buf, desc = "Go back.", silent = true })
 	-- :G
-	util.Map("n", "-", M.cmd_git, { silent = false, buffer = buf, desc = "Open :Git " })
-	util.Map("n", "I", M.reflog, { buffer = buf, desc = "Open reflog" })
+	vim.keymap.set("n", "-", M.cmd_git, { silent = false, buffer = buf, desc = "Open :Git " })
+	vim.keymap.set("n", "I", M.reflog, { buffer = buf, desc = "Open reflog", silent = true })
 	-- refresh
-	util.Map("n", "<C-r>", M.refresh, { buffer = buf, desc = "Refresh commit log buffer." })
+	vim.keymap.set("n", "<C-r>", M.refresh, { buffer = buf, desc = "Refresh commit log buffer.", silent = true })
 	-- show current hash
-	util.Map({ "n", "x" }, "<cr>", M.show_hash, { buffer = buf, desc = "Show current commit under cursor. <*>" })
+	vim.keymap.set({ "n", "x" }, "<cr>", M.show_hash, { buffer = buf, desc = "Show current commit under cursor. <*>", silent = true })
 	-- check out to a commit
-	util.Map("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout to the commit under cursor. <*>" })
+	vim.keymap.set("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout to the commit under cursor. <*>", silent = true })
 	key_grp["quick actions"] = { "<lt>", ">", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "q" }
 
 	-- goto mappings
@@ -166,15 +166,10 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 				{
 					key = "?",
 					cb = function()
-						require("oz.util.help_keymaps").show_maps({
+						util.show_maps({
 							group = key_grp,
 							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 							no_empty = true,
-							on_open = function()
-								vim.schedule(function()
-									util.inactive_echo("press ctrl-f to search section")
-								end)
-							end,
 						})
 					end,
 					desc = "Show all available keymaps",
@@ -183,23 +178,23 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "g", function()
-		require("oz.util.help_keymaps").show_menu("Goto Actions", g_options)
-	end, { buffer = buf, desc = "Goto Actions", nowait = true })
+	vim.keymap.set("n", "g", function()
+		util.show_menu("Goto Actions", g_options)
+	end, { buffer = buf, desc = "Goto Actions", nowait = true, silent = true })
 
 	-- pick hash
-	util.Map(
+	vim.keymap.set(
 		"n",
 		user_mappings.toggle_pick,
 		M.toggle_pick,
-		{ buffer = buf, desc = "Pick or unpick any hash under cursor. <*>" }
+		{ buffer = buf, desc = "Pick or unpick any hash under cursor. <*>", silent = true }
 	)
 
 	-- edit picked
 	util.Map("n", { "a", "i" }, M.edit_picked, { buffer = buf, desc = "Enter cmdline to edit picked hashes." })
 
 	-- discard picked
-	util.Map("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard any picked hashes." })
+	vim.keymap.set("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard any picked hashes.", silent = true })
 	key_grp["pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
 end
 

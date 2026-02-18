@@ -41,22 +41,28 @@ function M.add_update()
 					2 -- Default to No
 				)
 				if ans == 1 then
-					git.after_exec_complete(function(code)
-						if code == 0 then
-							util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
-							refresh() -- Refresh status potentially
-						end
-					end)
+					git.on_job_exit("remote_set_url", {
+						callback = function(ev)
+							if ev.exit_code == 0 then
+								util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
+								refresh() -- Refresh status potentially
+							end
+						end,
+						once = true,
+					})
 					vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
 				end
 			else
 				-- Add new remote
-				git.after_exec_complete(function(code)
-					if code == 0 then
-						util.Notify("Added new remote '" .. remote_name .. "'.", nil, "oz_git")
-						refresh() -- Refresh status potentially
-					end
-				end)
+				git.on_job_exit("remote_add", {
+					callback = function(ev)
+						if ev.exit_code == 0 then
+							util.Notify("Added new remote '" .. remote_name .. "'.", nil, "oz_git")
+							refresh() -- Refresh status potentially
+						end
+					end,
+					once = true,
+				})
 				vim.cmd("G remote add " .. remote_name .. " " .. remote_url)
 			end
 		else
@@ -113,7 +119,7 @@ function M.prune()
 	end)
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Actions",
@@ -138,9 +144,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "M", function()
-		require("oz.util.help_keymaps").show_menu("Remote Actions", options)
-	end, { buffer = buf, desc = "Remote Actions", nowait = true })
+	vim.keymap.set("n", "M", function()
+		util.show_menu("Remote Actions", options)
+	end, { buffer = buf, desc = "Remote Actions", nowait = true, silent = true })
 end
 
 return M

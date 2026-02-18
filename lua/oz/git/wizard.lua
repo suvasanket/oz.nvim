@@ -1,10 +1,10 @@
 local M = {}
-local shell = require("oz.util.shell")
+local util = require("oz.util")
 
 M.on_conflict_resolution = false
 M.on_conflict_resolution_complete = nil
 
-local shellout_str = shell.shellout_str
+local shellout_str = util.shellout_str
 
 --- Get suggestion if error in user-cmd
 ---@param data table

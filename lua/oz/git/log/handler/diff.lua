@@ -77,6 +77,7 @@ end
 local diff_range_hash = {}
 function M.diff_range()
 	local hashes = get_selected_hash()
+	util.exit_visual()
 	if #hashes > 1 then
 		vim.cmd("Git diff " .. hashes[1] .. ".." .. hashes[#hashes])
 	elseif #hashes == 1 then
@@ -89,7 +90,7 @@ function M.diff_range()
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Native Diff",
@@ -113,11 +114,11 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		})
 	end
 
-	util.Map("n", "d", function()
-		require("oz.util.help_keymaps").show_menu("Diff Actions", options)
-	end, { buffer = buf, desc = "Diff Actions", nowait = true })
+	vim.keymap.set("n", "d", function()
+		util.show_menu("Diff Actions", options)
+	end, { buffer = buf, desc = "Diff Actions", nowait = true, silent = true })
 
-	util.Map("x", "d", M.diff_range, { buffer = buf, desc = "Diff range selection" })
+	vim.keymap.set("x", "d", M.diff_range, { buffer = buf, desc = "Diff range selection", silent = true })
 end
 
 return M

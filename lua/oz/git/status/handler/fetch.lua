@@ -49,9 +49,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "f", function()
-		require("oz.util.help_keymaps").show_menu("Fetch Actions", fetch_opts)
-	end, { buffer = buf, desc = "Fetch Actions", nowait = true })
+	vim.keymap.set("n", "f", function()
+		util.show_menu("Fetch Actions", fetch_opts)
+	end, { buffer = buf, desc = "Fetch Actions", nowait = true, silent = true })
 end
 
 return M

@@ -56,7 +56,7 @@ function M.undo()
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",
@@ -98,8 +98,8 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "c", function()
-		require("oz.util.help_keymaps").show_menu("Commit Actions", options)
+	vim.keymap.set("n", "c", function()
+		util.show_menu("Commit Actions", options)
 	end, { buffer = buf, desc = "Commit Actions", nowait = true })
 end
 

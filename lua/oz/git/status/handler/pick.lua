@@ -26,7 +26,7 @@ function M.toggle_pick()
 			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
 		elseif status_grab_buffer[1] == entry then
 			-- Last item, clear and stop monitoring
-			util.tbl_monitor().stop_monitoring(status_grab_buffer)
+            util.stop_monitoring(status_grab_buffer)
 			status_grab_buffer = {} -- Reassign to new empty table
 			status.status_grab_buffer = status_grab_buffer -- Update original reference if needed
 			vim.api.nvim_echo({ { "" } }, false, {})
@@ -37,7 +37,7 @@ function M.toggle_pick()
 
 		-- Start monitoring if it's the first item picked
 		if #status_grab_buffer == 1 then
-			util.tbl_monitor().start_monitoring(status_grab_buffer, {
+            util.start_monitoring(status_grab_buffer, {
 				interval = 2000,
 				buf = buf_id, -- Use captured buf_id
 				on_active = function(t)
@@ -53,7 +53,7 @@ end
 
 function M.edit_picked()
 	if #status_grab_buffer > 0 then
-		util.tbl_monitor().stop_monitoring(status_grab_buffer)
+        util.stop_monitoring(status_grab_buffer)
 		util.set_cmdline("Git | " .. table.concat(status_grab_buffer, " "))
 		status_grab_buffer = {} -- Clear after editing
 		status.status_grab_buffer = status_grab_buffer -- Update original reference
@@ -62,7 +62,7 @@ end
 
 function M.discard_picked()
 	if #status_grab_buffer > 0 then
-		util.tbl_monitor().stop_monitoring(status_grab_buffer)
+        util.stop_monitoring(status_grab_buffer)
 		status_grab_buffer = {} -- Clear the buffer
 		status.status_grab_buffer = status_grab_buffer -- Update original reference
 		vim.api.nvim_echo({ { "" } }, false, {}) -- Clear echo area
@@ -72,18 +72,18 @@ end
 function M.setup_keymaps(buf, key_grp)
 	buf_id = buf
 	local user_mappings = require("oz.git").user_config.mappings -- Ensure this is available
-	util.Map(
+	vim.keymap.set(
 		"n",
 		user_mappings.toggle_pick,
 		M.toggle_pick,
-		{ nowait = true, buffer = buf, desc = "Pick/unpick file/branch/stash." }
+		{ nowait = true, buffer = buf, desc = "Pick/unpick file/branch/stash.", silent = true }
 	)
 	util.Map("n", { "a", "i" }, M.edit_picked, { nowait = true, buffer = buf, desc = "Enter cmdline to edit picked." })
-	util.Map(
+	vim.keymap.set(
 		"n",
 		user_mappings.unpick_all,
 		M.discard_picked,
-		{ nowait = true, buffer = buf, desc = "Discard picked entries." }
+		{ nowait = true, buffer = buf, desc = "Discard picked entries.", silent = true }
 	)
 	key_grp["Pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
 end

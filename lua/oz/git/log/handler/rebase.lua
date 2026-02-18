@@ -57,7 +57,7 @@ function M.edit_todo()
     run_n_refresh("Git rebase --edit-todo")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Switches",
@@ -82,9 +82,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "r", function()
-		require("oz.util.help_keymaps").show_menu("Rebase Actions", options)
-	end, { buffer = buf, desc = "Rebase Actions", nowait = true })
+	vim.keymap.set("n", "r", function()
+		util.show_menu("Rebase Actions", options)
+	end, { buffer = buf, desc = "Rebase Actions", nowait = true, silent = true })
 end
 
 return M

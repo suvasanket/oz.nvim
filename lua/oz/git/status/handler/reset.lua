@@ -7,6 +7,8 @@ function M.reset(args)
 	local files = s_util.get_file_under_cursor(true)
 	local branch = s_util.get_branch_under_cursor()
 
+	util.exit_visual()
+
 	local cmd_args = args or ""
 
 	if #files > 0 then
@@ -33,7 +35,7 @@ function M.undo_orig_head()
 	s_util.run_n_refresh("Git reset ORIG_HEAD")
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Reset",
@@ -82,11 +84,11 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 			},
 		},
 	}
-	util.Map("n", "U", function()
-		require("oz.util.help_keymaps").show_menu("Reset Actions", options)
-	end, { buffer = buf, desc = "Reset Actions", nowait = true })
+	vim.keymap.set("n", "U", function()
+		util.show_menu("Reset Actions", options)
+	end, { buffer = buf, desc = "Reset Actions", nowait = true, silent = true })
 
-	util.Map("x", "U", M.reset, { buffer = buf, desc = "Reset selection" })
+	vim.keymap.set("x", "U", M.reset, { buffer = buf, desc = "Reset selection", silent = true })
 end
 
 return M

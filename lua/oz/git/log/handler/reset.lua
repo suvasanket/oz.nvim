@@ -30,7 +30,7 @@ function M.hard()
     end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Reset Actions",
@@ -43,9 +43,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "U", function()
-		require("oz.util.help_keymaps").show_menu("Reset Actions", options)
-	end, { buffer = buf, desc = "Reset Actions", nowait = true })
+	vim.keymap.set("n", "U", function()
+		util.show_menu("Reset Actions", options)
+	end, { buffer = buf, desc = "Reset Actions", nowait = true, silent = true })
 end
 
 return M

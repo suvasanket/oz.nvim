@@ -113,7 +113,7 @@ function M.rename()
 	end
 end
 
-function M.setup_keymaps(buf, key_grp, map_help_key)
+function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
 			title = "Checkout",
@@ -152,9 +152,9 @@ function M.setup_keymaps(buf, key_grp, map_help_key)
 		},
 	}
 
-	util.Map("n", "b", function()
-		require("oz.util.help_keymaps").show_menu("Branch Actions", options)
-	end, { buffer = buf, desc = "Branch Actions", nowait = true })
+	vim.keymap.set("n", "b", function()
+		util.show_menu("Branch Actions", options)
+	end, { buffer = buf, desc = "Branch Actions", nowait = true, silent = true })
 end
 
 return M

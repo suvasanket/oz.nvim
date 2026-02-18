@@ -1,6 +1,5 @@
 local M = {}
 local util = require("oz.util")
-local progress = require("oz.util.progress")
 
 -- Clean ANSI codes and carriage returns from lines
 local function clean_line(line)
@@ -25,7 +24,7 @@ function M.run_git_with_progress(command, args, output_callback)
 	local stderr_lines = { "" }
 
 	local u_id = util.generate_unique_id()
-	progress.start_progress(u_id, { title = title, fidget_lsp = "oz_git", manual = true })
+	util.start_progress(u_id, { title = title, fidget_lsp = "oz_git", manual = true })
 
 	local function handle_data(lines_table, data)
 		if not data then
@@ -50,7 +49,7 @@ function M.run_git_with_progress(command, args, output_callback)
 				local msg = clean_line(str)
 				-- Optional: Truncate message if too long or noisy?
 				-- Git progress often includes counts (123/456), which is useful.
-				progress.update_progress(u_id, tonumber(last_p), msg)
+				util.update_progress(u_id, tonumber(last_p), msg)
 			end
 		end
 	end
@@ -65,7 +64,7 @@ function M.run_git_with_progress(command, args, output_callback)
 			handle_data(stderr_lines, data)
 		end,
 		on_exit = function(_, exit_code)
-			progress.stop_progress(u_id, { exit_code = exit_code, title = title })
+			util.stop_progress(u_id, { exit_code = exit_code, title = title })
 
 			-- Consolidate output for callback/display
 			-- Filter out pure progress lines if desired, or just show all cleaned lines.

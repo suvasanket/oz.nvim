@@ -90,9 +90,9 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	util.Map("n", "p", function()
-		require("oz.util.help_keymaps").show_menu("Pull Actions", pull_opts)
-	end, { buffer = buf, desc = "Pull Actions", nowait = true })
+	vim.keymap.set("n", "p", function()
+		util.show_menu("Pull Actions", pull_opts)
+	end, { buffer = buf, desc = "Pull Actions", nowait = true, silent = true })
 end
 
 return M

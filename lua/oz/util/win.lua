@@ -1,11 +1,12 @@
+--- @class oz.util.win
 local M = {}
 
 local unique_ids = {}
 
---- helper
----@param opts {win_type: string, buf_name: string, content: table, callback: function}
----@return integer
----@return integer
+--- Internal helper to create a window.
+--- @param opts {win_type: string, buf_name: string, content: string[], callback: function}
+--- @return integer win_id
+---@return integer buf_id
 local function create_win_util(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	if opts.buf_name then
@@ -33,16 +34,16 @@ local function create_win_util(opts)
 	if opts.callback then
 		opts.callback(buf_id, win_id)
 	end
-	vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
 
 	return win_id, buf_id
 end
 
---- create win
----@param unique_id string
----@param opts {buf_name: string, content: table, reuse: boolean, win_type: string, callback: function}
----@return integer win_id
----@return integer buf_id
+--- Create or reuse a window identified by a unique ID.
+--- @param unique_id string
+--- @param opts {buf_name: string, content: string[], reuse: boolean, win_type: string, callback: function}
+--- @return integer win_id
+--- @return integer buf_id
 function M.create_win(unique_id, opts)
 	local win_buf_id = unique_ids[unique_id]
 	local reuse = opts.reuse
@@ -64,9 +65,9 @@ function M.create_win(unique_id, opts)
 			vim.api.nvim_set_current_win(win_id)
 			local buf_id = vim.api.nvim_win_get_buf(win_id)
 			if opts.content and vim.api.nvim_buf_is_valid(buf_id) then
-				vim.api.nvim_buf_set_option(buf_id, "modifiable", true)
+				vim.api.nvim_set_option_value("modifiable", true, { buf = buf_id })
 				vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, opts.content)
-				vim.api.nvim_buf_set_option(buf_id, "modifiable", false)
+				vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
 			end
 
 			if opts.callback then
@@ -97,10 +98,10 @@ function M.create_win(unique_id, opts)
 	return win, actual_buf
 end
 
---- Create a floating window
----@param opts {content: string[], title: string, width: number|nil, height: number|nil, footer: string|nil}
----@return integer win_id
----@return integer buf_id
+--- Create a floating window centered in the editor.
+--- @param opts {content: string[], title: string, width?: number, height?: number, footer?: string}
+--- @return integer win_id
+--- @return integer buf_id
 function M.create_floating_window(opts)
 	local content = opts.content or {}
 	local width = opts.width or 60
@@ -115,7 +116,8 @@ function M.create_floating_window(opts)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
 	-- Ensure transparent highlight group exists
-	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
+	vim.api.nvim_set_hl(0, "ozTransparent", { bg = "NONE", ctermbg = "NONE" })
+
 
 	local win_opts = {
 		relative = "editor",
@@ -136,16 +138,16 @@ function M.create_floating_window(opts)
 	vim.api.nvim_win_set_option(
 		win_id,
 		"winhighlight",
-		"NormalFloat:StatusLine,FloatBorder:OzTransparent,FloatTitle:StatusLine"
+		"NormalFloat:StatusLine,FloatBorder:ozTransparent,FloatTitle:StatusLine"
 	)
 
 	return win_id, buf_id
 end
 
---- Create a bottom overlay window (Magit/Neogit style)
----@param opts {content: string[], title: string, height: number|nil}
----@return integer win_id
----@return integer buf_id
+--- Create a bottom overlay window (Magit/Neogit style).
+--- @param opts {content: string[], title: string, height?: number}
+--- @return integer win_id
+--- @return integer buf_id
 function M.create_bottom_overlay(opts)
 	local content = opts.content or {}
 	local height = opts.height or #content
@@ -155,8 +157,7 @@ function M.create_bottom_overlay(opts)
 	local buf_id = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
 
-	-- Ensure transparent highlight group exists
-	vim.api.nvim_set_hl(0, "OzTransparent", { bg = "NONE", ctermbg = "NONE" })
+	vim.api.nvim_set_hl(0, "ozTransparent", { bg = "NONE", ctermbg = "NONE" })
 	local row = vim.o.lines - height - 2 -- -2 for statusline and cmdline space roughly
 
 	local win_opts = {
@@ -166,9 +167,10 @@ function M.create_bottom_overlay(opts)
 		row = row,
 		col = 0,
 		style = "minimal",
-		border = { " ", " ", "", "", "", "", "", "" }, -- Top border only
-		title = " " .. title .. " ",
+		border = { " ", " ", "", "", "", "", "", "" },
+		title = ("  %s  "):format(title),
 		title_pos = "left",
+		zindex = 1000,
 	}
 
 	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
@@ -178,7 +180,7 @@ function M.create_bottom_overlay(opts)
 	vim.api.nvim_win_set_option(
 		win_id,
 		"winhighlight",
-		"NormalFloat:StatusLine,FloatBorder:OzTransparent,FloatTitle:StatusLine"
+		"NormalFloat:StatusLine,FloatBorder:ozTransparent,FloatTitle:StatusLine"
 	)
 
 	return win_id, buf_id
