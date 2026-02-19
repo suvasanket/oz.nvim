@@ -2,12 +2,11 @@
 
 An essential kit for the pragmatic developer who wants their editor to be a bit smarter without losing the feel of Neovim.
 
-Oz is not a collection of wrappers that hide your tools. Instead, it adds a layer of intelligence to the workflows you already use every day: Git, terminal management, building, and searching. It stays out of your way until you need it, and when you do, it tries to be one step ahead.
+Oz is not a collection of wrappers that hide your tools. Instead, it adds a layer of intelligence to your daily workflows: Git, terminal management, building, and searching. It is built to be fast, ensuring a nearly invisible impact on your startup time while staying out of your way until you need it.
 
 ## Core Modules
-
 ### Git
-A comprehensive Git client inspired by the experience of [Magit](https://magit.vc/) and the vimness of [Fugitive](https://github.com/tpope/vim-fugitive). It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
+A comprehensive Git client inspired by the experience of **[Magit](https://magit.vc/)** and the vimness of **[Fugitive](https://github.com/tpope/vim-fugitive)**. It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
 
 ### Term
 An enhanced terminal manager that learns. It caches your commands on a per-project and per-directory basis, adapting suggestions to the files you are currently editing. If you run a compiler on `api.c`, Oz will suggest the command adapting to `main.c` when you switch buffers.
@@ -19,9 +18,6 @@ An asynchronous build system that replaces the blocking `:make`. It detects your
 A fast, asynchronous search tool that integrates deeply with Neovim's quickfix list. It supports searching visual ranges, respects your project root by default, and narrows its scope automatically when you are navigating with Oil.
 
 ## Installation
-
-Oz has **zero mandatory third-party dependencies**. It relies entirely on Neovim's built-in APIs to provide its features.
-
 Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
@@ -30,15 +26,14 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     opts = {},
 }
 ```
+No **mandatory third-party dependencies**.
 
 ### Recommended Plugins (Completely optional)
-While Oz is fully functional on its own, the following plugins can improve the UI/UX:
 - [fidget.nvim](https://github.com/j-hui/fidget.nvim): For beautiful progress notifications during async tasks.
 - [nvim-notify](https://github.com/rcarriga/nvim-notify) (or similar): For enhanced system notifications.
 - Any picker for better option picking.
 
-## Showcase Features
-
+## Feature Showcase
 ### The Git Experience
 The `:Git` (or `:G`) command is your entry point, designed to feel familiar yet more capable.
 - **Magit-like Workflow**: Navigate your repository with a powerful status buffer featuring transient keybindings and intuitive section management.
@@ -61,16 +56,20 @@ The Make module is about staying in the flow.
 - **AutoMake**: Use `:AutoMake filetype` or `:AutoMake file` to have Oz automatically trigger a build whenever you save.
 
 ### Seamless Search
-Grep in Oz is designed to be the only search command you need.
+Grep module is designed to be simple yet effective.
 - **Range Support**: Select a block of text and run `:Grep` to search for it across your project. It automatically detects and escapes any wildcards to ensure precise results.
 - **Root by Default**: Every search starts from your project root by default. Use `:Grep!` to ground the search to your current working directory.
 - **Flexible Flags**: Pass any grep or ripgrep flags directly to the command (e.g., `:Grep -w "pattern"`).
-- **Oil Integration**: When you are navigating with Oil, `:Grep` automatically restricts its search scope to the current directory.
+
+### Integrations
+Various modules provides integration with **[oil.nvim](https://github.com/stevearc/oil.nvim)**.
+  - **Smart Search**: `:Grep` automatically restricts its search scope to the directory you are currently browsing.
+  - **Entry Execution**: Press `<C-G>` over any file or directory to run an arbitrary shell command. `:` separates the cmd and tail (e.g., `cp: /tmp/`: copies entry under cursor to /tmp/). These can be executed as background tasks or in a oz\_term.
+  - **Codebase Browsing**: Run `:GBrowse` in an Oil buffer to open that specific directory in your browser at your remote Git host.
 
 > **Tip**: Pressing `g?` in any Oz buffer will instantly bring up the list of all available keybindings for that specific context.
 
 ## Configuration
-
 Oz is based on zero-config setup. It works out of the box with sensible defaults and minimal config to keep your environment lean and predictable. Fewer knobs reduce configuration fatigue.
 
 Oz is modular; you can disable any part of it by setting the corresponding key to `false`.
