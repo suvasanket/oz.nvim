@@ -222,19 +222,15 @@ local function status_buf_hl()
 	vim.fn.matchadd("healthSuccess", "^new file:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.plus", "^+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^-.*$", 0, -1, { extend = true })
-
-	local some = {
-		[[match ozGitStatusBranchName "\S\+" contained ]],
-		[[match @attribute /\*\s\S\+/ ]],
-		[[match ozInactivePrompt /stash@{[0-9]}/ ]],
-		[[match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL ]],
-		[[region @property matchgroup=Delimiter start="\[" end="\]" ]],
-		[[match String /'[^']*'/ containedin=ALL ]],
-		[[match Number /\s\d\+/ containedin=ALL ]],
-	}
-	for _, str in pairs(some) do
-		vim.cmd(string.format("syntax %s", str))
-	end
+    vim.cmd([[
+        syntax match ozGitStatusBranchName "\S\+" contained
+        syntax match @attribute /\*\s\S\+/
+        syntax match ozInactivePrompt /stash@{[0-9]}/
+        syn region @property matchgroup=Delimiter start="\[" end="\]"
+        syntax match String /'[^']*'/ containedin=ALL
+        syntax match Number /\s\d\+/ containedin=ALL
+    ]])
+    vim.cmd("syntax match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 end
 
 local function is_conflict(sections)
