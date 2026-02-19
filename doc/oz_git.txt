@@ -53,12 +53,6 @@ COMMANDS                                                    *oz-git-commands*
     syncs its cursor with the main buffer and provides highlights for
     hashes and dates. Pressing <Enter> on a hash shows the commit details.
 
-:Gcw [message]                                              *:Gcw*
-:GitCommitWip [message]                                     *:Gcw*
-    Creates a "Work-In-Progress" (WIP) commit. If the previous commit was
-    also a WIP, it automatically amends it, keeping your history clean
-    while you work.
-
 ==============================================================================
 GIT STATUS WINDOW                                           *oz-git-status*
 
