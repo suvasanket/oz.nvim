@@ -32,7 +32,7 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "m", cb = M.merge_branch, desc = "Merge" },
 				{
-					key = "e",
+					key = " ",
 					cb = function(f)
 						local flags = f and table.concat(f, " ") or ""
 						util.set_cmdline("Git merge " .. flags .. " ")
@@ -45,7 +45,7 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Actions",
 			items = {
 				{
-					key = "a",
+					key = "q",
 					cb = function()
 						s_util.run_n_refresh("Git merge --abort")
 					end,
@@ -59,7 +59,7 @@ function M.setup_keymaps(buf, key_grp)
 					desc = "Continue",
 				},
 				{
-					key = "q",
+					key = "Q",
 					cb = function()
 						s_util.run_n_refresh("Git merge --quit")
 					end,

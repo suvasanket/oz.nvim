@@ -38,7 +38,7 @@ function M.setup_keymaps(buf, key_grp)
 					desc = "Fetch all",
 				},
 				{
-					key = "e",
+					key = " ",
 					cb = function(f)
 						local args = get_args(f)
 						util.set_cmdline("Git fetch" .. args .. " ")

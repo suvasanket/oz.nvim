@@ -147,7 +147,7 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Manage",
 			items = {
 				{ key = "w", cb = M.add, desc = "Add new worktree" },
-				{ key = "k", cb = M.remove, desc = "Delete worktree" },
+				{ key = "d", cb = M.remove, desc = "Delete worktree" },
 				{ key = "m", cb = M.move, desc = "Move worktree" },
 				{ key = "g", cb = M.visit, desc = "Visit worktree" },
 			},

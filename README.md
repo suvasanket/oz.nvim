@@ -1,12 +1,12 @@
 # oz.nvim
 
-An essential kit for the pragmatic developer who wants their editor to be a bit smarter without losing the feel of Neovim.
+An essential kit for the pragmatic developer who wants their editor to be a bit smarter without losing the feel of Vim.
 
-Oz is not a collection of wrappers that hide your tools. Instead, it adds a layer of intelligence to your daily workflows: Git, terminal management, building, and searching. It is built to be fast, ensuring a nearly invisible impact on your startup time while staying out of your way until you need it.
+Oz is not a collection of wrappers that hide your tools. Instead, it adds a layer of intelligence to your daily workflows: Git, terminal management, building, and searching. It stays out of your way until you need it.
 
 ## Core Modules
 ### Git
-A comprehensive Git client inspired by the experience of **[Magit](https://magit.vc/)** and the vimness of **[Fugitive](https://github.com/tpope/vim-fugitive)**. It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
+A comprehensive Git client inspired by the user experience of **[Magit](https://magit.vc/)** and the vimness of **[Fugitive](https://github.com/tpope/vim-fugitive)**. It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
 
 ### Term
 An enhanced terminal manager that learns. It caches your commands on a per-project and per-directory basis, adapting suggestions to the files you are currently editing. If you run a compiler on `api.c`, Oz will suggest the command adapting to `main.c` when you switch buffers.
@@ -36,8 +36,8 @@ No **mandatory third-party dependencies**.
 ## Feature Showcase
 ### The Git Experience
 The `:Git` (or `:G`) command is your entry point, designed to feel familiar yet more capable.
-- **Magit-like Workflow**: Navigate your repository with a powerful status buffer featuring transient keybindings and intuitive section management.
-- **Fugitive-like Interface**: Use the `:G` or `:Git` command for asynchronous execution of any git command.
+- **Magit-like Interface**: Navigate your repository with a powerful status buffer featuring transient keybindings and intuitive section management.
+- **Fugitive-like workflow**: `:Git` for any arbitrary git cmd execution and `:Gwrite`, `:Gread`, `:GBlame`, `:GBrowse`, `:GitLog` user-cmds are available just like in fugitive.
 - **Git Wizard**: If you type `:Git puhs` or try to push without an upstream, Oz won't just error out. It will suggest the corrected command in your command line.
 - **Async Execution**: Every git command runs in the background. You'll see progressive output for long-running tasks like `push` or `pull`.
 
@@ -62,10 +62,13 @@ Grep module is designed to be simple yet effective.
 - **Flexible Flags**: Pass any grep or ripgrep flags directly to the command (e.g., `:Grep -w "pattern"`).
 
 ### Integrations
-Various modules provides integration with **[oil.nvim](https://github.com/stevearc/oil.nvim)**.
+##### [oil.nvim](https://github.com/stevearc/oil.nvim) integration:
   - **Smart Search**: `:Grep` automatically restricts its search scope to the directory you are currently browsing.
   - **Entry Execution**: Press `<C-G>` over any file or directory to run an arbitrary shell command. `:` separates the cmd and tail (e.g., `cp: /tmp/`: copies entry under cursor to /tmp/). These can be executed as background tasks or in a oz\_term.
   - **Codebase Browsing**: Run `:GBrowse` in an Oil buffer to open that specific directory in your browser at your remote Git host.
+
+##### [diffview.nvim](https://github.com/sindrets/diffview.nvim) integration:
+  - **Diff Actions**: diff mappings in all oz\_git buffers additionally includes a section of mappings for diffview.nvim(if installed).
 
 > **Tip**: Pressing `g?` in any Oz buffer will instantly bring up the list of all available keybindings for that specific context.
 

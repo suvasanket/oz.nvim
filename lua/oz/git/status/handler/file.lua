@@ -71,10 +71,10 @@ function M.setup_keymaps(buf, key_grp)
 	vim.keymap.set({ "n", "x" }, "u", M.unstage, { buffer = buf, desc = "Unstage entry under cursor or selected entries.", silent = true })
 	-- discard
 	vim.keymap.set({ "n", "x" }, "X", M.discard, { buffer = buf, desc = "Discard entry under cursor or selected entries.", silent = true })
-	vim.keymap.set({ "n", "x" }, "K", M.untrack, { buffer = buf, desc = "Untrack file or selected files.", silent = true })
+	vim.keymap.set({ "n", "x" }, "D", M.untrack, { buffer = buf, desc = "Untrack file or selected files.", silent = true })
 	vim.keymap.set("n", "R", M.rename, { buffer = buf, desc = "Rename the file under cursor.", silent = true })
 
-	key_grp["File actions"] = { "s", "u", "K", "X", "R" }
+	key_grp["File actions"] = { "s", "u", "D", "X", "R" }
 end
 
 return M

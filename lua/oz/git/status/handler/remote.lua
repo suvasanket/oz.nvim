@@ -125,7 +125,7 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Actions",
 			items = {
 				{ key = "a", cb = M.add_update, desc = "Add or update remotes" },
-				{ key = "k", cb = M.remove, desc = "Remove remote" },
+				{ key = "d", cb = M.remove, desc = "Remove remote" },
 				{ key = "r", cb = M.rename, desc = "Rename remote" },
 				{ key = "p", cb = M.prune, desc = "Prune remote" },
 			},

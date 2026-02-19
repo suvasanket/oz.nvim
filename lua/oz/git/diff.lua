@@ -226,7 +226,7 @@ function start_visual_diff(target_file, args, file_list, index)
 		-- Help
 		vim.keymap.set("n", "g?", function()
 			local leader = vim.g.mapleader or "\\"
-            util.show_maps({
+			util.show_maps({
 				group = {
 					["Diff"] = { "]f", "[f", leader .. "f", "gq", "gs", "gu" },
 				},
@@ -352,37 +352,28 @@ function M.resolve_three_way()
 	-- Top-Left (Ours)
 	local ours_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(ours_win, ours_buf)
-	vim.api.nvim_set_option_value("number", true, { win = ours_win })
-	vim.api.nvim_set_option_value("signcolumn", "no", { win = ours_win })
-	vim.api.nvim_set_option_value("foldcolumn", "0", { win = ours_win })
+	vim.opt.setlocal("number signcolumn=no foldcolumn=0")
 	vim.cmd("diffthis")
 
 	-- Top-Mid (Base)
 	vim.cmd("rightbelow vsplit")
 	local base_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(base_win, base_buf)
-	vim.api.nvim_set_option_value("number", true, { win = base_win })
-	vim.api.nvim_set_option_value("signcolumn", "no", { win = base_win })
-	vim.api.nvim_set_option_value("foldcolumn", "0", { win = base_win })
+	vim.opt.setlocal("number signcolumn=no foldcolumn=0")
 	vim.cmd("diffthis")
 
 	-- Top-Right (Theirs)
 	vim.cmd("rightbelow vsplit")
 	local theirs_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(theirs_win, theirs_buf)
-	vim.api.nvim_set_option_value("number", true, { win = theirs_win })
-	vim.api.nvim_set_option_value("signcolumn", "no", { win = theirs_win })
-	vim.api.nvim_set_option_value("foldcolumn", "0", { win = theirs_win })
+	vim.opt.setlocal("number signcolumn=no foldcolumn=0")
 	vim.cmd("diffthis")
 
 	-- Bottom (Work)
 	vim.cmd("botright split")
 	local result_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(result_win, work_buf)
-	vim.api.nvim_set_option_value("number", true, { win = result_win })
-	vim.api.nvim_set_option_value("relativenumber", false, { win = result_win })
-	vim.api.nvim_set_option_value("signcolumn", "no", { win = result_win })
-	vim.api.nvim_set_option_value("foldcolumn", "0", { win = result_win })
+	vim.opt.setlocal("number signcolumn=no foldcolumn=0")
 	vim.cmd("diffthis")
 	vim.cmd("resize 15")
 
@@ -446,18 +437,19 @@ function M.resolve_three_way()
 	end
 
 	local map_opts = { buffer = work_buf, noremap = true, silent = true }
-	vim.keymap.set("n", "<leader>1", function()
+	local lead = "<leader>"
+	vim.keymap.set("n", lead .. "1", function()
 		get_diff(ours_buf)
 	end, vim.tbl_extend("force", map_opts, { desc = "Get change from OURS" }))
-	vim.keymap.set("n", "<leader>2", function()
+	vim.keymap.set("n", lead .. "2", function()
 		get_diff(base_buf)
 	end, vim.tbl_extend("force", map_opts, { desc = "Get change from BASE" }))
-	vim.keymap.set("n", "<leader>3", function()
+	vim.keymap.set("n", lead .. "3", function()
 		get_diff(theirs_buf)
 	end, vim.tbl_extend("force", map_opts, { desc = "Get change from THEIRS" }))
 
 	-- Jumps
-	vim.keymap.set("n", "<leader>j", function()
+	vim.keymap.set("n", lead .. "n", function()
 		for _, pattern in ipairs({ "^<<<<<<<", "^=====", "^>>>>>>" }) do
 			if vim.fn.search(pattern, "W") ~= 0 then
 				return
@@ -465,7 +457,7 @@ function M.resolve_three_way()
 		end
 	end, { buffer = work_buf, silent = true, desc = "Next conflict marker" })
 
-	vim.keymap.set("n", "<leader>k", function()
+	vim.keymap.set("n", lead .. "p", function()
 		for _, pattern in ipairs({ "^>>>>>>", "^=====", "^<<<<<<<" }) do
 			if vim.fn.search(pattern, "Wb") ~= 0 then
 				return
@@ -511,7 +503,7 @@ function M.resolve_three_way()
 	end, { buffer = work_buf, desc = "Prev conflicted file" })
 
 	-- Pick File
-	vim.keymap.set("n", "<leader>e", function()
+	vim.keymap.set("n", lead .. "e", function()
 		local ok_p, c_files = util.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
 		if not ok_p or #c_files == 0 then
 			util.Notify("No conflicted files found.", "warn", "oz_git")
@@ -531,24 +523,23 @@ function M.resolve_three_way()
 
 	-- Help
 	vim.keymap.set("n", "g?", function()
-		local leader = vim.g.mapleader or "\\"
-        util.show_maps({
+		util.show_maps({
 			group = {
 				["Resolution Actions"] = {
-					leader .. "1",
-					leader .. "2",
-					leader .. "3",
-					leader .. "j",
-					leader .. "k",
+					lead .. "1",
+					lead .. "2",
+					lead .. "3",
+					lead .. "n",
+					lead .. "p",
+                    lead .. "e",
 					"]f",
 					"[f",
-					leader .. "e",
 					"gq",
 				},
 			},
 			show_general = false,
 		})
-	end, { buffer = work_buf, desc = "Show 3-way merge help" })
+	end, { buffer = work_buf, desc = "Show 3-way merge mappings" })
 
 	-- Quit
 	vim.keymap.set("n", "gq", function()

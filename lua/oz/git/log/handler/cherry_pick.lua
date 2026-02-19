@@ -69,8 +69,8 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Cherry Pick",
 			items = {
 				{ key = "p", cb = M.handle_cherrypick, desc = "Cherry-pick commit under cursor" },
-				{ key = "a", cb = M.abort, desc = "Cherry-pick abort" },
-				{ key = "q", cb = M.quit, desc = "Cherry-pick quit" },
+				{ key = "q", cb = M.abort, desc = "Cherry-pick abort" },
+				{ key = "Q", cb = M.quit, desc = "Cherry-pick quit" },
 				{ key = "l", cb = M.continue, desc = "Cherry-pick continue" },
 				{ key = "k", cb = M.skip, desc = "Cherry-pick skip" },
 			},

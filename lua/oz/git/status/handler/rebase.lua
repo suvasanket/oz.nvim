@@ -46,7 +46,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "r", cb = M.rebase_branch, desc = "Rebase on..." },
 				{ key = "i", cb = M.rebase_interactive, desc = "Interactive" },
 				{
-					key = "e",
+					key = " ",
 					cb = function(f)
 						local flags = f and table.concat(f, " ") or ""
 						util.set_cmdline("Git rebase " .. flags .. " ")
@@ -59,28 +59,28 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Actions",
 			items = {
 				{
-					key = "c",
+					key = "l",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --continue")
 					end,
 					desc = "Continue",
 				},
 				{
-					key = "s",
+					key = "k",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --skip")
 					end,
 					desc = "Skip",
 				},
 				{
-					key = "a",
+					key = "q",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --abort")
 					end,
 					desc = "Abort",
 				},
 				{
-					key = "t",
+					key = "e",
 					cb = function()
 						s_util.run_n_refresh("Git rebase --edit-todo")
 					end,

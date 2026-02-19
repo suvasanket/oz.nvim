@@ -82,7 +82,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "u", cb = M.push_cmd, desc = "Push current to upstream" },
 				{ key = "e", cb = M.push_to, desc = "Push to..." },
 				{
-					key = "m",
+					key = " ",
 					cb = function(f)
 						local args = get_args(f)
 						util.set_cmdline("Git push" .. args .. " ")

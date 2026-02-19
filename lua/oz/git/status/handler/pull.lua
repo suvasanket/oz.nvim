@@ -79,7 +79,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "u", cb = M.pull_cmd, desc = "Pull from upstream" },
 				{ key = "e", cb = M.pull_from, desc = "Pull from..." },
 				{
-					key = "m",
+					key = " ",
 					cb = function(f)
 						local args = get_args(f)
 						util.set_cmdline("Git pull" .. args .. " ")

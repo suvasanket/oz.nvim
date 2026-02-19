@@ -85,8 +85,8 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "e", cb = M.no_edit, desc = "Revert commit with no-edit" },
 				{ key = "l", cb = M.continue, desc = "Revert continue" },
 				{ key = "k", cb = M.skip, desc = "Revert skip" },
-				{ key = "q", cb = M.quit, desc = "Revert quit" },
-				{ key = "a", cb = M.abort, desc = "Revert abort" },
+				{ key = "Q", cb = M.quit, desc = "Revert quit" },
+				{ key = "q", cb = M.abort, desc = "Revert abort" },
 			},
 		},
 	}

@@ -163,7 +163,7 @@ function M.setup_keymaps(buf, key_grp)
 					desc = "Diff Staged",
 				},
 				{
-					key = "e",
+					key = " ",
 					cb = function()
 						util.set_cmdline("DiffviewOpen ")
 					end,

@@ -105,7 +105,7 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "a", cb = M.apply, desc = "Apply" },
 				{ key = "p", cb = M.pop, desc = "Pop" },
-				{ key = "k", cb = M.drop, desc = "Drop" },
+				{ key = "d", cb = M.drop, desc = "Drop" },
 			},
 		},
 	}

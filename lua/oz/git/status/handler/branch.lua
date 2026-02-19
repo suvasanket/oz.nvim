@@ -132,10 +132,10 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Manipulation",
 			items = {
-				{ key = "k", cb = M.delete, desc = "Delete branch" },
+				{ key = "d", cb = M.delete, desc = "Delete branch" },
 				{ key = "r", cb = M.rename, desc = "Rename branch" },
 				{
-					key = "x",
+					key = "e",
 					cb = function()
 						s_util.run_n_refresh("Git branch --edit-description")
 					end,

@@ -1,9 +1,6 @@
 local M = {}
 local util = require("oz.util")
 
-M.on_conflict_resolution = false
-M.on_conflict_resolution_complete = nil
-
 local shellout_str = util.shellout_str
 
 --- Get suggestion if error in user-cmd
@@ -101,14 +98,6 @@ function M.get_git_suggestions(data, arg_tbl)
 			trigger = "pull with rebase",
 			extract = function()
 				return "pull --rebase"
-			end,
-		},
-		-- Merge conflict resolution
-		{
-			trigger = "fix conflicts",
-			extract = function()
-				vim.notify_once("We are in a conflict, press enter for details.")
-				return "Git"
 			end,
 		},
 		-- Detached HEAD suggestions
