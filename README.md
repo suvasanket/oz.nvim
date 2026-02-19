@@ -1,178 +1,130 @@
-# Oz.nvim
-Essential plugin kit for software developers
+# oz.nvim
 
-[oz_git showcase](https://github.com/user-attachments/assets/58229a8d-04a0-43a9-806d-8f175162f1b0)
-<details>
-<summary>More Showcases</summary>
+An essential kit for the pragmatic developer who wants their editor to be a bit smarter without losing the feel of Neovim.
 
-[oz_make showcase](https://github.com/user-attachments/assets/9315ac70-f5df-4077-bb87-eaa0bbc31a33)
+Oz is not a collection of wrappers that hide your tools. Instead, it adds a layer of intelligence to your daily workflows: Git, terminal management, building, and searching. It is built to be fast, ensuring a nearly invisible impact on your startup time while staying out of your way until you need it.
 
-[oz_grep showcase](https://github.com/user-attachments/assets/ac08fe0b-7228-4da6-b94c-1fda492cedde)
+## Core Modules
+### Git
+A comprehensive Git client inspired by the experience of **[Magit](https://magit.vc/)** and the vimness of **[Fugitive](https://github.com/tpope/vim-fugitive)**. It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
 
-</details>
+### Term
+An enhanced terminal manager that learns. It caches your commands on a per-project and per-directory basis, adapting suggestions to the files you are currently editing. If you run a compiler on `api.c`, Oz will suggest the command adapting to `main.c` when you switch buffers.
 
-## Requirement
-- Neovim >= 0.9.4
+### Make
+An asynchronous build system that replaces the blocking `:make`. It detects your build environment automatically (Makefile, Cargo, npm, etc.) and keeps the `makeprg` settings synchronized across your projects. With "AutoMake," you can have your tests or builds run automatically as you save.
+
+### Grep
+A fast, asynchronous search tool that integrates deeply with Neovim's quickfix list. It supports searching visual ranges, respects your project root by default, and narrows its scope automatically when you are navigating with Oil.
 
 ## Installation
-lazy:
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+
 ```lua
 {
     "suvasanket/oz.nvim",
     opts = {},
 }
 ```
+No **mandatory third-party dependencies**.
 
-## Config
-<details>
-<summary>Default config</summary>
+### Recommended Plugins (Completely optional)
+- [fidget.nvim](https://github.com/j-hui/fidget.nvim): For beautiful progress notifications during async tasks.
+- [nvim-notify](https://github.com/rcarriga/nvim-notify) (or similar): For enhanced system notifications.
+- Any picker for better option picking.
+
+## Feature Showcase
+### The Git Experience
+The `:Git` (or `:G`) command is your entry point, designed to feel familiar yet more capable.
+- **Magit-like Workflow**: Navigate your repository with a powerful status buffer featuring transient keybindings and intuitive section management.
+- **Fugitive-like Interface**: Use the `:G` or `:Git` command for asynchronous execution of any git command.
+- **Git Wizard**: If you type `:Git puhs` or try to push without an upstream, Oz won't just error out. It will suggest the corrected command in your command line.
+- **Async Execution**: Every git command runs in the background. You'll see progressive output for long-running tasks like `push` or `pull`.
+
+### A Smart Terminal
+Oz's terminal module is designed to reduce the friction of repetitive tasks.
+- **Arbitrary Execution**: Run any shell command with arguments directly via `:Term <cmd>`.
+- **Term Wizard**: If no arguments are provided, the Term Wizard suggests the most relevant command based on your learned patterns and project context.
+- **Jump & Grab**: Instantly jump to any errors/warnings in the output or use `<C-q>` to grab them all into the quickfix list.
+- **Root-Aware**: Use the `@` prefix (e.g., `:Term @make`) to run any command from the project root, regardless of where your current buffer is.
+
+### Project Building
+The Make module is about staying in the flow.
+- **Project-Specific Caching**: Use `:set makeprg` to set your build command; Oz will automatically cache it (along with your `efm`) for that specific project, restoring it the next time you work there.
+- **Root by Default**: Running `:Make` executes from your project root. Use `:Make!` to explicitly run from your current working directory.
+- **Transient Keymaps**: While a build is running, temporary global keymaps (`<C-x>` to kill, `<C-d>` to view live execution) are active. They disappear as soon as the job is done.
+- **AutoMake**: Use `:AutoMake filetype` or `:AutoMake file` to have Oz automatically trigger a build whenever you save.
+
+### Seamless Search
+Grep module is designed to be simple yet effective.
+- **Range Support**: Select a block of text and run `:Grep` to search for it across your project. It automatically detects and escapes any wildcards to ensure precise results.
+- **Root by Default**: Every search starts from your project root by default. Use `:Grep!` to ground the search to your current working directory.
+- **Flexible Flags**: Pass any grep or ripgrep flags directly to the command (e.g., `:Grep -w "pattern"`).
+
+### Integrations
+Various modules provides integration with **[oil.nvim](https://github.com/stevearc/oil.nvim)**.
+  - **Smart Search**: `:Grep` automatically restricts its search scope to the directory you are currently browsing.
+  - **Entry Execution**: Press `<C-G>` over any file or directory to run an arbitrary shell command. `:` separates the cmd and tail (e.g., `cp: /tmp/`: copies entry under cursor to /tmp/). These can be executed as background tasks or in a oz\_term.
+  - **Codebase Browsing**: Run `:GBrowse` in an Oil buffer to open that specific directory in your browser at your remote Git host.
+
+> **Tip**: Pressing `g?` in any Oz buffer will instantly bring up the list of all available keybindings for that specific context.
+
+## Configuration
+Oz is based on zero-config setup. It works out of the box with sensible defaults and minimal config to keep your environment lean and predictable. Fewer knobs reduce configuration fatigue.
+
+Oz is modular; you can disable any part of it by setting the corresponding key to `false`.
 
 ```lua
-{
-    -- Global mappings
-    mappings = {
-        Term = "<leader>av", -- Open a prompt to execute a shell command in oz_term
-        TermBang = "<leader>at", -- Open a prompt to execute a shell command in a tmux window or Neovim tab
-        Rerun = "<leader>aa", -- Re-execute the previous command (<Term|Compile|Term!>)
+require("oz").setup({
+    -- Git
+    oz_git = {
+        win_type = "bot",
+        mappings = { -- oz_git universal mappings
+            toggle_pick = "<C-P>",
+            unpick_all = "<C-S-P>",
+        },
     },
 
-     -- oz_git options
-     oz_git = {
-         win_type = "tab", -- window type of oz_git status, log buffer |tab, hor, vert|
-         mappings = {
-             toggle_pick = "<C-P>",
-             unpick_all = "<C-S-P>",
-         },
-     },
-
-     -- oz_term options
-     oz_term = {
-         bufhidden_behaviour = "prompt", -- |prompt, hide, quit|
-         mappings = {
-             open_entry = "<cr>", -- Open the entry (file or directory) under the cursor
-             add_to_quickfix = "<C-q>", -- Add any errors, warnings, or stack traces to the quickfix list and jump to the first item
-             open_in_compile_mode = "t", -- Run the current command in compile-mode
-             rerun = "r", -- Re-execute the previous shell command
-             quit = "q", -- Interrupt any shell execution and close the oz_term buffer
-             show_keybinds = "g?", -- Show all available keybindings
-         },
-     },
-
-     -- oz_make options
-     oz_make = {
-         override_make = false, -- Override the default :make
-         autosave_makeprg = true, -- Auto save all the project scoped makeprg(:set makeprg=<cmd>)
-     },
-
-     -- oz_grep options
-     oz_grep = {
-         override_grep = true, -- override the default :grep
-     },
-
-     -- integrations
-     integration = {
-         -- Compile-mode integration
-         compile_mode = {
-             mappings = {
-                 open_in_oz_term = "t", -- Run the current command in oz_term
-                 show_keybinds = "g?", -- Compile-mode doesn’t provide a keymaps list, so we define one here
-             },
-         },
-
-         -- Oil integration
-         oil = {
-             entry_exec = {
-                 method = "term", -- |background, term|
-                 use_fullpath = true, -- Use the full path of the entry
-                 tail_prefix = ":", -- char use to separte lead(LHS) and tail(RHS)
-             },
-             mappings = {
-                 term = "<global>", -- Execute a shell command using oz_term | by default uses global keys(<leader>av)
-                 compile = "<global>", -- Execute a shell command using compile-mode | by default uses global keys(<leader>ac)
-                 entry_exec = "<C-G>", -- Execute a command on the entry (file or directory) under the cursor
-                 show_keybinds = "g?", -- Override the existing `g?` mapping
-             },
-         },
-     }
-
-    -- error_formats :help errorformat
-    efm = {
-        cache_efm = true,
+    -- Term
+    oz_term = {
+        efm = { "%f:%l:%c: %trror: %m" }, -- strings of errorformats
+        root_prefix = "@", -- char to specify command to run in project root
     },
-}
+
+    -- Make
+    oz_make = {
+        override_make = false, -- override the default :make
+        autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
+        transient_mappings = { -- only unlocks during the execution
+            kill_job = "<C-x>",
+            toggle_output = "<C-d>",
+        },
+        -- vim.opt.makeprg can be used to set custom make program
+    },
+
+    -- Grep
+    oz_grep = {
+        override_grep = true, -- override the default :grep
+        -- vim.opt.grepprg can be used to set custom grep program
+    },
+
+    integration = {
+    -- oil integration
+        oil = {
+            entry_exec = {
+                method = "term", -- |background, term|
+                use_fullpath = true, -- false: only file or dir name will be used
+                tail_prefix = ":", -- split LHS RHS
+            },
+            mappings = {
+                entry_exec = "<C-G>",
+                show_keybinds = "g?", -- override existing g?
+            },
+        },
+    },
+})
 ```
 
-To disable any module: for eg. `oz_git = false`
-</details>
+## Contributing
 
-## Features
-### oz\_term:
-#### commands
-- `:Term`: like your typical `:term` but interactive by default and some kool keymaps.
-    - Using `!` (e.g., `:Term! npm test`) runs the command in the background without stealing focus.
-    - Using `@` before the command (e.g., `:Term @make`) runs it from the project root.
-- `:TermToggle`: Toggles the visibility of the oz\_term buffer.
-- `:TermClose`: Closes any active buffer.
-#### keymaps
-- “\<leader\>av”(oz\_term with suggestions): shows a prompt to run command using oz\_term.
-- “\<leader\>at”: same as above but with `!`.
-- “\<leader\>aa”: reruns any previously ran command, supports both oz\_term and [compile-mode.nvim](https://github.com/ej-shafran/compile-mode.nvim)(if installed).
-#### command suggestions
-- When using `<leader>av`(or any configured map) the most relevant command will be pre-populated based on previous usage.
-	- **Context-Aware**: Caches commands on a per-project basis, suggesting the most relevant options for your current filetype and buffer.
-	- **Learns Patterns**: Intelligently adapts previous commands to new files. (eg. after running `:Term gcc api.c -o api`, it will suggest `:Term gcc main.c -o main` when you switch to `main.c`)
-    - **Oil Integrations**: Caches command on the current directory basis, suggesting the previously ran command in that dir only.
-
-### oz\_make:
-#### commands
-- `:Make`: a much more improved version of builtin `:make`.
-	- **async** by default which means doesn’t block nvim instance.
-	- runs from the project root by default, use `!` to run it in the pwd.
-	- uses set efm for the current filetype to parse the error or any stdout then add to quickfix list.(More about [‘errorfomat’](https://neovim.io/doc/user/options.html#'errorformat'))
-- `:AutoMake`: watches for any changes then automatically runs the `:Make`.
-	- `filetype` checks for any changes in the current filetype in any files and runs `:Make`.
-	- `file` checks for changes in the current file only and do the same.
-#### makeprg
-- Supports the built-in `makeprg` option for choosing your build command.(e.g. `:set makeprg=cargo`)
-	- Automatically caches the `makeprg` setting per project so you don’t have to reconfigure it each time.
-	- Default `makeprg` is make.(ref [‘makeprg’](https://neovim.io/doc/user/options.html#'makeprg'))
-
-### oz\_grep:
-#### commands
-- `:Grep`: one of the best feature of this plugin, again just like before improving over builtin `:grep`.
-	- **Async**, so no blocking.
-	- Searches from the root of the project by default, use `!` to  explicitly run in the current directory.
-	- Supports passing **flags** and **path** directly as args.
-	- Supports both **relative-path notation** and vim's **filename modifiers** for search path specification.
-	- Supports **range**, which means you can just visually select something then do `:Grep` to directly search the selected in the whole project.
-- Adds all the results to the quickfix list.
-#### integrations
-- With [oil.nvim](https://github.com/stevearc/oil.nvim), `:Grep` automatically limits its search to your current directory—just navigate where you need and run `:Grep` to instantly narrow the scope.
-
-#### grepprg:
-- Use the builtin `grepprg` option to set a grep program.(ref [‘grepprg’](https://neovim.io/doc/user/options.html#'grepprg'))
-```lua
-vim.o.grepprg = "rg --vimgrep -u -S"
-```
-- To set a custom format of the specified grep program use the builtin `grepformat` option.(ref [‘grepformat’](https://neovim.io/doc/user/options.html#'grepformat'))
-
-### oz\_git
-- The important, huge portion of this plugin and my attempt at creating a git client.
-#### commands
-- `:Git`, `:G`: heavily inspired from [fugitive](https://github.com/tpope/vim-fugitive) but with different philosophy and features.
-    - By default when you run a git command its **async**(as usual) and smart.
-    - `Git` without args will open the **status** buffer, heavily inspired from **magit**.
-    - I’ve aimed to make this self-explanatory, but if anything’s unclear, please check the docs(which ~~might~~ will be available in future).
-- `:Gwrite`, `:Gw`: save the current file and stage the changes in the Git repository.
-    - to *rename* or *move* the current file pass the path as arg.
-- `:Gread`, `:Gr`: revert unstaged changes back without writing.
-    - you can explicitly specify any file also as arg.
-- `:GitLog`: opens the oz\_git log buffer, showing the full commit history.
-    - Like the status buffer, it’s mostly self-explanatory.
-    - From the status buffer, press `gl` to open the full log or `gL` on a specific object (branch or file) to view its history.
-- `:GBlame`: opens split to the right showing SHA, author, time and line number etc.
-    - Not as good as fugitive's but ok enough.
-- `:GBrowse`: open the current file or any file you pass as an argument in your browser at your Git host.
-    - integrates with [oil.nvim](https://github.com/stevearc/oil.nvim): navigate to a directory and run `:GBrowse` to open that directory in your browser.
-
-## Integrations
+If you find a bug or have an idea for a feature that fits the "pragmatic intelligence" philosophy, feel free to open an issue or a pull request.

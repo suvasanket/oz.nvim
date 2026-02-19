@@ -6,7 +6,7 @@ local _highlights = {}
 M.oz_highlights = {
 	ozHelpEcho = { fg = "#606060" },
 	ozInactivePrompt = { fg = "#757575" },
-	ozUrl = { fg = "#B8B5FF", undercurl = true, bold = true },
+	ozUrl = { fg = "#ffffff", undercurl = true, bold = true },
 
 	ozGitStatusHeading = { fg = "#ffffff", bold = true },
 	ozGitStatusBranchName = { link = "@attribute" },
