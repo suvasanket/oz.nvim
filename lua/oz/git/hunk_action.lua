@@ -1,281 +1,287 @@
 local M = {}
 local g_util = require("oz.git.util")
 
-local function run_git(args, cwd, input)
-	local cmd = { "git", "-C", cwd, "--no-pager" }
-	vim.list_extend(cmd, args)
+--- Run a git command and return the output.
+local function git_exec(args, cwd, stdin_data)
+	local cmd = { "git", "--no-pager", unpack(args) }
+	local result = vim.system(cmd, {
+		text = true,
+		stdin = stdin_data or false,
+		cwd = cwd or g_util.get_project_root(),
+	}):wait()
 
-	local output = vim.fn.systemlist(cmd, input)
-	if vim.v.shell_error ~= 0 then
-		return nil, table.concat(output, "\n")
+	if result.code ~= 0 then
+		return nil, string.format("git %s failed (%d):\n%s", table.concat(args, " "), result.code, result.stderr or "")
 	end
-	return output
+	return result.stdout or ""
 end
 
-local function get_git_info(bufnr, opts)
+--- Get Git information for a target.
+local function get_info(target, opts)
 	opts = opts or {}
-	bufnr = bufnr or 0
-
-	-- If explicit paths provided, use them
 	if opts.root and opts.rel_path then
-		return {
-			root = opts.root,
-			rel_path = opts.rel_path,
-		}
+		return { root = opts.root, rel_path = opts.rel_path }
 	end
 
-	local filepath = vim.api.nvim_buf_get_name(bufnr)
-	if filepath == "" then
-		return nil, "Buffer has no filepath"
+	local filepath
+	if not target or target == 0 then
+		filepath = vim.api.nvim_buf_get_name(0)
+	elseif type(target) == "string" then
+		filepath = target
+	else
+		filepath = vim.api.nvim_buf_get_name(target)
 	end
 
-	filepath = vim.fn.resolve(filepath)
-	local cwd = vim.fn.fnamemodify(filepath, ":h")
+	if not filepath or filepath == "" then
+		return nil, "No filepath provided"
+	end
 
 	local git_root = g_util.get_project_root()
 	if not git_root then
 		return nil, "Not a git repository"
 	end
 
-	local rel_path = filepath:sub(#git_root + 2) -- +2 for trailing slash
+	local root_clean = git_root:gsub("/$", "")
+	local abs_path = vim.fn.fnamemodify(vim.fn.resolve(filepath), ":p")
+	local rel_path
+	if abs_path:sub(1, #root_clean) == root_clean then
+		rel_path = abs_path:sub(#root_clean + 2)
+	else
+		rel_path = vim.fn.fnamemodify(abs_path, ":.")
+	end
 
-	return {
-		root = git_root,
-		rel_path = rel_path,
-		cwd = cwd,
-	}
+	return { root = root_clean, rel_path = rel_path }
 end
 
--- Parses the diff and extracts changes strictly within start_line and end_line
-local function generate_patch(diff_lines, start_line, end_line)
-	local file_headers = {}
-	local patch_content = {}
-	local has_matches = false
+--------------------------------------------------------------------------------
+-- Working-tree ↔ Index line mapping
+--------------------------------------------------------------------------------
 
+local function build_wt_to_index_map(root, rel_path)
+	local raw = ""
+	pcall(function()
+		raw = git_exec({ "diff", "--no-color", "--no-ext-diff", "-U0", "--", rel_path }, root) or ""
+	end)
+
+	local hunks = {}
+	for line in raw:gmatch("[^\n]+") do
+		local os, oc, ns, nc = line:match("^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@")
+		if os then
+			hunks[#hunks + 1] = {
+				idx_start = tonumber(os),
+				idx_count = tonumber(oc == "" and "1" or oc),
+				wt_start = tonumber(ns),
+				wt_count = tonumber(nc == "" and "1" or nc),
+			}
+		end
+	end
+
+	return function(wt_line)
+		local offset = 0
+		for _, h in ipairs(hunks) do
+			local wt_end = h.wt_start + h.wt_count - 1
+			if wt_line < h.wt_start then
+				break
+			elseif wt_line >= h.wt_start and wt_line <= wt_end then
+				return h.idx_start
+			else
+				offset = offset + (h.idx_count - h.wt_count)
+			end
+		end
+		return wt_line + offset
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Diff parsing & filtering
+--------------------------------------------------------------------------------
+
+local function parse_hunk_header(header)
+	local os, oc, ns, nc = header:match("^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@")
+	return tonumber(os), tonumber(oc == "" and "1" or oc), tonumber(ns), tonumber(nc == "" and "1" or nc)
+end
+
+local function parse_diff(raw)
+	local lines = vim.split(raw, "\n", { plain = true })
+	local diff = { header_lines = {}, hunks = {} }
 	local i = 1
 
-	-- 1. Capture Git File Headers (lines before first @@)
-	while i <= #diff_lines do
-		if diff_lines[i]:match("^@@") then
+	while i <= #lines do
+		if lines[i]:match("^@@") then
 			break
 		end
-		table.insert(file_headers, diff_lines[i])
+		diff.header_lines[#diff.header_lines + 1] = lines[i]
 		i = i + 1
 	end
 
-	-- 2. Iterate Hunks
-	while i <= #diff_lines do
-		local line = diff_lines[i]
-
-		if line:match("^@@") then
-			-- Parse Header: @@ -OldStart,OldCount +NewStart,NewCount @@
-			local old_str, new_str = line:match("^@@ %-(.+) %+(.+) @@")
-
-			local function parse_nums(s)
-				local s_start, s_count = s:match("(%d+),(%d+)")
-				if not s_start then
-					s_start = s
-					s_count = 1
-				end
-				return tonumber(s_start), tonumber(s_count)
-			end
-
-			local hunk_old_start, _ = parse_nums(old_str)
-			local hunk_new_start, _ = parse_nums(new_str)
-
-			local current_new_line = hunk_new_start
-			local current_old_line = hunk_old_start
-
-			-- State for capturing sub-hunks
-			local sub_body = {}
-			local pending_deletions = {}
-			local capture_new_start = nil
-			local capture_old_start = nil
-			local capture_add_count = 0
-			local capture_del_count = 0
-
-			i = i + 1 -- Enter Hunk Body
-
-			while i <= #diff_lines do
-				local content = diff_lines[i]
-				if not content or content:match("^@@") then
+	while i <= #lines do
+		if lines[i]:match("^@@") then
+			local hunk = { header = lines[i], lines = {} }
+			i = i + 1
+			while i <= #lines and not lines[i]:match("^@@") and not lines[i]:match("^diff %-%-git") do
+				if i == #lines and lines[i] == "" then
 					break
-				end -- Next hunk detected
-
-				local char = content:sub(1, 1)
-
-				if char == "-" then
-					-- Deletions are queued and attached to the *next* addition
-					table.insert(pending_deletions, content)
-					current_old_line = current_old_line + 1
-				elseif char == "+" then
-					-- Check if this added line is within the user's requested range
-					if current_new_line >= start_line and current_new_line <= end_line then
-						has_matches = true
-
-						-- Start a new capture block if needed
-						if not capture_new_start then
-							capture_new_start = current_new_line
-							capture_old_start = current_old_line - #pending_deletions
-						end
-
-						-- Flush pending deletions (modification case)
-						for _, del in ipairs(pending_deletions) do
-							table.insert(sub_body, del)
-							capture_del_count = capture_del_count + 1
-						end
-
-						pending_deletions = {}
-
-						-- Add current line
-						table.insert(sub_body, content)
-						capture_add_count = capture_add_count + 1
-					else
-						-- Outside range. If we were capturing, close the block.
-						if capture_new_start then
-							local header = string.format(
-								"@@ -%d,%d +%d,%d @@",
-								capture_old_start,
-								capture_del_count,
-								capture_new_start,
-								capture_add_count
-							)
-							table.insert(patch_content, header)
-							for _, l in ipairs(sub_body) do
-								table.insert(patch_content, l)
-							end
-
-							sub_body = {}
-							capture_new_start = nil
-							capture_add_count = 0
-							capture_del_count = 0
-						end
-						-- Discard pending deletions as they don't belong to a selected line
-						pending_deletions = {}
-					end
-					current_new_line = current_new_line + 1
-				elseif char == "\\" then
-					-- Handle "No newline at end of file"
-					if capture_new_start then
-						table.insert(sub_body, content)
-					end
 				end
+				hunk.lines[#hunk.lines + 1] = lines[i]
 				i = i + 1
 			end
-
-			-- End of Hunk: Flush remaining capture
-			if capture_new_start and #sub_body > 0 then
-				local header = string.format(
-					"@@ -%d,%d +%d,%d @@",
-					capture_old_start,
-					capture_del_count,
-					capture_new_start,
-					capture_add_count
-				)
-				table.insert(patch_content, header)
-				for _, l in ipairs(sub_body) do
-					table.insert(patch_content, l)
-				end
-			end
+			diff.hunks[#diff.hunks + 1] = hunk
 		else
 			i = i + 1
 		end
 	end
-
-	if not has_matches then
-		return nil
-	end
-	return table.concat(file_headers, "\n") .. "\n" .. table.concat(patch_content, "\n") .. "\n"
+	return diff
 end
 
-local function apply_operation(op, bufnr, start_line, end_line, opts)
-	bufnr = bufnr or 0
-	local info, err = get_git_info(bufnr, opts)
+local function filter_hunk(hunk, sel_start, sel_end)
+	local old_start, _, new_start, _ = parse_hunk_header(hunk.header)
+	local out = {}
+	local cur_old, cur_new = old_start, new_start
+
+	for _, line in ipairs(hunk.lines) do
+		local p = line:sub(1, 1)
+		local rest = line:sub(2)
+
+		if p == "+" then
+			if cur_new >= sel_start and cur_new <= sel_end then
+				out[#out + 1] = line
+			end
+			cur_new = cur_new + 1
+		elseif p == "-" then
+			if cur_new >= sel_start and cur_new <= sel_end then
+				out[#out + 1] = line
+			else
+				out[#out + 1] = " " .. rest
+			end
+			cur_old = cur_old + 1
+		elseif p == " " then
+			out[#out + 1] = line
+			cur_old, cur_new = cur_old + 1, cur_new + 1
+		elseif p == "\\" then
+			out[#out + 1] = line
+		end
+	end
+
+	local has_diff = false
+	for _, l in ipairs(out) do
+		local c = l:sub(1, 1)
+		if c == "+" or c == "-" then
+			has_diff = true
+			break
+		end
+	end
+	if not has_diff then
+		return nil
+	end
+
+	local o_count, n_count = 0, 0
+	for _, l in ipairs(out) do
+		local c = l:sub(1, 1)
+		if c == " " then
+			o_count, n_count = o_count + 1, n_count + 1
+		elseif c == "-" then
+			o_count = o_count + 1
+		elseif c == "+" then
+			n_count = n_count + 1
+		end
+	end
+
+	local new_header = string.format("@@ -%d,%d +%d,%d @@", old_start, o_count, new_start, n_count)
+	return new_header .. "\n" .. table.concat(out, "\n") .. "\n"
+end
+
+--------------------------------------------------------------------------------
+-- Public API
+--------------------------------------------------------------------------------
+
+function M.stage_range(target, s, e, opts)
+	local info, err = get_info(target, opts)
 	if not info then
 		return false, err
 	end
 
-	-- Normalize range
-	local s = math.min(start_line, end_line)
-	local e = math.max(start_line, end_line)
+	local line_start, line_end = math.min(s, e), math.max(s, e)
 
-	-- 1. Diff
-	local diff_args = { "diff", "--no-color", "--no-ext-diff", "-U0", "--", info.rel_path }
-	if op == "unstage" then
-		table.insert(diff_args, 2, "--cached")
+	local raw_diff, diff_err = git_exec({ "diff", "--no-color", "--no-ext-diff", "-U0", "--", info.rel_path }, info.root)
+	if not raw_diff or raw_diff == "" then
+		return false, diff_err or "No changes to stage"
 	end
 
-	local diff_lines, diff_err = run_git(diff_args, info.root)
-	if not diff_lines or #diff_lines == 0 then
-		return false, (diff_err or ("No changes found to " .. op))
+	local diff = parse_diff(raw_diff)
+	local patch_body = ""
+	for _, hunk in ipairs(diff.hunks) do
+		local filtered = filter_hunk(hunk, line_start, line_end)
+		if filtered then
+			patch_body = patch_body .. filtered
+		end
 	end
 
-	-- 2. Construct Patch
-	local patch = generate_patch(diff_lines, s, e)
-	if not patch then
-		return false, "No changes found specifically in range " .. s .. "-" .. e
+	if patch_body == "" then
+		return false, string.format("No changes in range %d-%d", line_start, line_end)
 	end
 
-	-- 3. Apply
-	local apply_args = { "apply", "--unidiff-zero", "--whitespace=nowarn" }
-	if op == "stage" then
-		table.insert(apply_args, 2, "--cached")
-	elseif op == "unstage" then
-		table.insert(apply_args, 2, "--cached")
-		table.insert(apply_args, "--reverse")
-	elseif op == "restore" then
-		table.insert(apply_args, "--reverse")
-	end
-	table.insert(apply_args, "-")
-
-	local _, apply_err = run_git(apply_args, info.root, patch)
-
+	local patch = table.concat(diff.header_lines, "\n") .. "\n" .. patch_body
+	local _, apply_err = git_exec({ "apply", "--cached", "--unidiff-zero", "-" }, info.root, patch)
 	if apply_err then
 		return false, apply_err
 	end
 
-	-- Reload buffer to sync with disk if it's the current file
-	if bufnr == 0 or bufnr == vim.api.nvim_get_current_buf() then
-        pcall(vim.cmd.checktime)
+	vim.schedule(function()
+		pcall(vim.cmd.checktime)
+		require("oz.git").refresh_buf()
+	end)
+	return true
+end
+
+function M.unstage_range(target, s, e, opts)
+	local info, err = get_info(target, opts)
+	if not info then
+		return false, err
 	end
 
-	return true, nil
-end
+	local line_start, line_end = math.min(s, e), math.max(s, e)
+	local idx_start, idx_end
 
----
---- Stage lines in range
----@param bufnr number|nil Buffer number (0 for current)
----@param start_line number Start line number (1-based)
----@param end_line number End line number (1-based)
----@param opts table|nil Optional overrides {root=..., rel_path=...}
----@return boolean success
----@return string|nil error_message
-function M.stage_range(bufnr, start_line, end_line, opts)
-	return apply_operation("stage", bufnr, start_line, end_line, opts)
-end
+	if opts and opts.is_index then
+		idx_start, idx_end = line_start, line_end
+	else
+		local wt2idx = build_wt_to_index_map(info.root, info.rel_path)
+		idx_start, idx_end = wt2idx(line_start), wt2idx(line_end)
+		if idx_start > idx_end then
+			idx_start, idx_end = idx_end, idx_start
+		end
+	end
 
----
---- Unstage lines in range
----@param bufnr number|nil Buffer number (0 for current)
----@param start_line number Start line number (1-based)
----@param end_line number End line number (1-based)
----@param opts table|nil Optional overrides {root=..., rel_path=...}
----@return boolean success
----@return string|nil error_message
-function M.unstage_range(bufnr, start_line, end_line, opts)
-	return apply_operation("unstage", bufnr, start_line, end_line, opts)
-end
+	local raw_diff, diff_err =
+		git_exec({ "diff", "--cached", "--no-color", "--no-ext-diff", "-U0", "--", info.rel_path }, info.root)
+	if not raw_diff or raw_diff == "" then
+		return false, diff_err or "No staged changes to unstage"
+	end
 
----
---- Restore lines in range (discard changes in working tree)
----@param bufnr number|nil Buffer number (0 for current)
----@param start_line number Start line number (1-based)
----@param end_line number End line number (1-based)
----@param opts table|nil Optional overrides {root=..., rel_path=...}
----@return boolean success
----@return string|nil error_message
-function M.restore_range(bufnr, start_line, end_line, opts)
-	return apply_operation("restore", bufnr, start_line, end_line, opts)
+	local diff = parse_diff(raw_diff)
+	local patch_body = ""
+	for _, hunk in ipairs(diff.hunks) do
+		local filtered = filter_hunk(hunk, idx_start, idx_end)
+		if filtered then
+			patch_body = patch_body .. filtered
+		end
+	end
+
+	if patch_body == "" then
+		return false, string.format("No staged changes in index range %d-%d", idx_start, idx_end)
+	end
+
+	local patch = table.concat(diff.header_lines, "\n") .. "\n" .. patch_body
+	local _, apply_err = git_exec({ "apply", "--cached", "--reverse", "--unidiff-zero", "-" }, info.root, patch)
+	if apply_err then
+		return false, apply_err
+	end
+
+	vim.schedule(function()
+		pcall(vim.cmd.checktime)
+		require("oz.git").refresh_buf()
+	end)
+	return true
 end
 
 return M

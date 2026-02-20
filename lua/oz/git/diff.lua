@@ -156,7 +156,7 @@ function start_visual_diff(target_file, args, file_list, index)
 	})
 
 	-- Helper to apply keymaps to both splits
-	local function set_diff_keymaps(buf)
+	local function set_diff_keymaps(buf, side_name)
 		local map_opts = { buffer = buf, silent = true }
 
 		vim.keymap.set("n", "gq", close_diff, vim.tbl_extend("force", map_opts, { desc = "Close diff" }))
@@ -179,7 +179,12 @@ function start_visual_diff(target_file, args, file_list, index)
 			if op == "stage" then
 				ok, err = require("oz.git.hunk_action").stage_range(0, s, e, { root = root, rel_path = rel_path })
 			else
-				ok, err = require("oz.git.hunk_action").unstage_range(0, s, e, { root = root, rel_path = rel_path })
+				local is_index = (side_name == "Index")
+				ok, err = require("oz.git.hunk_action").unstage_range(0, s, e, {
+					root = root,
+					rel_path = rel_path,
+					is_index = is_index,
+				})
 			end
 
 			if ok then
@@ -235,8 +240,8 @@ function start_visual_diff(target_file, args, file_list, index)
 		end, vim.tbl_extend("force", map_opts, { desc = "Show diff help" }))
 	end
 
-	set_diff_keymaps(lhs_buf)
-	set_diff_keymaps(rhs_buf)
+	set_diff_keymaps(lhs_buf, lhs_name)
+	set_diff_keymaps(rhs_buf, rhs_name)
 
 	util.inactive_echo("press 'g?' to see mappings.")
 end
