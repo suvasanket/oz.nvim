@@ -221,8 +221,9 @@ function M.run_git_job(args)
 			end
 
 			M.running_git_jobs[args_table[1]] = nil
-			-- refresh
-			vim.fn.timer_start(50, function()
+			
+			-- refresh immediately
+			vim.schedule(function()
 				M.refresh_buf()
 			end)
 
@@ -240,8 +241,8 @@ function M.run_git_job(args)
 				end)
 			end
 
-			-- run exec complete callbacks --
-			vim.fn.timer_start(100, function()
+			-- run exec complete callbacks immediately
+			vim.schedule(function()
 				for id, cbt in pairs(exit_callbacks) do
 					cbt.cb({ exit_code = code, stdout = std_out, stderr = std_err, args = args_table })
 					if cbt.once then

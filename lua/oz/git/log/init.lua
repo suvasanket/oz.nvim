@@ -52,7 +52,7 @@ local function log_buf_hl()
 		"ozGitLogHead",
 		"PathSeparator",
 	})
-    vim.cmd("syntax match ozGitLogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
+	vim.cmd("syntax match ozGitLogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 	vim.cmd([[
         syntax region ozGitLogBranchName start=/(/ end=/)/ contains=ALL
         syntax match ozGitLogTime /\[.*\]/
@@ -123,7 +123,7 @@ local function generate_content(level, args)
 end
 
 function M.refresh_buf(passive)
-	if passive then
+	if not passive then
 		local lines = generate_content()
 		vim.api.nvim_set_option_value("modifiable", true, { buf = M.log_buf })
 		vim.api.nvim_buf_set_lines(M.log_buf, 0, -1, false, lines)

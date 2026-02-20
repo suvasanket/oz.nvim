@@ -8,7 +8,9 @@ function M.run_n_refresh(cmd)
 	git.on_job_exit("log_refresh", {
 		once = true,
 		callback = function()
-			log.refresh_buf(true)
+            vim.schedule(function()
+                log.refresh_buf()
+            end)
 		end,
 	})
 	util.setup_hls({ "ozInactivePrompt" })

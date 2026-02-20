@@ -259,7 +259,7 @@ end
 
 function M.GitStatus()
 	local s_util = require("oz.git.status.util")
-	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
+	M.state.cwd = g_util.get_project_root()
 	M.state.sections = generate_sections()
 	M.state.in_conflict = is_conflict(M.state.sections)
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
@@ -281,6 +281,7 @@ function M.GitStatus()
 
 			vim.opt_local.fillchars:append({ eob = " " })
 
+			vim.cmd("lcd " .. M.state.cwd)
 			s_util.render(buf_id)
 
 			vim.fn.timer_start(10, function()
@@ -289,6 +290,13 @@ function M.GitStatus()
 			vim.fn.timer_start(100, function()
 				require("oz.git.status.keymaps").keymaps_init(buf_id)
 			end)
+
+			vim.api.nvim_create_autocmd("BufDelete", {
+				buffer = buf_id,
+				callback = function()
+					require("oz.git.status.inline_diff").cleanup(buf_id)
+				end,
+			})
 		end,
 	})
 end

@@ -28,6 +28,38 @@ function M.gitignore()
 end
 
 function M.setup_keymaps(buf, key_grp)
+	vim.keymap.set("n", "<TAB>", function()
+		local line = vim.api.nvim_win_get_cursor(0)[1]
+		local status = require("oz.git.status")
+		local item = status.state.line_map[line]
+		local inline_diff = require("oz.git.status.inline_diff")
+
+		if item then
+			if item.type == "file" then
+				if item.section_id == "untracked" then
+					util.inactive_echo("No diff for untracked")
+					return
+				end
+				inline_diff.toggle_inline_diff(
+					buf,
+					line,
+					item.path,
+					item.section_id,
+					require("oz.git").state.root or util.GetProjectRoot(),
+					item.path
+				)
+			elseif item.type == "header" then
+				require("oz.git.status.util").toggle_section()
+			end
+		else
+			local h = inline_diff.get_hunk_at_cursor(buf, line)
+			if h then
+				inline_diff.collapse_inline_diff(buf, h.file_line)
+				vim.api.nvim_win_set_cursor(0, { h.file_line, 0 })
+			end
+		end
+	end, { buffer = buf, desc = "Toggle inline diff or section" })
+
 	local options = {
 		{
 			title = "Log",
@@ -110,6 +142,8 @@ function M.setup_keymaps(buf, key_grp)
 	vim.keymap.set("n", "g", function()
         util.show_menu("Goto", options)
 	end, { buffer = buf, desc = "Goto Actions", nowait = true, silent = true })
+
+	key_grp["Navigation"] = { "<TAB>" }
 end
 
 return M
