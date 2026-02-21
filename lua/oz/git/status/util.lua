@@ -188,8 +188,9 @@ function M.get_section_under_cursor()
 end
 
 function M.get_file_under_cursor(fmt_origin)
+	local g_util = require("oz.git.util")
 	local entries = {}
-	local root = require("oz.git").state.root or util.GetProjectRoot()
+	local root = g_util.get_project_root()
 	local mode = vim.api.nvim_get_mode().mode
 	local start_line, end_line
 

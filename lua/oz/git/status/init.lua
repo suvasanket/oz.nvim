@@ -246,7 +246,11 @@ function M.refresh_buf(passive)
 	local s_util = require("oz.git.status.util")
 	local pos = vim.api.nvim_win_get_cursor(0)
 	if not passive then
-		vim.cmd("lcd " .. M.state.cwd)
+		local new_cwd = g_util.get_project_root()
+		if new_cwd then
+			M.state.cwd = new_cwd
+			vim.cmd("lcd " .. M.state.cwd)
+		end
 		M.state.sections = generate_sections()
 		M.state.in_conflict = is_conflict(M.state.sections)
 		M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
@@ -259,7 +263,12 @@ end
 
 function M.GitStatus()
 	local s_util = require("oz.git.status.util")
-	M.state.cwd = g_util.get_project_root()
+	local root = g_util.get_project_root()
+	if not root then
+		util.Notify("Not in a git repository", "error", "oz_git")
+		return
+	end
+	M.state.cwd = root
 	M.state.sections = generate_sections()
 	M.state.in_conflict = is_conflict(M.state.sections)
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)

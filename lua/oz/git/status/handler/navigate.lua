@@ -40,12 +40,13 @@ function M.setup_keymaps(buf, key_grp)
 					util.inactive_echo("No diff for untracked")
 					return
 				end
+				local g_util = require("oz.git.util")
 				inline_diff.toggle_inline_diff(
 					buf,
 					line,
 					item.path,
 					item.section_id,
-					require("oz.git").state.root or util.GetProjectRoot(),
+					g_util.get_project_root(),
 					item.path
 				)
 			elseif item.type == "header" then

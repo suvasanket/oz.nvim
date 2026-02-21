@@ -52,7 +52,8 @@ M.add_to_gitignore = function(paths)
 		return
 	end
 
-	local project_root = require("oz.git").state.root
+	local g_util = require("oz.git.util")
+	local project_root = g_util.get_project_root()
 	local gitignore_path = project_root .. "/.gitignore"
 
 	ensure_comments_exist(gitignore_path)

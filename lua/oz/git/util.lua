@@ -157,16 +157,8 @@ end
 --- Get the Git project root.
 --- @return string|nil
 function M.get_project_root()
-	local state = require("oz.git").state
-	if state and state.root then
-		return state.root
-	end
-
 	local root = util.get_git_root()
 	if root then
-		if state then
-			state.root = root
-		end
 		return root
 	else
 		return util.GetProjectRoot()
