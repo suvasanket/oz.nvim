@@ -1,12 +1,10 @@
 # oz.nvim
 
-An essential kit for the pragmatic developer who wants their editor to be a bit smarter without losing the feel of Vim.
-
-Oz is not a collection of wrappers that hide your tools. Instead, it adds a layer of intelligence to your daily workflows: Git, terminal management, building, and searching. It stays out of your way until you need it.
+Oz is a collection of modules, each module is wrapper over essential tools like git, term, make, grep, and more adding a layer of intelligence while staying transparent and out of your way until you need it.
 
 ## Core Modules
 ### Git
-A comprehensive Git client inspired by the user experience of **[Magit](https://magit.vc/)** and the vimness of **[Fugitive](https://github.com/tpope/vim-fugitive)**. It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
+A comprehensive Git client inspired by the ux of **[Magit](https://magit.vc/)** and the vimness of **[Fugitive](https://github.com/tpope/vim-fugitive)**. It features powerful status and log-viewer, and a "Command Wizard" that catches common git errors and suggests the right command for you, plus a ton more features.
 
 ### Term
 An enhanced terminal manager that learns. It caches your commands on a per-project and per-directory basis, adapting suggestions to the files you are currently editing. If you run a compiler on `api.c`, Oz will suggest the command adapting to `main.c` when you switch buffers.
@@ -26,12 +24,11 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     opts = {},
 }
 ```
-No **mandatory third-party dependencies**.
+Zero **third-party dependencies**.
 
 ### Recommended Plugins (Completely optional)
 - [fidget.nvim](https://github.com/j-hui/fidget.nvim): For beautiful progress notifications during async tasks.
 - [nvim-notify](https://github.com/rcarriga/nvim-notify) (or similar): For enhanced system notifications.
-- Any picker for better option picking.
 
 ## Feature Showcase
 ### The Git Experience
@@ -73,9 +70,9 @@ Grep module is designed to be simple yet effective.
 > **Tip**: Pressing `g?` in any Oz buffer will instantly bring up the list of all available keybindings for that specific context.
 
 ## Configuration
-Oz is based on zero-config setup. It works out of the box with sensible defaults and minimal config to keep your environment lean and predictable. Fewer knobs reduce configuration fatigue.
+Oz is designed with zero-config mindset. It works out of the box with sensible defaults and minimal config to keep your environment lean and predictable. Fewer knobs reduce configuration fatigue.
 
-Oz is modular; you can disable any part of it by setting the corresponding key to `false`.
+Oz is modular; you can disable any module by setting the respective key to `false`(eg. `oz_git = false`).
 
 ```lua
 require("oz").setup({
@@ -129,14 +126,4 @@ require("oz").setup({
 ```
 
 ## Contributing
-
-
-
-
 If you find a bug or have an idea for a feature that fits the "pragmatic intelligence" philosophy, feel free to open an issue or a pull request.
-
-
-more stuff added
-more stuff added
-more stuff added
-more stuff added
