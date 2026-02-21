@@ -30,11 +30,14 @@ function M.diff_branch()
 		return
 	end
 
-	vim.ui.select(branches, { prompt = "Select Branch to Diff against " .. cur_hash[1] }, function(choice)
-		if choice then
-			vim.cmd("Git diff " .. cur_hash[1] .. ".." .. choice)
-		end
-	end)
+	util.pick(branches, {
+		title = "Select Branch to Diff against " .. cur_hash[1],
+		on_select = function(choice)
+			if choice then
+				vim.cmd("Git diff " .. cur_hash[1] .. ".." .. choice)
+			end
+		end,
+	})
 end
 
 function M.diff_stash()
@@ -48,14 +51,17 @@ function M.diff_stash()
 		return
 	end
 
-	vim.ui.select(stashes, { prompt = "Select Stash to Diff against " .. cur_hash[1] }, function(choice)
-		if choice then
-			local stash_idx = choice:match("stash@%{%d+%}")
-			if stash_idx then
-				vim.cmd("Git diff " .. cur_hash[1] .. ".." .. stash_idx)
+	util.pick(stashes, {
+		title = "Select Stash to Diff against " .. cur_hash[1],
+		on_select = function(choice)
+			if choice then
+				local stash_idx = choice:match("stash@%{%d+%}")
+				if stash_idx then
+					vim.cmd("Git diff " .. cur_hash[1] .. ".." .. stash_idx)
+				end
 			end
-		end
-	end)
+		end,
+	})
 end
 
 -- Diffview wrappers

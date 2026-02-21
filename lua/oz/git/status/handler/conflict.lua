@@ -11,11 +11,14 @@ function M.list_conflicts()
 		return
 	end
 
-	vim.ui.select(out, { prompt = "Select Conflicted File:" }, function(choice)
-		if choice then
-			vim.cmd("botright split " .. choice)
-		end
-	end)
+	util.pick(out, {
+		title = "Select Conflicted File:",
+		on_select = function(choice)
+			if choice then
+				vim.cmd("botright split " .. choice)
+			end
+		end,
+	})
 end
 
 function M.conflict_diffview()

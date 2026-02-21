@@ -69,6 +69,9 @@ local lazy = {
     get_branch = "oz.util.git",
     str_contains_hash = "oz.util.git",
 
+    -- oz.util.picker
+    pick = "oz.util.picker",
+
     -- parse
     parse_args = "oz.util.parse_args",
 

@@ -28,29 +28,31 @@ function M.diff(flags)
 
 	local all = util.join_tables(branches, stash)
 
-	vim.ui.select(all, {
-		prompt = "lhs..",
-	}, function(lhs)
-		if not lhs then
-			return
-		end
-		local rhs_options = vim.tbl_filter(function(item)
-			return item ~= lhs
-		end, all)
-
-		vim.ui.select(rhs_options, {
-			prompt = "..rhs",
-		}, function(rhs)
-			if not rhs then
+	util.pick(all, {
+		title = "lhs..",
+		on_select = function(lhs)
+			if not lhs then
 				return
 			end
-			local cmd = string.format("Git diff %s..%s", lhs, rhs)
-			if flags and #flags > 0 then
-				cmd = cmd .. " " .. table.concat(flags, " ")
-			end
-			vim.cmd(cmd)
-		end)
-	end)
+			local rhs_options = vim.tbl_filter(function(item)
+				return item ~= lhs
+			end, all)
+
+			util.pick(rhs_options, {
+				title = "..rhs",
+				on_select = function(rhs)
+					if not rhs then
+						return
+					end
+					local cmd = string.format("Git diff %s..%s", lhs, rhs)
+					if flags and #flags > 0 then
+						cmd = cmd .. " " .. table.concat(flags, " ")
+					end
+					vim.cmd(cmd)
+				end,
+			})
+		end,
+	})
 end
 
 function M.diff_range()
@@ -94,19 +96,25 @@ function M.dv_diff()
 	local stash = util.shellout_tbl("git stash list --format=%gd")
 	local all = util.join_tables(branches, stash)
 
-	vim.ui.select(all, { prompt = "lhs.." }, function(lhs)
-		if not lhs then
-			return
-		end
-		local rhs_options = vim.tbl_filter(function(item)
-			return item ~= lhs
-		end, all)
-		vim.ui.select(rhs_options, { prompt = "..rhs" }, function(rhs)
-			if rhs then
-				vim.cmd(string.format("DiffviewOpen %s..%s", lhs, rhs))
+	util.pick(all, {
+		title = "lhs..",
+		on_select = function(lhs)
+			if not lhs then
+				return
 			end
-		end)
-	end)
+			local rhs_options = vim.tbl_filter(function(item)
+				return item ~= lhs
+			end, all)
+			util.pick(rhs_options, {
+				title = "..rhs",
+				on_select = function(rhs)
+					if rhs then
+						vim.cmd(string.format("DiffviewOpen %s..%s", lhs, rhs))
+					end
+				end,
+			})
+		end,
+	})
 end
 
 function M.dv_diff_range()

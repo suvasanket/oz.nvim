@@ -60,9 +60,10 @@ end
 -- balme buffer hl
 local function blame_buf_hl()
 	vim.cmd("syntax clear")
+	util.setup_hls({ "OzActive" })
 
 	vim.cmd([[
-        syntax match @attribute /[0-9a-f]\{7,40\}/
+        syntax match OzActive /[0-9a-f]\{7,40\}/
         syntax match NonText /^[0]\{7,40\}.*$/
         syntax match @string /\d\{4}-\d\{2}-\d\{2} \d\{2}:\d\{2}:\d\{2} [+-]\d\{4}/
     ]])

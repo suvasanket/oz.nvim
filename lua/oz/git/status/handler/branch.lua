@@ -10,11 +10,14 @@ end
 
 function M.checkout_local()
 	local branches = g_util.get_branch({ rem = false })
-	vim.ui.select(branches, { prompt = "Checkout branch:" }, function(choice)
-		if choice then
-			s_util.run_n_refresh("Git switch " .. choice)
-		end
-	end)
+	util.pick(branches, {
+		title = "Checkout branch:",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git switch " .. choice)
+			end
+		end,
+	})
 end
 
 function M.new()
@@ -30,11 +33,14 @@ function M.new_from()
 	local branches = util.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
 	local new_branch = util.UserInput("New Branch Name:")
 	if new_branch then
-		vim.ui.select(branches, { prompt = "From branch:" }, function(choice)
-			if choice then
-				s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
-			end
-		end)
+		util.pick(branches, {
+			title = "From branch:",
+			on_select = function(choice)
+				if choice then
+					s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
+				end
+			end,
+		})
 	end
 end
 
@@ -80,11 +86,14 @@ function M.set_upstream()
 		return
 	end
 
-	vim.ui.select(remote_branches, { prompt = "Select upstream branch for '" .. branch .. "':" }, function(choice)
-		if choice then
-			s_util.run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
-		end
-	end)
+	util.pick(remote_branches, {
+		title = "Select upstream branch for '" .. branch .. "':",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
+			end
+		end,
+	})
 end
 
 function M.unset_upstream()

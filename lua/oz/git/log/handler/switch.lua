@@ -36,44 +36,52 @@ function M.show_file_in_commit()
 		return
 	end
 
-	vim.ui.select(files, { prompt = "Select file to view from " .. commit_hash .. ":" }, function(choice)
-		if choice then
-			local ok_show, content = util.run_command({ "git", "show", commit_hash .. ":" .. choice }, root)
-			if ok_show then
-				util.create_win("oz_git_log_file", {
-					content = content,
-					win_type = "tab",
-					buf_name = string.format("%s @ %s", choice, commit_hash:sub(1, 7)),
-					callback = function(buf_id, win_id)
-						local ft = vim.filetype.match({ filename = choice })
-						if ft then
-							vim.api.nvim_set_option_value("filetype", ft, { buf = buf_id })
-						end
-						vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf_id })
-						vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf_id })
-						vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
-						vim.api.nvim_set_option_value("number", true, { win = win_id })
-						vim.api.nvim_set_option_value("relativenumber", false, { win = win_id })
-						vim.api.nvim_set_option_value("signcolumn", "no", { win = win_id })
-						vim.api.nvim_set_option_value("foldcolumn", "0", { win = win_id })
+	util.pick(files, {
+		title = "Select file to view from " .. commit_hash .. ":",
+		on_select = function(choice)
+			if choice then
+				local ok_show, content = util.run_command({ "git", "show", commit_hash .. ":" .. choice }, root)
+				if ok_show then
+					util.create_win("oz_git_log_file", {
+						content = content,
+						win_type = "tab",
+						buf_name = string.format("%s @ %s", choice, commit_hash:sub(1, 7)),
+						callback = function(buf_id, win_id)
+							local ft = vim.filetype.match({ filename = choice })
+							if ft then
+								vim.api.nvim_set_option_value("filetype", ft, { buf = buf_id })
+							end
+							vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf_id })
+							vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf_id })
+							vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
+							vim.api.nvim_set_option_value("number", true, { win = win_id })
+							vim.api.nvim_set_option_value("relativenumber", false, { win = win_id })
+							vim.api.nvim_set_option_value("signcolumn", "no", { win = win_id })
+							vim.api.nvim_set_option_value("foldcolumn", "0", { win = win_id })
 
-						vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf_id, desc = "Close buffer", silent = true })
-					end,
-				})
-			else
-				util.Notify(
-					"Could not show file "
-						.. choice
-						.. "\nRoot: "
-						.. root
-						.. "\nError: "
-						.. table.concat(content or {}, "\n"),
-					"error",
-					"oz_git"
-				)
+							vim.keymap.set(
+								"n",
+								"q",
+								"<cmd>close<cr>",
+								{ buffer = buf_id, desc = "Close buffer", silent = true }
+							)
+						end,
+					})
+				else
+					util.Notify(
+						"Could not show file "
+							.. choice
+							.. "\nRoot: "
+							.. root
+							.. "\nError: "
+							.. table.concat(content or {}, "\n"),
+						"error",
+						"oz_git"
+					)
+				end
 			end
-		end
-	end)
+		end,
+	})
 end
 
 function M.setup_keymaps(buf, key_grp)

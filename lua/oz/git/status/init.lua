@@ -212,6 +212,7 @@ local function status_buf_hl()
 		"ozInactivePrompt",
 		"ozGitStatusHeading",
 		{ ozGitStatusBranchName = "@attribute" },
+		"OzActive",
 	})
 
 	-- Consolidate all patterns into buffer-local syntax matches.
@@ -222,7 +223,7 @@ local function status_buf_hl()
 	vim.fn.matchadd("healthSuccess", "^new file:\\s\\+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.plus", "^+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^-.*$", 0, -1, { extend = true })
-    vim.cmd([[
+	vim.cmd([[
         syntax match ozGitStatusBranchName "\S\+" contained
         syntax match @attribute /\*\s\S\+/
         syntax match ozInactivePrompt /stash@{[0-9]}/
@@ -230,7 +231,7 @@ local function status_buf_hl()
         syntax match String /'[^']*'/ containedin=ALL
         syntax match Number /\s\d\+/ containedin=ALL
     ]])
-    vim.cmd("syntax match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
+	vim.cmd("syntax match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 end
 
 local function is_conflict(sections)
@@ -275,9 +276,9 @@ function M.GitStatus()
 		callback = function(buf_id, win_id)
 			M.status_buf = buf_id
 			M.status_win = win_id
-            vim.cmd(
-                [[setlocal ft=oz_git signcolumn=yes listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
-            )
+			vim.cmd(
+				[[setlocal ft=oz_git signcolumn=yes listchars= nonumber norelativenumber nowrap nomodifiable bufhidden=wipe]]
+			)
 
 			vim.opt_local.fillchars:append({ eob = " " })
 

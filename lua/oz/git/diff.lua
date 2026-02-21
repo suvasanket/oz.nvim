@@ -30,23 +30,26 @@ local start_visual_diff -- forward decl
 local function show_picker(files, args)
 	local choices = vim.deepcopy(files)
 	table.insert(choices, 1, "[ALL] (Text Summary)")
-	vim.ui.select(choices, { prompt = "Select File to Diff:" }, function(choice)
-		if not choice then
-			return
-		end
-		if choice == "[ALL] (Text Summary)" then
-			fallback_text(args)
-		else
-			local idx = 0
-			for i, f in ipairs(files) do
-				if f == choice then
-					idx = i
-					break
-				end
+	util.pick(choices, {
+		title = "Select File to Diff:",
+		on_select = function(choice)
+			if not choice then
+				return
 			end
-			start_visual_diff(choice, args, files, idx)
-		end
-	end)
+			if choice == "[ALL] (Text Summary)" then
+				fallback_text(args)
+			else
+				local idx = 0
+				for i, f in ipairs(files) do
+					if f == choice then
+						idx = i
+						break
+					end
+				end
+				start_visual_diff(choice, args, files, idx)
+			end
+		end,
+	})
 end
 
 local function setup_diff_buf(buf, name, content, ft)
@@ -508,14 +511,17 @@ function M.resolve_three_way()
 			return
 		end
 
-		vim.ui.select(c_files, { prompt = "Select Conflicted File:" }, function(choice)
-			if not choice then
-				return
-			end
-			close_merge()
-			vim.cmd("edit " .. vim.fn.fnameescape(vim.fs.normalize(root .. "/" .. choice)))
-			M.resolve_three_way()
-		end)
+		util.pick(c_files, {
+			title = "Select Conflicted File:",
+			on_select = function(choice)
+				if not choice then
+					return
+				end
+				close_merge()
+				vim.cmd("edit " .. vim.fn.fnameescape(vim.fs.normalize(root .. "/" .. choice)))
+				M.resolve_three_way()
+			end,
+		})
 	end, { buffer = work_buf, desc = "Pick conflicted file" })
 
 	-- Help

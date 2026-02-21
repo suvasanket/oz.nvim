@@ -5,6 +5,7 @@ local _highlights = {}
 --- @type table<string, table>
 M.oz_highlights = {
 	ozHelpEcho = { fg = "#606060" },
+	OzActive = { link = "@attribute" },
 	ozInactivePrompt = { fg = "#757575" },
 	ozUrl = { fg = "#ffffff", undercurl = true, bold = true },
 

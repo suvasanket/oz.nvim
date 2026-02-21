@@ -69,8 +69,7 @@ Sections:
 
 Keymaps:
     <Enter>     Open file under cursor in a split.
-    <Tab>       Jump to next section header.
-    <S-Tab>     Jump to previous section header.
+    <Tab>       Show inline diffs or toggle section.
     s           Stage file or visual selection.
     u           Unstage file or visual selection.
     X           Discard changes in file or selection (Hard reset for file).

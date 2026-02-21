@@ -53,11 +53,14 @@ function M.push_to(flags)
 	local args = get_args(flags)
 	local remotes = status.state.remotes or { "origin" } -- Simplified
 
-	vim.ui.select(remotes, { prompt = "Push to:" }, function(choice)
-		if choice then
-			s_util.run_n_refresh("Git push" .. args .. " " .. choice)
-		end
-	end)
+	util.pick(remotes, {
+		title = "Push to:",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git push" .. args .. " " .. choice)
+			end
+		end,
+	})
 end
 
 function M.setup_keymaps(buf, key_grp)
