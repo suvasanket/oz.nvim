@@ -54,7 +54,7 @@ function M.push_to(flags)
 	local remotes = status.state.remotes or { "origin" } -- Simplified
 
 	util.pick(remotes, {
-		title = "Push to:",
+		title = "Push to",
 		on_select = function(choice)
 			if choice then
 				s_util.run_n_refresh("Git push" .. args .. " " .. choice)

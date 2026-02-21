@@ -78,7 +78,7 @@ function M.remove()
 	end
 
 	util.pick(options, {
-		title = "Select remote to remove:",
+		title = "Select remote to remove",
 		on_select = function(choice)
 			if choice then
 				-- Confirmation prompt
@@ -99,7 +99,7 @@ function M.rename()
 	end
 
 	util.pick(options, {
-		title = "Select remote to rename:",
+		title = "Select remote to rename",
 		on_select = function(choice)
 			if choice then
 				local new_name = util.UserInput("New name for '" .. choice .. "':", choice)
@@ -118,7 +118,7 @@ function M.prune()
 		return
 	end
 	util.pick(options, {
-		title = "Select remote to prune:",
+		title = "Select remote to prune",
 		on_select = function(choice)
 			if choice then
 				s_util.run_n_refresh("Git remote prune " .. choice)

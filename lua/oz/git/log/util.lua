@@ -13,8 +13,8 @@ function M.run_n_refresh(cmd)
             end)
 		end,
 	})
-	util.setup_hls({ "ozInactivePrompt" })
-	vim.api.nvim_echo({ { ":" .. cmd, "ozInactivePrompt" } }, false, {})
+	util.setup_hls({ "OzCmdPrompt" })
+	vim.api.nvim_echo({ { ":" .. cmd, "OzCmdPrompt" } }, false, {})
 	vim.cmd(cmd)
 end
 

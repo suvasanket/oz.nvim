@@ -4,7 +4,6 @@ local util = require("oz.util")
 M.oz_git_buf = nil
 M.oz_git_win = nil
 local git_cmd = {}
-util.setup_hls({ "OzActive" })
 
 local function set_cmd_history(cmd)
 	if git_cmd.prev_cmd == cmd then
@@ -111,7 +110,7 @@ local function ft_mappings(buf)
 					interval = 2000,
 					buf = buf,
 					on_active = function(t)
-						vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+						vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "OzActive" } }, false, {})
 					end,
 				})
 			else
@@ -204,9 +203,11 @@ end
 local function oz_git_win_hl()
 	vim.cmd("syntax clear")
 
+    util.setup_hls({ "OzActive" })
+
 	-- Syntax matches
 	vim.cmd([[
-        syntax match @attribute /[0-9a-f]\{7,40\}/ containedin=ALL
+        syntax match OzActive /[0-9a-f]\{7,40\}/ containedin=ALL
         syntax match @function /^Author:/ containedin=ALL
         syntax match @function /^Date:/ containedin=ALL
 

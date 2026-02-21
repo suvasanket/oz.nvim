@@ -18,9 +18,9 @@ function M.inactive_echo(str)
 	if not str or str == "" or vim.fn.strdisplaywidth(str) >= vim.v.echospace then
 		return
 	end
-	util.setup_hls({ "ozInactivePrompt" })
+	util.setup_hls({ "OzCmdPrompt" })
 	vim.api.nvim_echo({ { "" } }, false, {})
-	vim.api.nvim_echo({ { str, "ozInactivePrompt" } }, false, {})
+	vim.api.nvim_echo({ { str, "OzCmdPrompt" } }, false, {})
 end
 
 --- Get input from the user using `vim.fn.input`.
@@ -46,8 +46,8 @@ end
 --- @param complete? string Optional completion type.
 --- @return string|nil The user input, or nil if cancelled.
 function M.inactive_input(str, def, complete)
-	util.setup_hls({ "ozInactivePrompt" })
-	vim.cmd("echohl ozInactivePrompt")
+	util.setup_hls({ "OzCmdPrompt" })
+	vim.cmd("echohl OzCmdPrompt")
 	local input = M.UserInput(str, def, complete)
 	vim.cmd("echohl None")
 	return input

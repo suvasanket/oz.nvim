@@ -76,8 +76,9 @@ function M.toggle_pick()
 	-- unpick
 	if vim.tbl_contains(grab_hashs, entry) then
 		if #grab_hashs > 1 then
+            util.setup_hls({ "OzActive" })
 			util.remove_from_tbl(grab_hashs, entry)
-			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "@attribute" } }, false, {})
+			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "OzActive" } }, false, {})
 		elseif grab_hashs[1] == entry then
 			util.stop_monitoring(grab_hashs)
 			for k in pairs(grab_hashs) do
@@ -96,7 +97,8 @@ function M.toggle_pick()
 			interval = 2000,
 			buf = buf_id,
 			on_active = function(t)
-				vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+                util.setup_hls({ "OzActive" })
+				vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "OzActive" } }, false, {})
 			end,
 		})
 	end

@@ -24,7 +24,7 @@ local state = {
 
 local function setup_highlights()
 	require("oz.util.hl").setup_hls({
-		"ozHelpEcho",
+		"OzEchoDef",
 		-- { OzPickerNorm = "Comment" },
 		-- { Title = { bold = true, link = "Normal" } },
 	})
@@ -143,7 +143,7 @@ local function render_results()
 				nvim_buf_add_highlight(buf, ns, "Title", i - 1, 0, #pointer)
 				nvim_buf_add_highlight(buf, ns, "Title", i - 1, #pointer, -1)
 			else
-                nvim_buf_add_highlight(buf, ns, "ozHelpEcho", i - 1, 0, -1)
+                nvim_buf_add_highlight(buf, ns, "OzEchoDef", i - 1, 0, -1)
 			end
 		end
 	end

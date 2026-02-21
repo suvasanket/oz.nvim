@@ -109,15 +109,10 @@ function M.setup_keymaps(buf, key_grp)
 				{
 					key = "?",
 					cb = function()
-                        util.show_maps({
+						util.show_maps({
 							group = key_grp,
 							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 							no_empty = true,
-							on_open = function()
-								vim.schedule(function()
-									util.inactive_echo("press ctrl-f to search section")
-								end)
-							end,
 						})
 					end,
 					desc = "Show all available keymaps",
@@ -140,7 +135,7 @@ function M.setup_keymaps(buf, key_grp)
 	}
 
 	vim.keymap.set("n", "g", function()
-        util.show_menu("Goto", options)
+		util.show_menu("Goto", options)
 	end, { buffer = buf, desc = "Goto Actions", nowait = true, silent = true })
 
 	key_grp["Navigation"] = { "<TAB>" }

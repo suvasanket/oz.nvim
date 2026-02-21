@@ -20,8 +20,8 @@ local function handle_g(opts)
 			main.run_git_job(opts.args)
 		else
 			require("oz.git.status").GitStatus()
-			util.setup_hls({ "ozHelpEcho" })
-			vim.api.nvim_echo({ { "press g? to see all available keymaps.", "ozHelpEcho" } }, false, {})
+			util.setup_hls({ "OzEchoDef" })
+			vim.api.nvim_echo({ { "press g? to see all available keymaps.", "OzEchoDef" } }, false, {})
 		end
 	elseif opts.args and (opts.args:find("init") or opts.args:find("clone")) then
 		main.run_git_job(opts.args)

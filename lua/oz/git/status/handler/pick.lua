@@ -23,7 +23,8 @@ function M.toggle_pick()
 		-- Unpick
 		if #status_grab_buffer > 1 then
 			util.remove_from_tbl(status_grab_buffer, entry)
-			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
+            util.setup_hls({ "OzActive" })
+			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "OzActive" } }, false, {})
 		elseif status_grab_buffer[1] == entry then
 			-- Last item, clear and stop monitoring
             util.stop_monitoring(status_grab_buffer)
@@ -41,12 +42,14 @@ function M.toggle_pick()
 				interval = 2000,
 				buf = buf_id, -- Use captured buf_id
 				on_active = function(t)
-					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "@attribute" } }, false, {})
+                    util.setup_hls({ "OzActive" })
+					vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "OzActive" } }, false, {})
 				end,
 			})
 		else
 			-- Already monitoring, just update echo if needed
-			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "@attribute" } }, false, {})
+            util.setup_hls({ "OzActive" })
+			vim.api.nvim_echo({ { ":Git | " }, { table.concat(status_grab_buffer, " "), "OzActive" } }, false, {})
 		end
 	end
 end

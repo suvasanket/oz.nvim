@@ -31,7 +31,7 @@ local function show_picker(files, args)
 	local choices = vim.deepcopy(files)
 	table.insert(choices, 1, "[ALL] (Text Summary)")
 	util.pick(choices, {
-		title = "Select File to Diff:",
+		title = "Select File to Diff",
 		on_select = function(choice)
 			if not choice then
 				return
@@ -512,7 +512,7 @@ function M.resolve_three_way()
 		end
 
 		util.pick(c_files, {
-			title = "Select Conflicted File:",
+			title = "Select Conflicted File",
 			on_select = function(choice)
 				if not choice then
 					return

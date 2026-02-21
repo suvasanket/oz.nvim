@@ -209,9 +209,8 @@ end
 local function status_buf_hl()
 	vim.cmd("syntax clear")
 	util.setup_hls({
-		"ozInactivePrompt",
+		"OzCmdPrompt",
 		"ozGitStatusHeading",
-		{ ozGitStatusBranchName = "@attribute" },
 		"OzActive",
 	})
 
@@ -224,14 +223,14 @@ local function status_buf_hl()
 	vim.fn.matchadd("@diff.plus", "^+.*$", 0, -1, { extend = true })
 	vim.fn.matchadd("@diff.minus", "^-.*$", 0, -1, { extend = true })
 	vim.cmd([[
-        syntax match ozGitStatusBranchName "\S\+" contained
-        syntax match @attribute /\*\s\S\+/
-        syntax match ozInactivePrompt /stash@{[0-9]}/
+        syntax match OzActive "\S\+" contained
+        syntax match OzActive /\*\s\S\+/
+        syntax match OzCmdPrompt /stash@{[0-9]}/
         syn region @property matchgroup=Delimiter start="\[" end="\]"
         syntax match String /'[^']*'/ containedin=ALL
         syntax match Number /\s\d\+/ containedin=ALL
     ]])
-	vim.cmd("syntax match ozInactivePrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
+	vim.cmd("syntax match OzCmdPrompt '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 end
 
 local function is_conflict(sections)
@@ -266,8 +265,8 @@ function M.GitStatus()
 	M.state.info_lines = generate_status_info(M.state.current_branch, M.state.in_conflict)
 	local win_type = require("oz.git").user_config.win_type or "botright"
 
-	vim.fn.sign_define("OzGitStatusExpanded", { text = M.icons.expanded, texthl = "ozInactivePrompt" })
-	vim.fn.sign_define("OzGitStatusCollapsed", { text = M.icons.collapsed, texthl = "ozInactivePrompt" })
+	vim.fn.sign_define("OzGitStatusExpanded", { text = M.icons.expanded, texthl = "OzCmdPrompt" })
+	vim.fn.sign_define("OzGitStatusCollapsed", { text = M.icons.collapsed, texthl = "OzCmdPrompt" })
 
 	util.create_win("status", {
 		content = {},

@@ -12,7 +12,7 @@ function M.list_conflicts()
 	end
 
 	util.pick(out, {
-		title = "Select Conflicted File:",
+		title = "Select Conflicted File",
 		on_select = function(choice)
 			if choice then
 				vim.cmd("botright split " .. choice)

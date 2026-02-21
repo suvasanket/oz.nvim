@@ -54,7 +54,7 @@ function M.pull_from(flags)
 	local args = get_args(flags)
 	local remotes = status.state.remotes or { "origin" }
 	util.pick(remotes, {
-		title = "Pull from:",
+		title = "Pull from",
 		on_select = function(choice)
 			if choice then
 				s_util.run_n_refresh("Git pull" .. args .. " " .. choice)

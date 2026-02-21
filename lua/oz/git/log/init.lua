@@ -46,18 +46,15 @@ end
 local function log_buf_hl()
 	vim.cmd("syntax clear")
 	util.setup_hls({
-		{ ozGitLogCommitHash = "@attribute" },
 		{ ozGitLogTime = "Comment" },
 		"ozGitLogBranchName",
 		"ozGitLogHead",
-		"PathSeparator",
 	})
-	vim.cmd("syntax match ozGitLogCommitHash '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
+	vim.cmd("syntax match OzActive '\\<[0-9a-f]\\{7,40}\\>' containedin=ALL")
 	vim.cmd([[
         syntax region ozGitLogBranchName start=/(/ end=/)/ contains=ALL
         syntax match ozGitLogTime /\[.*\]/
         syntax match ozGitLogHead /HEAD -> \w\+/
-        syntax match PathSeparator /\w\+\/\w\+/
         syntax match Comment /\*\w\+/ containedin=ALL
         syntax match Comment /\zs\*\w\+\ze.\{-}\*\w\+/ skipwhite
     ]])

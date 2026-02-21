@@ -37,7 +37,7 @@ function M.show_file_in_commit()
 	end
 
 	util.pick(files, {
-		title = "Select file to view from " .. commit_hash .. ":",
+		title = "Select file to view from " .. commit_hash,
 		on_select = function(choice)
 			if choice then
 				local ok_show, content = util.run_command({ "git", "show", commit_hash .. ":" .. choice }, root)

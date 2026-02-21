@@ -223,13 +223,12 @@ function M.show_maps(args)
 
 	-- Syntax highlighting
 	vim.api.nvim_buf_call(buf_id, function()
+        util.setup_hls({ "OzActive" })
 		-- Highlight all [something] patterns anywhere on the line
-		vim.cmd([=[syntax match SpecialKey /\[[^\]]*\]/]=])
-		vim.cmd("highlight link SpecialKey Comment")
+		vim.cmd([=[syntax match OzCmdPrompt /\[[^\]]*\]/]=])
 
 		-- Highlight keys
-		vim.cmd([=[syntax match KeyName /\(\[[^]]\+\] \+\)\@<=\S\+/]=])
-		vim.cmd("highlight link KeyName @attribute")
+		vim.cmd([=[syntax match OzActive /\(\[[^]]\+\] \+\)\@<=\S\+/]=])
 	end)
 
 	-- Clean up header markers and apply line highlights
@@ -262,8 +261,6 @@ function M.show_maps(args)
 	end
 
 	vim.cmd("redraw")
-
-	util.inactive_echo("press 'q' to close this window.")
 end
 
 --- Show an interactive menu for switches and actions.
@@ -380,8 +377,9 @@ function M.show_menu(title, items)
 
 						-- Determine Highlight Groups
 						local active = active_switches[entry.key]
-						local key_hl = "@attribute"
-						local flag_hl = "ozInactivePrompt"
+                        util.setup_hls({ "OzActive" })
+						local key_hl = "OzActive"
+						local flag_hl = "OzCmdPrompt"
 
 						if active then
 							key_hl = "Boolean"

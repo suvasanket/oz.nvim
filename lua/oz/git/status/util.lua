@@ -109,18 +109,18 @@ function M.render(buf)
 				if b_name then
 					local start = lines[lnum]:find(b_name, 1, true)
 					if start then
-						vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", row, start - 1, -1)
+						vim.api.nvim_buf_add_highlight(buf, ns_id, "OzActive", row, start - 1, -1)
 					end
 				end
 			end
 		elseif data.type == "info" then
-			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", row, 0, -1)
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "OzCmdPrompt", row, 0, -1)
 		elseif data.type == "worktree" then
 			-- Re-implement worktree highlighting logic
 			local line_text = lines[lnum]
 			local is_prunable = line_text:match("%(prunable%)")
 			if is_prunable then
-				vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", row, 0, -1)
+				vim.api.nvim_buf_add_highlight(buf, ns_id, "OzCmdPrompt", row, 0, -1)
 				local p_start, p_end = line_text:find("prunable")
 				if p_start then
 					vim.api.nvim_buf_add_highlight(buf, ns_id, "healthError", row, p_start - 1, p_end)
@@ -132,10 +132,10 @@ function M.render(buf)
 					vim.api.nvim_buf_add_highlight(buf, ns_id, "Directory", row, name_start - 1, b_open - 1)
 					local b_close = line_text:find("%)", b_open)
 					if b_close then
-						vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusBranchName", row, b_open, b_close - 1)
+						vim.api.nvim_buf_add_highlight(buf, ns_id, "OzActive", row, b_open, b_close - 1)
 						local sha_start, sha_end = line_text:find("%x+", b_close + 1)
 						if sha_start then
-							vim.api.nvim_buf_add_highlight(buf, ns_id, "ozInactivePrompt", row, sha_start - 1, sha_end)
+							vim.api.nvim_buf_add_highlight(buf, ns_id, "OzCmdPrompt", row, sha_start - 1, sha_end)
 						end
 					end
 				end

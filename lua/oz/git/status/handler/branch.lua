@@ -11,7 +11,7 @@ end
 function M.checkout_local()
 	local branches = g_util.get_branch({ rem = false })
 	util.pick(branches, {
-		title = "Checkout branch:",
+		title = "Checkout branch",
 		on_select = function(choice)
 			if choice then
 				s_util.run_n_refresh("Git switch " .. choice)
@@ -34,7 +34,7 @@ function M.new_from()
 	local new_branch = util.UserInput("New Branch Name:")
 	if new_branch then
 		util.pick(branches, {
-			title = "From branch:",
+			title = "From branch",
 			on_select = function(choice)
 				if choice then
 					s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
@@ -87,7 +87,7 @@ function M.set_upstream()
 	end
 
 	util.pick(remote_branches, {
-		title = "Select upstream branch for '" .. branch .. "':",
+		title = "Select upstream branch for '" .. branch .. "'",
 		on_select = function(choice)
 			if choice then
 				s_util.run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
