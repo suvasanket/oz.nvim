@@ -1,7 +1,6 @@
 local M = {}
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local shell = require("oz.util.shell")
 
 function M.create(flags)
 	local cmd = "Git commit"
@@ -46,7 +45,7 @@ function M.instant_fixup()
 end
 
 function M.undo()
-	local ok, commit_ahead = shell.run_command("git rev-list --count @{u}..HEAD")
+	local ok, commit_ahead = util.run_command("git rev-list --count @{u}..HEAD")
 	local commit_ahead_n = ok and tonumber(commit_ahead[1]) or nil
 
 	if commit_ahead_n == 0 then

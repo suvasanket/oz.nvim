@@ -2,8 +2,6 @@ local M = {}
 local util = require("oz.util")
 local log = require("oz.git.log")
 local log_util = require("oz.git.log.util")
-local shell = require("oz.util.shell")
-local win = require("oz.util.win")
 
 local get_selected_hash = log.get_selected_hash
 local run_n_refresh = log_util.run_n_refresh
@@ -23,7 +21,7 @@ function M.show_file_in_commit()
 	local commit_hash = hash[1]
 	local root = require("oz.git.util").get_project_root()
 
-	local ok, files = shell.run_command({ "git", "ls-tree", "-r", "--name-only", "--full-name", commit_hash }, root)
+	local ok, files = util.run_command({ "git", "ls-tree", "-r", "--name-only", "--full-name", commit_hash }, root)
 	if not ok or #files == 0 then
 		util.Notify(
 			"Could not list files for commit "
@@ -40,9 +38,9 @@ function M.show_file_in_commit()
 
 	vim.ui.select(files, { prompt = "Select file to view from " .. commit_hash .. ":" }, function(choice)
 		if choice then
-			local ok_show, content = shell.run_command({ "git", "show", commit_hash .. ":" .. choice }, root)
+			local ok_show, content = util.run_command({ "git", "show", commit_hash .. ":" .. choice }, root)
 			if ok_show then
-				win.create_win("oz_git_log_file", {
+				util.create_win("oz_git_log_file", {
 					content = content,
 					win_type = "tab",
 					buf_name = string.format("%s @ %s", choice, commit_hash:sub(1, 7)),

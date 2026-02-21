@@ -1,4 +1,5 @@
 local M = {}
+local util = require("oz.util")
 
 --- Run a shell command using `jobstart`.
 --- @param cmd string|string[] The command to execute.
@@ -21,7 +22,7 @@ function M.ShellCmd(cmd, on_success, on_error)
 		end,
 	})
 	if not ok then
-		require("oz.util.ui").Notify("oz: something went wrong while executing cmd with jobstart().", "error", "Error")
+		util.Notify("oz: something went wrong while executing cmd with jobstart().", "error", "Error")
 		return
 	end
 end

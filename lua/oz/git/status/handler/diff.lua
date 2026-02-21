@@ -3,7 +3,6 @@ local M = {}
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
 local g_util = require("oz.git.util")
-local shell = require("oz.util.shell")
 
 -- Native Actions --
 function M.file_history()
@@ -25,7 +24,7 @@ end
 
 function M.diff(flags)
 	local branches = g_util.get_branch()
-	local stash = shell.shellout_tbl("git stash list --format=%gd")
+	local stash = util.shellout_tbl("git stash list --format=%gd")
 
 	local all = util.join_tables(branches, stash)
 
@@ -92,7 +91,7 @@ end
 
 function M.dv_diff()
 	local branches = g_util.get_branch()
-	local stash = shell.shellout_tbl("git stash list --format=%gd")
+	local stash = util.shellout_tbl("git stash list --format=%gd")
 	local all = util.join_tables(branches, stash)
 
 	vim.ui.select(all, { prompt = "lhs.." }, function(lhs)

@@ -2,7 +2,6 @@ local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local shell = require("oz.util.shell")
 
 local state = status.state
 
@@ -22,8 +21,8 @@ function M.push_cmd(flags)
 		return
 	end
 
-	local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
-	local cur_remote_branch_ref = shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- fallback?
 
 	local refined_args, branch
@@ -34,7 +33,7 @@ function M.push_cmd(flags)
 	end
 
 	if cur_remote_branch_ref == "" then
-		local remote = shell.shellout_str("git remote")
+		local remote = util.shellout_str("git remote")
 		if remote ~= "" then
 			refined_args = ("-u %s %s"):format(remote, current_branch)
 		else

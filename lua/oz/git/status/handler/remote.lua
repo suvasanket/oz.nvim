@@ -1,5 +1,4 @@
 local M = {}
-local shell = require("oz.util.shell")
 local status = require("oz.git.status")
 local util = require("oz.util")
 local git = require("oz.git")
@@ -10,7 +9,7 @@ local state = status.state
 
 -- helper: get remotes
 local function get_remotes()
-	local ok, remotes = shell.run_command({ "git", "remote" }, state.cwd)
+	local ok, remotes = util.run_command({ "git", "remote" }, state.cwd)
 	if ok and #remotes ~= 0 then
 		state.remotes = remotes
 		return remotes
@@ -21,13 +20,13 @@ end
 
 function M.add_update()
 	local initial_input = " "
-	if shell.shellout_str("git remote") == "" then
+	if util.shellout_str("git remote") == "" then
 		initial_input = " origin " -- Suggest 'origin' if no remotes exist
 	end
 	local input_str = util.inactive_input(":Git remote add", initial_input)
 
 	if input_str then
-		local args = util.args_parser().parse_args(input_str)
+		local args = util.parse_args(input_str)
 		local remote_name = args[1]
 		local remote_url = args[2]
 

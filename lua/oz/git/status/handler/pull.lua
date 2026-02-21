@@ -2,7 +2,6 @@ local M = {}
 local status = require("oz.git.status")
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local shell = require("oz.util.shell")
 
 local state = status.state
 
@@ -23,8 +22,8 @@ function M.pull_cmd()
 		return
 	end
 
-	local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
-	local cur_remote_branch_ref = shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
+	local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
+	local cur_remote_branch_ref = util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 
 	if cur_remote == "" or cur_remote_branch_ref == "" then
 		util.Notify(

@@ -1,4 +1,5 @@
 local M = {}
+local util = require("oz.util")
 
 M.cached_cmd = nil
 M.term_cmd_ft = nil
@@ -24,7 +25,7 @@ local function term_cmd_init(config)
 			local cmd = args.args
 			if prefix and cmd:sub(1, #prefix) == prefix then
 				cmd = cmd:sub(#prefix + 1)
-				opts.cwd = require("oz.util").GetProjectRoot()
+				opts.cwd = util.GetProjectRoot()
 			end
 			M.cached_cmd = cmd
 			M.term_cmd_ft = vim.bo.ft
@@ -35,7 +36,7 @@ local function term_cmd_init(config)
 				local cmd = user_input
 				if prefix and cmd:sub(1, #prefix) == prefix then
 					cmd = cmd:sub(#prefix + 1)
-					opts.cwd = require("oz.util").GetProjectRoot()
+					opts.cwd = util.GetProjectRoot()
 				end
 				M.cached_cmd = cmd
 				M.term_cmd_ft = vim.bo.ft
@@ -56,7 +57,7 @@ end
 function M.Term_init(config)
 	term_cmd_init(config)
 	if config and config.efm then
-		local util = require("oz.term.util")
+		local t_util = require("oz.term.util")
 		local seen = {}
 		local combined = {}
 		for _, p in ipairs(config.efm) do
@@ -65,13 +66,13 @@ function M.Term_init(config)
 				seen[p] = true
 			end
 		end
-		for _, p in ipairs(util.EFM_PATTERNS) do
+		for _, p in ipairs(t_util.EFM_PATTERNS) do
 			if not seen[p] then
 				table.insert(combined, p)
 				seen[p] = true
 			end
 		end
-		util.EFM_PATTERNS = combined
+		t_util.EFM_PATTERNS = combined
 	end
 end
 

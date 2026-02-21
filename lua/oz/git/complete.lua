@@ -1,5 +1,5 @@
 local M = {}
-local shell = require("oz.util.shell")
+local util = require("oz.util")
 
 -- Filter out candidates that are already present in the command line args
 local function filter_suggestions(candidates, used_args, current_arg)
@@ -81,16 +81,16 @@ local function get_git_commands()
 end
 
 local function get_git_branches()
-	return shell.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
+	return util.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
 end
 
 local function get_git_remotes()
-	return shell.shellout_tbl("git remote")
+	return util.shellout_tbl("git remote")
 end
 
 local function get_git_files()
-	local files = shell.shellout_tbl("git ls-files")
-	local untracked = shell.shellout_tbl("git ls-files --others --exclude-standard")
+	local files = util.shellout_tbl("git ls-files")
+	local untracked = util.shellout_tbl("git ls-files --others --exclude-standard")
 	vim.list_extend(files, untracked)
 	return files
 end

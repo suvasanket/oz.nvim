@@ -3,7 +3,6 @@ local util = require("oz.util")
 local s_util = require("oz.git.status.util")
 local g_util = require("oz.git.util")
 local status = require("oz.git.status")
-local shell = require("oz.util.shell")
 
 function M.cc()
 	util.set_cmdline("Git checkout ")
@@ -28,7 +27,7 @@ function M.new()
 end
 
 function M.new_from()
-	local branches = shell.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
+	local branches = util.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
 	local new_branch = util.UserInput("New Branch Name:")
 	if new_branch then
 		vim.ui.select(branches, { prompt = "From branch:" }, function(choice)
@@ -50,14 +49,14 @@ function M.delete()
 		if ans == 1 then
 			s_util.run_n_refresh("Git branch -D " .. branch)
 		elseif ans == 2 then
-			local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", branch))
+			local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", branch))
 			if cur_remote == "" then
 				cur_remote = "origin"
 			end
 			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
 		elseif ans == 3 then
 			s_util.run_n_refresh("Git branch -D " .. branch)
-			local cur_remote = shell.shellout_str(string.format("git config --get branch.%s.remote", branch))
+			local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", branch))
 			if cur_remote == "" then
 				cur_remote = "origin"
 			end
@@ -91,7 +90,7 @@ end
 function M.unset_upstream()
 	local branch = s_util.get_branch_under_cursor()
 	if branch then
-		local upstream = shell.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", branch))
+		local upstream = util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", branch))
 		if upstream == "" then
 			util.Notify("Branch '" .. branch .. "' has no upstream configured.", "info", "oz_git")
 			return

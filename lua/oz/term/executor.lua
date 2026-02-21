@@ -1,4 +1,5 @@
 local M = {}
+local util = require("oz.util")
 
 local function highlight(buf)
 	local term_util = require("oz.term.util")
@@ -11,7 +12,7 @@ local function highlight(buf)
         ]])
 	end)
 
-	require("oz.util").setup_hls({ "ozUrl" })
+	util.setup_hls({ "ozUrl" })
 
 	vim.schedule(function()
 		if not vim.api.nvim_buf_is_valid(buf) then
@@ -248,7 +249,7 @@ function M.run(cmd, opts)
 		setup_terminal(terminal_buf, nil)
 	else
 		-- create a new window or reuse existing
-		require("oz.util").create_win("oz_term", {
+		util.create_win("oz_term", {
 			win_type = "botright",
 			reuse = reuse_win ~= nil,
 			content = {},

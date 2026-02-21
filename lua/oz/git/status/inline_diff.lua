@@ -1,8 +1,5 @@
--- inline_diff.lua
 local M = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
-local hl_util = require("oz.util.hl")
 
 -- ============================================================
 -- Configuration & State
@@ -17,7 +14,7 @@ local function setup_highlights()
 	if hls_setup_done then
 		return
 	end
-	hl_util.setup_hls({
+	util.setup_hls({
 		{ OzGitDiffHeader = { fg = "#c678dd", bold = true } },
 		{ OzGitDiffHunkHeader = { fg = "#61afef", bold = true } },
 		{ OzGitDiffAdd = { fg = "#98c379", bg = "#2d3b2d" } },
@@ -227,7 +224,7 @@ function M.toggle_inline_diff(bufnr, file_line, file_path, section, root, rel_pa
 
 	local args = section == "staged" and { "diff", "--cached", "--no-color", "--", file_path }
 		or { "diff", "--no-color", "--", file_path }
-	local ok, raw_diff_tbl = shell.run_command(vim.list_extend({ "git" }, args), root)
+	local ok, raw_diff_tbl = util.run_command(vim.list_extend({ "git" }, args), root)
 	if not ok or #raw_diff_tbl == 0 then
 		return
 	end
@@ -316,7 +313,7 @@ function build_display_lines(parsed)
 			table.insert(
 				display,
 				{
-					text = "── ── ── ── ── ── ── ── ── ── ── ── ── ──",
+					text = "=====================================================================",
 					hl = "OzGitDiffSep",
 					type = "sep",
 				}

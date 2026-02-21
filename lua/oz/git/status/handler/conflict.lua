@@ -1,11 +1,10 @@
 local M = {}
 local util = require("oz.util")
-local shell = require("oz.util.shell")
 local g_util = require("oz.git.util")
 
 function M.list_conflicts()
 	local root = g_util.get_project_root()
-	local ok, out = shell.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
+	local ok, out = util.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, root)
 
 	if not ok or #out == 0 then
 		util.Notify("No conflicted files found.", "warn", "oz_git")

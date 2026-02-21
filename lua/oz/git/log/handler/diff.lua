@@ -1,7 +1,6 @@
 local M = {}
 local util = require("oz.util")
 local log = require("oz.git.log")
-local shell = require("oz.util.shell")
 
 local get_selected_hash = log.get_selected_hash
 
@@ -26,7 +25,7 @@ function M.diff_branch()
 	end
 
 	local ok, branches =
-		shell.run_command({ "git", "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" })
+		util.run_command({ "git", "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" })
 	if not ok then
 		return
 	end
@@ -44,7 +43,7 @@ function M.diff_stash()
 		return
 	end
 
-	local ok, stashes = shell.run_command({ "git", "stash", "list" })
+	local ok, stashes = util.run_command({ "git", "stash", "list" })
 	if not ok then
 		return
 	end

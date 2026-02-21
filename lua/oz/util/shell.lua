@@ -1,5 +1,6 @@
 --- @class oz.util.shell
 local M = {}
+local util = require("oz.util")
 
 --- Trim empty strings from the beginning and end of a table.
 --- @param tbl string[] The table of strings.
@@ -37,7 +38,7 @@ function M.run_command(cmd, cwd, opts)
 		cwd = vim.fn.getcwd()
 	end
 
-	cmd = type(cmd) == "string" and require("oz.util.parse_args").parse_args(cmd) or cmd
+	cmd = type(cmd) == "string" and util.parse_args(cmd) or cmd
 
 	local job_id = vim.fn.jobstart(cmd, {
 		cwd = cwd,

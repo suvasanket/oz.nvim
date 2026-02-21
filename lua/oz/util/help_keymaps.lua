@@ -1,8 +1,6 @@
 --- @class oz.util.help_keymaps
 local M = {}
-local win_util = require("oz.util.win")
-local ui_util = require("oz.util.ui")
-local misc = require("oz.util.misc")
+local util = require("oz.util")
 
 -- Module-level tracking for singleton behavior
 local key_help_win = nil
@@ -214,7 +212,7 @@ function M.show_maps(args)
 	local max_height = math.floor(vim.o.lines / 3)
 	local win_height = math.min(total_lines, max_height)
 
-	local win_id, buf_id = win_util.create_bottom_overlay({
+	local win_id, buf_id = util.create_bottom_overlay({
 		content = render_lines,
 		title = args.title or "Available Keymaps",
 		height = win_height,
@@ -254,7 +252,7 @@ function M.show_maps(args)
 	-- 6. Keymaps and Interaction
 	-- Close maps
 	local opts = { nowait = true, noremap = true, silent = true, buffer = buf_id }
-	misc.Map("n", { "q", "<C-c>", "<esc>" }, function()
+	util.Map("n", { "q", "<C-c>", "<esc>" }, function()
 		M.close()
 		vim.api.nvim_echo({ { "" } }, false, {})
 	end, opts)
@@ -265,7 +263,7 @@ function M.show_maps(args)
 
 	vim.cmd("redraw")
 
-	ui_util.inactive_echo("press 'q' to close this window.")
+	util.inactive_echo("press 'q' to close this window.")
 end
 
 --- Show an interactive menu for switches and actions.
@@ -424,7 +422,7 @@ function M.show_menu(title, items)
 
 		-- Window Creation / Update
 		if not win_id or not vim.api.nvim_win_is_valid(win_id) then
-			win_id, buf_id = win_util.create_bottom_overlay({
+			win_id, buf_id = util.create_bottom_overlay({
 				content = render_lines,
 				title = title,
 			})

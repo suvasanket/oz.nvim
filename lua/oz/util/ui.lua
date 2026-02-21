@@ -1,5 +1,6 @@
 --- @class oz.util.ui
 local M = {}
+local util = require("oz.util")
 
 --- Display a message in the command line using `nvim_echo`.
 --- @param str string The message to display.
@@ -17,7 +18,7 @@ function M.inactive_echo(str)
 	if not str or str == "" or vim.fn.strdisplaywidth(str) >= vim.v.echospace then
 		return
 	end
-	require("oz.util.hl").setup_hls({ "ozInactivePrompt" })
+	util.setup_hls({ "ozInactivePrompt" })
 	vim.api.nvim_echo({ { "" } }, false, {})
 	vim.api.nvim_echo({ { str, "ozInactivePrompt" } }, false, {})
 end
@@ -45,7 +46,7 @@ end
 --- @param complete? string Optional completion type.
 --- @return string|nil The user input, or nil if cancelled.
 function M.inactive_input(str, def, complete)
-	require("oz.util.hl").setup_hls({ "ozInactivePrompt" })
+	util.setup_hls({ "ozInactivePrompt" })
 	vim.cmd("echohl ozInactivePrompt")
 	local input = M.UserInput(str, def, complete)
 	vim.cmd("echohl None")
