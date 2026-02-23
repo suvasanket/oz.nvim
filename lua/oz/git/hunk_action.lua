@@ -284,4 +284,43 @@ function M.unstage_range(target, s, e, opts)
 	return true
 end
 
+function M.restore_range(target, s, e, opts)
+	local info, err = get_info(target, opts)
+	if not info then
+		return false, err
+	end
+
+	local line_start, line_end = math.min(s, e), math.max(s, e)
+
+	local raw_diff, diff_err = git_exec({ "diff", "--no-color", "--no-ext-diff", "-U0", "--", info.rel_path }, info.root)
+	if not raw_diff or raw_diff == "" then
+		return false, diff_err or "No changes to restore"
+	end
+
+	local diff = parse_diff(raw_diff)
+	local patch_body = ""
+	for _, hunk in ipairs(diff.hunks) do
+		local filtered = filter_hunk(hunk, line_start, line_end)
+		if filtered then
+			patch_body = patch_body .. filtered
+		end
+	end
+
+	if patch_body == "" then
+		return false, string.format("No changes in range %d-%d", line_start, line_end)
+	end
+
+	local patch = table.concat(diff.header_lines, "\n") .. "\n" .. patch_body
+	local _, apply_err = git_exec({ "apply", "--reverse", "--unidiff-zero", "-" }, info.root, patch)
+	if apply_err then
+		return false, apply_err
+	end
+
+	vim.schedule(function()
+		pcall(vim.cmd.checktime)
+		require("oz.git").refresh_buf()
+	end)
+	return true
+end
+
 return M

@@ -96,7 +96,16 @@ end
 
 local function handle_gread(opts)
 	if g_util.if_in_git() then
-		local file = opts.args
+		local file_name = vim.trim(opts.args)
+		if opts.range and opts.range > 0 and file_name == "" then
+			local ok, err = require("oz.git.hunk_action").restore_range(0, opts.line1, opts.line2)
+			if not ok then
+				util.Notify("Failed to restore lines: " .. (err or "unknown"), "error", "oz_git")
+			end
+			return
+		end
+
+		local file = file_name
 		if file == "" then
 			local files = util.shellout_tbl("git diff --name-only HEAD")
 			file = find_substring(vim.fn.expand("%:p"), files)

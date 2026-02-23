@@ -69,7 +69,6 @@ function M.enter_key()
 		if #files > 0 then
 			local target = files[1]
 			if vim.fn.filereadable(target) == 1 or vim.fn.isdirectory(target) == 1 then
-				-- vim.cmd("split | edit " .. vim.fn.fnameescape(target)) -- WIP
 				util.open_in_split(vim.fn.fnameescape(target))
 			end
 		end
@@ -78,18 +77,12 @@ function M.enter_key()
 end
 
 function M.setup_keymaps(buf, key_grp)
-	vim.keymap.set("n", "q", M.quit, { buffer = buf, desc = "Close git status buffer.", silent = true })
-	-- vim.keymap.set("n", "<Tab>", function()
-	-- 	s_util.jump_section(1)
-	-- end, { buffer = buf, desc = "Jump to next section.", silent = true })
-	-- vim.keymap.set("n", "<S-Tab>", function()
-	-- 	s_util.jump_section(-1)
-	-- end, { buffer = buf, desc = "Jump to previous section.", silent = true })
-	vim.keymap.set("n", "<C-r>", status.refresh_buf, { buffer = buf, desc = "Refresh status buffer.", silent = true })
+	vim.keymap.set("n", "q", M.quit, { buffer = buf, desc = "Close status buffer", silent = true })
+	vim.keymap.set("n", "<C-r>", status.refresh_buf, { buffer = buf, desc = "Refresh status buffer", silent = true })
 	vim.keymap.set("n", "-", function()
 		util.set_cmdline("Git ")
-	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git." })
-	vim.keymap.set("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry under cursor.", silent = true })
+	end, { silent = false, buffer = buf, desc = "Populate cmdline with :Git" })
+	vim.keymap.set("n", "<cr>", M.enter_key, { buffer = buf, desc = "Open entry and more", silent = true })
 	vim.keymap.set("n", "I", "<cmd>Git reflog<cr>", { buffer = buf, desc = "Open reflog", silent = true })
 	key_grp["Quick actions"] = { "-", "<Tab>", "<S-Tab>", "<CR>", "I", "<C-R>", "q" }
 end

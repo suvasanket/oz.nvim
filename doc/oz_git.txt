@@ -31,8 +31,8 @@ COMMANDS                                                    *oz-git-commands*
     Opens the |oz-git-log| window. Optional arguments are passed directly
     to `git log`. You can use it to filter by author, date, or path.
 
-:Gread [range]                                              *:Gread*
-:Gr [range]                                                 *:Gr*
+:Gread [file]                                               *:Gread*
+:Gr [file]                                                  *:Gr*
     Restores the current file to its state in the index (undoes unstaged
     changes). If a [range] is provided (e.g., in visual mode), only that
     range is restored using partial patching logic.
@@ -40,7 +40,7 @@ COMMANDS                                                    *oz-git-commands*
 :Gwrite [file]                                              *:Gwrite*
 :Gw [file]                                                  *:Gw*
     Stages the current file. If [file] is provided and different from the
-    current file, it performs a `git mv`. If a range is selected, only those
+    current file, it performs a `git mv`. If a [range] is selected, only those
     lines are staged.
 
 :GBrowse [path]                                             *:GBrowse*
