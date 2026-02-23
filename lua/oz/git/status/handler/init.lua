@@ -14,6 +14,10 @@ local modules = {
 	"oz.git.status.handler.merge",
 	"oz.git.status.handler.conflict",
 	"oz.git.status.handler.rebase",
+	"oz.git.status.handler.revert",
+	"oz.git.status.handler.cherry_pick",
+	"oz.git.status.handler.bisect",
+	"oz.git.status.handler.tag",
 	"oz.git.status.handler.quick_action",
 	"oz.git.status.handler.worktree",
 }

@@ -17,6 +17,32 @@ function M.merge_branch(flags)
 	})
 end
 
+function M.squash_merge(flags)
+	local branches = g_util.get_branch()
+	local flag_str = (flags and #flags > 0) and (" " .. table.concat(flags, " ")) or ""
+
+	util.pick(branches, {
+		title = "Squash merge branch",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git merge --squash" .. flag_str .. " " .. choice)
+			end
+		end,
+	})
+end
+
+function M.preview_merge()
+	local branches = g_util.get_branch()
+	util.pick(branches, {
+		title = "Preview merge branch",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git merge --no-commit --no-ff " .. choice)
+			end
+		end,
+	})
+end
+
 function M.setup_keymaps(buf, key_grp)
 	-- Merge mappings
 	local m_opts = {
@@ -33,6 +59,8 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Merge",
 			items = {
 				{ key = "m", cb = M.merge_branch, desc = "Merge" },
+				{ key = "s", cb = M.squash_merge, desc = "Squash merge" },
+				{ key = "p", cb = M.preview_merge, desc = "Preview merge" },
 				{
 					key = " ",
 					cb = function(f)
@@ -55,6 +83,13 @@ function M.setup_keymaps(buf, key_grp)
 				},
 				{
 					key = "c",
+					cb = function()
+						s_util.run_n_refresh("Git merge --continue")
+					end,
+					desc = "Continue",
+				},
+				{
+					key = "l",
 					cb = function()
 						s_util.run_n_refresh("Git merge --continue")
 					end,

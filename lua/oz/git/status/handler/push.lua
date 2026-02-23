@@ -75,6 +75,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "-n", name = "--no-verify", type = "switch", desc = "No verify" },
 				{ key = "-d", name = "--dry-run", type = "switch", desc = "Dry run" },
 				{ key = "-t", name = "--tags", type = "switch", desc = "Tags" },
+				{ key = "-q", name = "--quiet", type = "switch", desc = "Quiet" },
 			},
 		},
 		{

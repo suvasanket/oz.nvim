@@ -72,6 +72,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "-a", name = "--autostash", type = "switch", desc = "Autostash" },
 				{ key = "-f", name = "--ff-only", type = "switch", desc = "Fast-forward only" },
 				{ key = "-n", name = "--no-ff", type = "switch", desc = "No fast-forward" },
+				{ key = "-q", name = "--quiet", type = "switch", desc = "Quiet" },
 			},
 		},
 		{

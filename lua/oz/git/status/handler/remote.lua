@@ -34,23 +34,23 @@ function M.add_update()
 			local remotes = get_remotes()
 			if vim.tbl_contains(remotes, remote_name) then
 				-- Remote exists, ask to update URL
-				local ans = util.prompt(
-					"Remote '" .. remote_name .. "' already exists. Update URL?",
-					"&Yes\n&No",
-					2 -- Default to No
-				)
-				if ans == 1 then
-					git.on_job_exit("remote_set_url", {
-						callback = function(ev)
-							if ev.exit_code == 0 then
-								util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
-								refresh() -- Refresh status potentially
-							end
-						end,
-						once = true,
-					})
-					vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
-				end
+				util.pick({ { key = "Yes", value = 1 }, { key = "No", value = 2 } }, {
+					title = "Remote '" .. remote_name .. "' already exists. Update URL?",
+					on_select = function(ans)
+						if ans == 1 then
+							git.on_job_exit("remote_set_url", {
+								callback = function(ev)
+									if ev.exit_code == 0 then
+										util.Notify("Updated URL for remote '" .. remote_name .. "'.", nil, "oz_git")
+										refresh() -- Refresh status potentially
+									end
+								end,
+								once = true,
+							})
+							vim.cmd("G remote set-url " .. remote_name .. " " .. remote_url)
+						end
+					end,
+				})
 			else
 				-- Add new remote
 				git.on_job_exit("remote_add", {
@@ -130,6 +130,12 @@ end
 function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
+			title = "Switches",
+			items = {
+				{ key = "-f", name = "--force", type = "switch", desc = "Force" },
+			},
+		},
+		{
 			title = "Actions",
 			items = {
 				{ key = "a", cb = M.add_update, desc = "Add or update remotes" },
@@ -147,6 +153,14 @@ function M.setup_keymaps(buf, key_grp)
 						vim.cmd("Git remote -v")
 					end,
 					desc = "Remote list",
+				},
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git remote " .. flags .. " ")
+					end,
+					desc = "Remote (edit cmd)",
 				},
 			},
 		},

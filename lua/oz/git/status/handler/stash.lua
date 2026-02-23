@@ -82,6 +82,8 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "-u", name = "--include-untracked", type = "switch", desc = "Include untracked" },
 				{ key = "-a", name = "--all", type = "switch", desc = "Include all (ignored)" },
 				{ key = "-k", name = "--keep-index", type = "switch", desc = "Keep index" },
+				{ key = "-p", name = "--patch", type = "switch", desc = "Patch" },
+				{ key = "-q", name = "--quiet", type = "switch", desc = "Quiet" },
 			},
 		},
 		{
@@ -98,6 +100,14 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Stash index",
 				}, -- Usually means stash but keep index?
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git stash " .. flags .. " ")
+					end,
+					desc = "Stash (edit cmd)",
+				},
 			},
 		},
 		{

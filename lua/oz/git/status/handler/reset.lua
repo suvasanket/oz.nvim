@@ -81,6 +81,14 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Reset file/HEAD (Mixed)",
 				},
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git reset " .. flags .. " ")
+					end,
+					desc = "Reset (edit cmd)",
+				},
 			},
 		},
 	}

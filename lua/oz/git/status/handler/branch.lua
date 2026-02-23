@@ -59,23 +59,34 @@ function M.delete()
 			util.Notify("Cannot delete the current branch.", "error", "oz_git")
 			return
 		end
-		local ans = util.prompt("Delete branch '" .. branch .. "'?", "&Local\n&Remote\n&Both\n&Nevermind", 4)
-		if ans == 1 then
-			s_util.run_n_refresh("Git branch -D " .. branch)
-		elseif ans == 2 then
-			local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", branch))
-			if cur_remote == "" then
-				cur_remote = "origin"
-			end
-			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
-		elseif ans == 3 then
-			s_util.run_n_refresh("Git branch -D " .. branch)
-			local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", branch))
-			if cur_remote == "" then
-				cur_remote = "origin"
-			end
-			s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
-		end
+
+		local del_options = {
+			{ key = "l: Local", value = "local" },
+			{ key = "r: Remote", value = "remote" },
+			{ key = "b: Both", value = "both" },
+		}
+
+		util.pick(del_options, {
+			title = "Delete branch '" .. branch .. "'",
+			on_select = function(ans)
+				if ans == "local" then
+					s_util.run_n_refresh("Git branch -D " .. branch)
+				elseif ans == "remote" then
+					local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", branch))
+					if cur_remote == "" then
+						cur_remote = "origin"
+					end
+					s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
+				elseif ans == "both" then
+					s_util.run_n_refresh("Git branch -D " .. branch)
+					local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", branch))
+					if cur_remote == "" then
+						cur_remote = "origin"
+					end
+					s_util.run_n_refresh(("Git push %s --delete %s"):format(cur_remote, branch))
+				end
+			end,
+		})
 	else
 		util.Notify("Cursor not on a deletable branch.", "warn", "oz_git")
 	end
@@ -129,8 +140,41 @@ function M.rename()
 	end
 end
 
+function M.copy()
+	local branch = s_util.get_branch_under_cursor()
+	local new_name = util.UserInput("Copy branch '" .. (branch or "") .. "' to: ")
+	if new_name and new_name ~= "" then
+		s_util.run_n_refresh(string.format("Git branch %s %s", new_name, branch or ""))
+	end
+end
+
+function M.reset()
+	local branch = s_util.get_branch_under_cursor()
+	if not branch then
+		util.Notify("Cursor not on a branch.", "warn", "oz_git")
+		return
+	end
+	local targets = g_util.get_branch()
+	util.pick(targets, {
+		title = "Reset branch '" .. branch .. "' to",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh(string.format("Git branch -f %s %s", branch, choice))
+			end
+		end,
+	})
+end
+
 function M.setup_keymaps(buf, key_grp)
 	local options = {
+		{
+			title = "Switches",
+			items = {
+				{ key = "-a", name = "--all", type = "switch", desc = "All" },
+				{ key = "-r", name = "--remotes", type = "switch", desc = "Remotes" },
+				{ key = "-f", name = "--force", type = "switch", desc = "Force" },
+			},
+		},
 		{
 			title = "Checkout",
 			items = {
@@ -141,7 +185,7 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Creation",
 			items = {
-                { key = "c", cb = M.new_from, desc = "Checkout new branch" },
+				{ key = "c", cb = M.new_from, desc = "Checkout new branch" },
 				{ key = "n", cb = M.new, desc = "Create a new branch" },
 			},
 		},
@@ -150,6 +194,8 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "d", cb = M.delete, desc = "Delete branch" },
 				{ key = "r", cb = M.rename, desc = "Rename branch" },
+				{ key = "y", cb = M.copy, desc = "Copy branch" },
+				{ key = "x", cb = M.reset, desc = "Reset branch" },
 				{
 					key = "e",
 					cb = function()
@@ -164,6 +210,19 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "u", cb = M.set_upstream, desc = "Set upstream" },
 				{ key = "U", cb = M.unset_upstream, desc = "Unset upstream" },
+			},
+		},
+		{
+			title = "Custom",
+			items = {
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git branch " .. flags .. " ")
+					end,
+					desc = "Branch (edit cmd)",
+				},
 			},
 		},
 	}

@@ -1,6 +1,7 @@
 local M = {}
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
+local g_util = require("oz.git.util")
 local status = require("oz.git.status")
 
 -- Add Worktree (ww)
@@ -14,43 +15,62 @@ function M.add(flags)
 		end
 	end
 
-	local ans = util.prompt("Select Worktree Location Base", "&Parent of root\n&This dir\n&Custom path", 2)
-	if not ans or ans == 0 then
-		return
-	end
+	local loc_options = {
+		{ key = "p: Parent of root", value = "parent" },
+		{ key = "t: This dir", value = "this" },
+		{ key = "c: Custom path", value = "custom" },
+	}
 
-	local base_path
-	if ans == 1 then -- Parent Dir
-		base_path = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
-	elseif ans == 2 then -- Current Dir
-		base_path = vim.fn.getcwd()
-	elseif ans == 3 then -- Provide Path
-		base_path = util.UserInput("Path: ", vim.fn.getcwd() .. "/", "dir")
-	end
+	util.pick(loc_options, {
+		title = "Select Worktree Location Base",
+		on_select = function(base_choice)
+			if not base_choice then
+				return
+			end
 
-	if not base_path or base_path == "" then
-		return
-	end
+			local base_path
+			if base_choice == "parent" then
+				base_path = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
+			elseif base_choice == "this" then
+				base_path = vim.fn.getcwd()
+			elseif base_choice == "custom" then
+				base_path = util.UserInput("Path: ", vim.fn.getcwd() .. "/", "dir")
+			end
 
-	local name = util.UserInput("Worktree Name: ")
-	if not name or name == "" then
-		return
-	end
+			if not base_path or base_path == "" then
+				return
+			end
 
-	local final_path = base_path .. "/" .. name
+			local name = util.UserInput("Worktree Name: ")
+			if not name or name == "" then
+				return
+			end
 
-	local commit_ish = util.UserInput("Branch/Commit (empty for HEAD): ")
+			local final_path = base_path .. "/" .. name
+			local branches = g_util.get_branch()
+			table.insert(branches, 1, "HEAD")
 
-	local cmd = string.format("Git worktree add %q", final_path)
-	if force then
-		cmd = cmd .. " --force"
-	end
+			util.pick(branches, {
+				title = "Select Branch/Commit",
+				on_select = function(commit_ish)
+					if not commit_ish then
+						return
+					end
 
-	if commit_ish ~= "" then
-		cmd = cmd .. " " .. commit_ish
-	end
+					local cmd = string.format("Git worktree add %q", final_path)
+					if force then
+						cmd = cmd .. " --force"
+					end
 
-	s_util.run_n_refresh(cmd)
+					if commit_ish ~= "HEAD" then
+						cmd = cmd .. " " .. commit_ish
+					end
+
+					s_util.run_n_refresh(cmd)
+				end,
+			})
+		end,
+	})
 end
 
 function M.prune()
@@ -164,6 +184,14 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "p", cb = M.prune, desc = "Prune worktrees" },
 				{ key = "R", cb = M.repair, desc = "Repair worktrees" },
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git worktree " .. flags .. " ")
+					end,
+					desc = "Worktree (edit cmd)",
+				},
 			},
 		},
 	}

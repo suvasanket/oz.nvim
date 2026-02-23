@@ -91,11 +91,11 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	vim.keymap.set("n", "u", function()
+	vim.keymap.set("n", "C", function()
 		util.show_menu("Revert Actions", options)
 	end, { buffer = buf, desc = "Revert Actions", nowait = true, silent = true })
 
-	vim.keymap.set("x", "u", M.handle_revert, { buffer = buf, desc = "Revert selection", silent = true })
+	vim.keymap.set("x", "C", M.handle_revert, { buffer = buf, desc = "Revert selection", silent = true })
 end
 
 return M

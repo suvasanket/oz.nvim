@@ -132,6 +132,8 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "-f", name = "--function-context", type = "switch", desc = "Show function context" },
 				{ key = "-w", name = "--ignore-all-space", type = "switch", desc = "Ignore whitespace" },
 				{ key = "-b", name = "--ignore-space-change", type = "switch", desc = "Ignore space change" },
+				{ key = "-M", name = "--find-renames", type = "switch", desc = "Find renames" },
+				{ key = "-C", name = "--find-copies", type = "switch", desc = "Find copies" },
 			},
 		},
 		{
@@ -143,6 +145,14 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "r", cb = M.diff_range, desc = "Diff Range" },
 				{ key = "u", cb = M.diff_unstaged, desc = "Diff Unstaged" },
 				{ key = "s", cb = M.diff_staged, desc = "Diff Staged" },
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git diff " .. flags .. " ")
+					end,
+					desc = "Diff (edit cmd)",
+				},
 			},
 		},
 	}
@@ -180,7 +190,7 @@ function M.setup_keymaps(buf, key_grp)
 		})
 	end
 
-	vim.keymap.set("n", "d", function()
+	vim.keymap.set("n", "D", function()
 		util.show_menu("Diff Actions", options)
 	end, { buffer = buf, desc = "Diff Actions", nowait = true, silent = true })
 end

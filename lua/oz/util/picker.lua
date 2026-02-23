@@ -25,8 +25,7 @@ local state = {
 local function setup_highlights()
 	require("oz.util.hl").setup_hls({
 		"OzEchoDef",
-		-- { OzPickerNorm = "Comment" },
-		-- { Title = { bold = true, link = "Normal" } },
+		"OzActive",
 	})
 end
 
@@ -122,7 +121,7 @@ local function render_results()
 	end
 
 	local res_lines = {}
-	local pointer, no_pointer = " ▸ ", "   "
+	local pointer, no_pointer = "* ", "  "
 	if count == 0 then
 		res_lines = { no_pointer .. "(no matches)" }
 	else
@@ -140,8 +139,8 @@ local function render_results()
 	if count > 0 then
 		for i = 1, #res_lines do
 			if (start_idx + i - 2) == state.selected then
-				nvim_buf_add_highlight(buf, ns, "Title", i - 1, 0, #pointer)
-				nvim_buf_add_highlight(buf, ns, "Title", i - 1, #pointer, -1)
+				nvim_buf_add_highlight(buf, ns, "OzActive", i - 1, 0, #pointer)
+				nvim_buf_add_highlight(buf, ns, "OzActive", i - 1, #pointer, -1)
 			else
 				nvim_buf_add_highlight(buf, ns, "OzEchoDef", i - 1, 0, -1)
 			end
@@ -194,10 +193,17 @@ local function on_type()
 		local pbuf, pns = state.prompt_buf, state.prompt_ns
 		nvim_buf_clear_namespace(pbuf, pns, 0, -1)
 		if #t.title > 0 then
-			nvim_buf_add_highlight(pbuf, pns, t.highlight or "Special", 0, 0, #t.title)
+			nvim_buf_add_highlight(pbuf, pns, t.highlight or "OzActive", 0, 0, #t.title)
 		end
 		if #t.separator > 0 then
-			nvim_buf_add_highlight(pbuf, pns, t.separator_highlight or "Comment", 0, #t.title, #t.title + #t.separator)
+			nvim_buf_add_highlight(
+				pbuf,
+				pns,
+				t.separator_highlight or "OzEchoDef",
+				0,
+				#t.title,
+				#t.title + #t.separator
+			)
 		end
 		api.nvim_buf_set_extmark(pbuf, pns, 0, 0, {
 			id = 1,
@@ -245,7 +251,7 @@ function M.pick(items, opts)
 	for _, b in ipairs({ state.prompt_buf, state.result_buf }) do
 		nvim_set_option_value("buftype", "nofile", { buf = b })
 		nvim_set_option_value("bufhidden", "wipe", { buf = b })
-        nvim_set_option_value("ft", "oz_prompt", { buf = state.result_buf })
+		nvim_set_option_value("ft", "oz_prompt", { buf = state.result_buf })
 	end
 	nvim_set_option_value("modifiable", false, { buf = state.result_buf })
 

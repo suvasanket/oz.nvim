@@ -71,6 +71,14 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Commit",
 			items = {
 				{ key = "c", cb = M.create, desc = "Create a commit" },
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git commit " .. flags .. " ")
+					end,
+					desc = "Commit (edit cmd)",
+				},
 			},
 		},
 		{

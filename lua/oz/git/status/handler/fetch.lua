@@ -23,6 +23,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "-p", name = "--prune", type = "switch", desc = "Prune" },
 				{ key = "-t", name = "--tags", type = "switch", desc = "Tags" },
 				{ key = "-f", name = "--force", type = "switch", desc = "Force" },
+				{ key = "-q", name = "--quiet", type = "switch", desc = "Quiet" },
 			},
 		},
 		{
