@@ -190,7 +190,7 @@ function M.setup_keymaps(buf, key_grp)
 		})
 	end
 
-	vim.keymap.set("n", "D", function()
+	vim.keymap.set("n", "d", function()
 		util.show_menu("Diff Actions", options)
 	end, { buffer = buf, desc = "Diff Actions", nowait = true, silent = true })
 end
