@@ -1,18 +1,20 @@
 local M = {}
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
+local g_util = require("oz.git.util")
 
 function M.merge_branch(flags)
-	local branch_under_cursor = s_util.get_branch_under_cursor()
-	local flag_str = ""
-	if flags and #flags > 0 then
-		flag_str = " " .. table.concat(flags, " ")
-	end
+	local branches = g_util.get_branch()
+	local flag_str = (flags and #flags > 0) and (" " .. table.concat(flags, " ")) or ""
 
-	local input = util.inactive_input(":Git merge", flag_str .. " " .. (branch_under_cursor or ""))
-	if input then
-		s_util.run_n_refresh("Git merge" .. input)
-	end
+	util.pick(branches, {
+		title = "Merge branch",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git merge" .. flag_str .. " " .. choice)
+			end
+		end,
+	})
 end
 
 function M.setup_keymaps(buf, key_grp)

@@ -5,7 +5,15 @@ local g_util = require("oz.git.util")
 local status = require("oz.git.status")
 
 function M.cc()
-	util.set_cmdline("Git checkout ")
+	local branches = g_util.get_branch()
+	util.pick(branches, {
+		title = "Switch branch",
+		on_select = function(choice)
+			if choice then
+				s_util.run_n_refresh("Git switch " .. choice)
+			end
+		end,
+	})
 end
 
 function M.checkout_local()

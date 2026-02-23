@@ -143,7 +143,7 @@ local function render_results()
 				nvim_buf_add_highlight(buf, ns, "Title", i - 1, 0, #pointer)
 				nvim_buf_add_highlight(buf, ns, "Title", i - 1, #pointer, -1)
 			else
-                nvim_buf_add_highlight(buf, ns, "OzEchoDef", i - 1, 0, -1)
+				nvim_buf_add_highlight(buf, ns, "OzEchoDef", i - 1, 0, -1)
 			end
 		end
 	end
@@ -245,6 +245,7 @@ function M.pick(items, opts)
 	for _, b in ipairs({ state.prompt_buf, state.result_buf }) do
 		nvim_set_option_value("buftype", "nofile", { buf = b })
 		nvim_set_option_value("bufhidden", "wipe", { buf = b })
+        nvim_set_option_value("ft", "oz_prompt", { buf = state.result_buf })
 	end
 	nvim_set_option_value("modifiable", false, { buf = state.result_buf })
 
@@ -312,6 +313,8 @@ function M.pick(items, opts)
 	map_nav("<Up>", -1)
 	map_nav("<Tab>", 1)
 	map_nav("<S-Tab>", -1)
+	map_nav("<C-n>", 1)
+	map_nav("<C-p>", -1)
 
 	state.aug = api.nvim_create_augroup("IvyPicker", { clear = true })
 	api.nvim_create_autocmd("TextChangedI", { group = state.aug, buffer = state.prompt_buf, callback = on_type })
