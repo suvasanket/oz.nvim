@@ -4,16 +4,16 @@ local _highlights = {}
 
 --- @type table<string, table>
 M.oz_highlights = {
-    OzActive = { link = "@attribute" },
-	OzLink = { fg = "#ffffff", undercurl = true, bold = true },
-    OzNone = { bg = "NONE", ctermbg = "NONE" },
-    OzEchoDef = { fg = "#606060" },
-    OzCmdPrompt = { fg = "#757575" },
+	OzActive = { link = "@attribute" },
+	OzUrl = { underline = true, bold = true, sp = "#15F5BA" },
+	OzNone = { bg = "NONE", ctermbg = "NONE" },
+	OzEchoDef = { fg = "#606060" },
+	OzCmdPrompt = { fg = "#757575" },
+	OzGitStatusHeading = { link = "Title" },
 
-	ozGitStatusHeading = { fg = "#ffffff", bold = true },
-	ozGitLogBranchName = { fg = "#A390F0", bg = "NONE" },
-	ozGitLogTime = { link = "Comment" },
-	ozGitLogHead = { fg = "#A390F0", bg = "NONE", bold = true },
+    -- TODO: will update in log buffer rework
+	ozGitLogBranchName = { fg = "#A390F0" },
+	ozGitLogHead = { fg = "#A390F0", bold = true },
 }
 
 --- Set a highlight group once.

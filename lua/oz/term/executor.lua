@@ -3,6 +3,10 @@ local util = require("oz.util")
 
 local function highlight(buf)
 	local term_util = require("oz.term.util")
+
+    -- initialization of hls
+    util.setup_hls({ "OzUrl" })
+
 	vim.api.nvim_buf_call(buf, function()
 		vim.cmd([[
             syntax clear
@@ -12,8 +16,6 @@ local function highlight(buf)
         ]])
 	end)
 
-	util.setup_hls({ "OzLink" })
-
 	vim.schedule(function()
 		if not vim.api.nvim_buf_is_valid(buf) then
 			return
@@ -22,7 +24,7 @@ local function highlight(buf)
 		if win ~= -1 then
 			vim.api.nvim_win_call(win, function()
 				-- Highlight URLs
-				vim.fn.matchadd("OzLink", term_util.URL_PATTERN)
+				vim.fn.matchadd("OzUrl", term_util.URL_PATTERN)
 			end)
 		end
 
@@ -64,7 +66,7 @@ local function highlight(buf)
 
 					-- Fast path: if it contains : or (, it might be an EFM match
 					local maybe_efm = text:find("[:(]") ~= nil
-					local hl_group = "OzLink"
+					local hl_group = "OzUrl"
 					local filename = text
 
 					if maybe_efm then

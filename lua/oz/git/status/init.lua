@@ -210,7 +210,7 @@ local function status_buf_hl()
 	vim.cmd("syntax clear")
 	util.setup_hls({
 		"OzCmdPrompt",
-		"ozGitStatusHeading",
+		"OzGitStatusHeading",
 		"OzActive",
 	})
 

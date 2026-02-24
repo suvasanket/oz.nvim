@@ -191,7 +191,7 @@ local function ft_mappings(buf)
 
 	-- show help
 	vim.keymap.set("n", "g?", function()
-        util.show_maps({
+		util.show_maps({
 			group = {
 				["Pick mappings"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" },
 			},
@@ -203,7 +203,7 @@ end
 local function oz_git_win_hl()
 	vim.cmd("syntax clear")
 
-    util.setup_hls({ "OzActive" })
+	util.setup_hls({ "OzActive", "OzUrl" })
 
 	-- Syntax matches
 	vim.cmd([[
@@ -215,7 +215,7 @@ local function oz_git_win_hl()
         syntax match Title /HEAD@{[0-9]\+}/
         syntax match @comment.todo /Note/
         syntax match @comment /^\s\+[^*].*$/
-        syntax match DiagnosticUnderlineOk /\v(https?|ftp|file):\/\/\S+/
+        syntax match OzUrl /\v(https?|ftp|file):\/\/\S+/
     ]])
 
 	-- diff

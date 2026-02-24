@@ -101,7 +101,7 @@ function M.render(buf)
 	for lnum, data in pairs(line_map) do
 		local row = lnum - 1 -- 0-based
 		if data.type == "header" then
-			vim.api.nvim_buf_add_highlight(buf, ns_id, "ozGitStatusHeading", row, 0, -1)
+			vim.api.nvim_buf_add_highlight(buf, ns_id, "OzGitStatusHeading", row, 0, -1)
 			if data.section_id == "branch" then
 				-- Highlight branch name if present in header
 				-- "Branch: master"
