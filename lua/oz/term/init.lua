@@ -32,8 +32,7 @@ local function term_cmd_init(config)
 			require("oz.term.manager").run_with_arg(cmd, opts)
 		else
 			local type = args.bang and "Term!" or "Term"
-			require("oz.term.cmd_wizard").cmd_func(type, function(user_input)
-				local cmd = user_input
+			require("oz.term.cmd_wizard").cmd_func(type, function(cmd)
 				if prefix and cmd:sub(1, #prefix) == prefix then
 					cmd = cmd:sub(#prefix + 1)
 					opts.cwd = util.GetProjectRoot()

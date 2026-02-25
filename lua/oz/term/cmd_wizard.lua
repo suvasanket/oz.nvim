@@ -1,4 +1,5 @@
 local M = {}
+local util = require("oz.util")
 
 function M.detect_compiler(ft)
 	-- Try common suffix variations dynamically
@@ -101,7 +102,14 @@ function M.detect_makeprg(filename)
 end
 
 -- predict the compiler then concat with the current file
+---@param current_file string
+---@param ft string
+---@return string
 function M.predict_compiler(current_file, ft)
+	local shebang = M.detect_shebang()
+	if shebang then
+		return string.format("%s %s", shebang, current_file)
+	end
 	local makeprg = M.detect_makeprg(current_file)
 	if makeprg == "make" or not makeprg then
 		local compiler = M.detect_compiler(ft)
@@ -116,52 +124,47 @@ function M.predict_compiler(current_file, ft)
 end
 
 -- run command for both Compile-Term
-function M.cmd_func(type, func)
+---@param prefix string
+---@param func function<string>
+function M.cmd_func(prefix, func)
 	local current_file = vim.fn.expand("%")
 	local ft = vim.bo.filetype
-	local shebang = M.detect_shebang()
-	local util = require("oz.util")
-	local project_path = util.GetProjectRoot() -- may return nil
-	-- p: 1
-	if not shebang then
-		-- p: 2 , 3
-		local cmd
-		if project_path then
-			cmd = getprojectCMD(project_path, current_file, ft) or getftCMD(current_file, ft)
-		else
-			cmd = getftCMD(current_file, ft)
-		end
-		if not cmd then
-			-- p: 4
-			cmd = M.predict_compiler(current_file, ft)
-		end
-		local input = util.inactive_input(":" .. type .. " ", cmd, "shellcmd")
+	local project_path = util.GetProjectRoot()
+	local cmd = nil
 
-		if input and input ~= "" then
-			-- custom function, used for AKTUAL execution
-			if func then
-				func(input, cmd)
-			else
-				vim.cmd(type .. " " .. input)
-			end
-
-			-- check if its a valid cmd or not
-			if cmd ~= input and project_path then
-				setprojectCMD(project_path, current_file, ft, input)
-			end
-			if input:find(current_file, 1, true) then
-				if project_path then
-					setprojectCMD(project_path, current_file, ft, input)
-				else
-					setftCMD(current_file, ft, input)
-				end
-			end
-			-- end
-		elseif input == "" then
-			util.Notify("Term requires at least one command to start.", "warn", "oz_term")
-		end
+	if project_path then
+		cmd = getprojectCMD(project_path, current_file, ft) or getftCMD(current_file, ft)
 	else
-		vim.api.nvim_feedkeys(string.format(": %s %s %s", type, shebang, current_file), "n", false)
+		cmd = getftCMD(current_file, ft)
+	end
+	-- no cached data --
+	if not cmd then
+		cmd = M.predict_compiler(current_file, ft)
+	end
+	-- take userinput --
+	local input = util.inactive_input(":" .. prefix .. " ", cmd, "shellcmd")
+
+	if input and input ~= "" then
+		-- custom function, used for AKTUAL execution
+		if func then
+			func(input, cmd)
+		else
+			vim.cmd(prefix .. " " .. input)
+		end
+
+		-- caching --
+		if cmd ~= input and project_path then -- if cmd is different and in project then cache it.
+			setprojectCMD(project_path, current_file, ft, input)
+		end
+		if input:find(current_file, 1, true) then -- if cmd contains current file
+			if project_path then
+				setprojectCMD(project_path, current_file, ft, input)
+			else
+				setftCMD(current_file, ft, input)
+			end
+		end
+	elseif input == "" then
+		util.Notify("Provide a cmd!", "warn", "oz_term")
 	end
 end
 

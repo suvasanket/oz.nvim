@@ -124,7 +124,7 @@ function M.setup(buf)
 		if try_jump_file(buf, line) or try_cword(buf) or try_open_url(line) then
 			return
 		end
-        util.Notify("No entry found under cursor.", "info", "oz_term")
+		util.Notify("No entry found under cursor.", "info", "oz_term")
 	end, { buffer = buf, silent = true, desc = "Visit location under cursor" })
 
 	vim.keymap.set("n", "<C-q>", function()
