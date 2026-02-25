@@ -56,4 +56,29 @@ function M.str_contains_hash(text)
 	return false
 end
 
+--- Get the current state of the Git repository.
+--- @param cwd? string The working directory.
+--- @return {operation: string, hash: string|nil} | nil
+function M.get_git_state(cwd)
+	local git_dir = util.shellout_str("git rev-parse --git-dir", cwd)
+	if not git_dir or git_dir == "" then return nil end
+
+	local paths = {
+		{ path = git_dir .. "/BISECT_LOG", op = "bisect", head = nil },
+		{ path = git_dir .. "/CHERRY_PICK_HEAD", op = "cherry-pick", head = "CHERRY_PICK_HEAD" },
+		{ path = git_dir .. "/MERGE_HEAD", op = "merge", head = "MERGE_HEAD" },
+		{ path = git_dir .. "/REBASE_HEAD", op = "rebase", head = "REBASE_HEAD" },
+		{ path = git_dir .. "/rebase-merge", op = "rebase", head = nil },
+		{ path = git_dir .. "/rebase-apply", op = "rebase", head = nil },
+	}
+
+	for _, p in ipairs(paths) do
+		if vim.fn.filereadable(p.path) == 1 or vim.fn.isdirectory(p.path) == 1 then
+			local hash = p.head and util.shellout_str("git rev-parse --short " .. p.head, cwd) or nil
+			return { operation = p.op, hash = hash }
+		end
+	end
+	return nil
+end
+
 return M

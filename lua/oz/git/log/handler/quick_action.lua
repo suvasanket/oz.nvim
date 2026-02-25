@@ -135,9 +135,9 @@ function M.setup_keymaps(buf, key_grp)
 	-- quick actions
 	vim.keymap.set("n", "q", M.quit, { buffer = buf, desc = "Close git log buffer.", silent = true })
 	-- increase
-	vim.keymap.set("n", ">", M.increase_log, { buffer = buf, desc = "Increase log level.", silent = true })
+	vim.keymap.set("n", "]", M.increase_log, { buffer = buf, desc = "Increase log level.", silent = true, nowait = true })
 	-- decrease
-	vim.keymap.set("n", "<", M.decrease_log, { buffer = buf, desc = "Decrease log level.", silent = true })
+	vim.keymap.set("n", "[", M.decrease_log, { buffer = buf, desc = "Decrease log level.", silent = true, nowait = true })
 	-- back
 	vim.keymap.set("n", "<C-o>", M.go_back, { buffer = buf, desc = "Go back.", silent = true })
 	-- :G
@@ -149,7 +149,7 @@ function M.setup_keymaps(buf, key_grp)
 	vim.keymap.set({ "n", "x" }, "<cr>", M.show_hash, { buffer = buf, desc = "Show current commit under cursor. <*>", silent = true })
 	-- check out to a commit
 	vim.keymap.set("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout to the commit under cursor. <*>", silent = true })
-	key_grp["quick actions"] = { "<lt>", ">", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "q" }
+	key_grp["quick actions"] = { "[", "]", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "q" }
 
 	-- goto mappings
 	local g_options = {

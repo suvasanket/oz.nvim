@@ -133,7 +133,6 @@ function M.create_floating_window(opts)
 	}
 
 	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
-	vim.api.nvim_win_set_option(win_id, "winblend", 20)
 	vim.api.nvim_win_set_option(
 		win_id,
 		"winhighlight",
@@ -175,7 +174,6 @@ function M.create_bottom_overlay(opts)
 	local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
 
 	-- Set local options for "minimal" feel
-	vim.api.nvim_win_set_option(win_id, "winblend", 2)
 	vim.api.nvim_win_set_option(
 		win_id,
 		"winhighlight",

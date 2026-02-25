@@ -75,6 +75,10 @@ local lazy = {
     -- parse
     parse_args = "oz.util.parse_args",
 
+    -- ansi
+    setup_ansi_hls = "oz.util.ansi",
+    parse_ansi = "oz.util.ansi",
+
     -- tbl monitor
     start_monitoring = "oz.util.tbl_monitor",
     stop_monitoring = "oz.util.tbl_monitor",

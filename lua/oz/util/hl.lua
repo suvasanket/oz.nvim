@@ -10,10 +10,6 @@ M.oz_highlights = {
 	OzEchoDef = { fg = "#606060" },
 	OzCmdPrompt = { fg = "#757575" },
 	OzGitStatusHeading = { link = "Title" },
-
-    -- TODO: will update in log buffer rework
-	ozGitLogBranchName = { fg = "#A390F0" },
-	ozGitLogHead = { fg = "#A390F0", bold = true },
 }
 
 --- Set a highlight group once.
