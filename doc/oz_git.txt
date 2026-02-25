@@ -72,23 +72,41 @@ Keymaps:
     <Tab>       Show inline diffs or toggle section.
     s           Stage file or visual selection.
     u           Unstage file or visual selection.
-    X           Discard changes in file or selection (Hard reset for file).
-    K           Untrack file (removes from index but keeps on disk).
+    X           Discard changes in file or selection.
+    D           Untrack file (removes from index but keeps on disk).
     R           Rename file (triggers `git mv`).
-    c           Open Commit menu (amend, extend, reword, fixup, squash).
-    d           Open Diff menu (staged, unstaged, vs HEAD, vs branch).
-    b           Open Branch menu (checkout, new, delete, rename, upstream).
+    c           Open Commit menu (amend, extend, reword, fixup, squash, undo).
+    d           Open Diff menu (staged, unstaged, vs HEAD, vs branch, diffview).
+    b           Open Branch menu (checkout, new, delete, rename, upstream, copy).
     P           Open Push menu (to upstream, to remote, with force).
     p           Open Pull menu (from upstream, from remote, with rebase).
     f           Open Fetch menu (all, prune, tags).
-    Z           Open Stash menu (save, pop, apply, drop, snapshot).
+    z           Open Stash menu (save, pop, apply, drop, snapshot).
     r           Open Rebase menu (interactive, continue, skip, abort).
     m           Open Merge menu (branch, squash, abort).
-    U           Open Reset menu (soft, mixed, hard, keep).
-    w           Open Worktree menu (add, remove, move, lock).
-    x           Open Conflict menu (only visible during merge conflicts).
+    t           Open Tag menu (create, delete).
+    M           Open Remote menu (add, remove, rename, prune).
+    U           Open Reset menu (soft, mixed, hard, keep, ORIG_HEAD).
+    W           Open Worktree menu (add, remove, move, lock, visit).
+    B           Open Bisect menu (start, good, bad, reset).
+    A           Open Cherry-pick menu (cherry-pick, continue, abort).
+    C           Open Revert menu (revert, continue, abort).
+    x           Open Conflict menu (resolve, list, diffview).
+    I           Open reflog.
+    -           Populate command line with `:Git `.
+    <C-r>       Refresh status buffer.
+    q           Close status buffer.
+    <C-P>       "Pick" an object (file, branch, hash) for later use.
+    a, i        Edit picked objects in command line.
+    <C-S-P>     Discard all picked objects.
     gl          Open full commit log (|oz-git-log|).
     gL          Open log for object under cursor.
+    gu          Jump to Unstaged section.
+    gs          Jump to Staged section.
+    gU          Jump to Untracked section.
+    gz          Jump to Stash section.
+    gw          Jump to Worktree section.
+    gI          Add file under cursor to .gitignore.
     g?          Show all available keymaps.
 
 ==============================================================================
@@ -98,13 +116,25 @@ Opened via `:GitLog` or `gl` from the status buffer.
 
 Keymaps:
     <Enter>     Show commit details (`git show`).
+    <C-CR>      Checkout the commit under cursor.
     c           Open Commit Actions (squash, fixup, extend, amend).
     d           Open Diff Actions (vs commit, working, branch, stash).
     r           Open Rebase menu (interactive, continue, abort).
     R           Open Reset menu (soft, mixed, hard).
-    a           Open Cherry-pick menu.
-    v           Open Revert menu.
+    b           Open Switch menu (checkout, new branch).
+    a           Open Cherry-pick menu (cherry-pick, continue, abort).
+    v           Open Revert menu (revert, continue, abort).
+    I           Open reflog.
+    -           Populate command line with `:Git `.
+    <           Decrease log level.
+    >           Increase log level.
+    <C-r>       Refresh log buffer.
+    q           Close log buffer.
     <C-P>       "Pick" a hash to use in a future command (Magit-style picking).
+    a, i        Edit picked hashes in command line.
+    <C-S-P>     Discard all picked hashes.
+    gs          Go to Git status window.
+    g:          Add custom arguments to the log command.
     g?          Show all available keymaps.
 
 ==============================================================================

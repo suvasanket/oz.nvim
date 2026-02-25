@@ -41,6 +41,7 @@ In an oz-term buffer, the following keymaps are available by default:
                 is still active.
     r		Run the executed command in root of the project.
     e           Edit the command that was executed in this buffer.
+    g?          Show all available keymaps.
 
 Global mappings (must be configured in |oz-nvim-setup|):
     Term        Open a prompt to execute a shell command.

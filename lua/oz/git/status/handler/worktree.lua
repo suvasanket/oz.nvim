@@ -196,7 +196,7 @@ function M.setup_keymaps(buf, key_grp)
 		},
 	}
 
-	vim.keymap.set("n", "w", function()
+	vim.keymap.set("n", "W", function()
 		util.show_menu("Worktree Actions", options)
 	end, { buffer = buf, desc = "Worktree Actions", nowait = true, silent = true })
 end

@@ -2,8 +2,6 @@
 :G	oz_git.txt	/*:G*
 :GBlame	oz_git.txt	/*:GBlame*
 :GBrowse	oz_git.txt	/*:GBrowse*
-:Gcw	oz_git.txt	/*:Gcw*
-:Gcw	oz_git.txt	/*:Gcw*
 :Git	oz_git.txt	/*:Git*
 :GitLog	oz_git.txt	/*:GitLog*
 :Gr	oz_git.txt	/*:Gr*
@@ -14,11 +12,13 @@
 :Gwrite	oz_git.txt	/*:Gwrite*
 :Make	oz_make.txt	/*:Make*
 :Make!	oz_make.txt	/*:Make!*
+:MakeKill	oz_make.txt	/*:MakeKill*
 :Term	oz_term.txt	/*:Term*
 :Term!	oz_term.txt	/*:Term!*
 :TermClose	oz_term.txt	/*:TermClose*
 :TermToggle	oz_term.txt	/*:TermToggle*
 oz-git	oz-nvim.txt	/*oz-git*
+oz-git-api	oz_git.txt	/*oz-git-api*
 oz-git-commands	oz_git.txt	/*oz-git-commands*
 oz-git-config	oz_git.txt	/*oz-git-config*
 oz-git-intro	oz_git.txt	/*oz-git-intro*
@@ -31,8 +31,11 @@ oz-grep-intro	oz_grep.txt	/*oz-grep-intro*
 oz-make	oz-nvim.txt	/*oz-make*
 oz-make-commands	oz_make.txt	/*oz-make-commands*
 oz-make-config	oz_make.txt	/*oz-make-config*
+oz-make-efm	oz_make.txt	/*oz-make-efm*
 oz-make-intro	oz_make.txt	/*oz-make-intro*
 oz-make-keymaps	oz_make.txt	/*oz-make-keymaps*
+oz-make-out-win	oz_make.txt	/*oz-make-out-win*
+oz-make-transient	oz_make.txt	/*oz-make-transient*
 oz-nvim-contents	oz-nvim.txt	/*oz-nvim-contents*
 oz-nvim-credits	oz-nvim.txt	/*oz-nvim-credits*
 oz-nvim-install	oz-nvim.txt	/*oz-nvim-install*
@@ -49,6 +52,7 @@ oz-term-commands	oz_term.txt	/*oz-term-commands*
 oz-term-config	oz_term.txt	/*oz-term-config*
 oz-term-intro	oz_term.txt	/*oz-term-intro*
 oz-term-keymaps	oz_term.txt	/*oz-term-keymaps*
+oz.git.on_job_exit	oz_git.txt	/*oz.git.on_job_exit*
 oz_git.txt	oz_git.txt	/*oz_git.txt*
 oz_grep.txt	oz_grep.txt	/*oz_grep.txt*
 oz_make.txt	oz_make.txt	/*oz_make.txt*
