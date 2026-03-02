@@ -93,6 +93,19 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "f", cb = M.show_file_in_commit, desc = "Show file from commit under cursor" },
 			},
 		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git switch " .. flags .. " ")
+					end,
+					desc = "Switch (edit cmd)",
+				},
+			},
+		},
 	}
 
 	vim.keymap.set("n", "s", function()

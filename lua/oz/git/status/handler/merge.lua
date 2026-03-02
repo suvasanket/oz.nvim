@@ -61,14 +61,6 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "m", cb = M.merge_branch, desc = "Merge" },
 				{ key = "s", cb = M.squash_merge, desc = "Squash merge" },
 				{ key = "p", cb = M.preview_merge, desc = "Preview merge" },
-				{
-					key = " ",
-					cb = function(f)
-						local flags = f and table.concat(f, " ") or ""
-						util.set_cmdline("Git merge " .. flags .. " ")
-					end,
-					desc = "Merge (edit cmd)",
-				},
 			},
 		},
 		{
@@ -101,6 +93,14 @@ function M.setup_keymaps(buf, key_grp)
 						s_util.run_n_refresh("Git merge --quit")
 					end,
 					desc = "Quit",
+				},
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git merge " .. flags .. " ")
+					end,
+					desc = "Merge (edit cmd)",
 				},
 			},
 		},

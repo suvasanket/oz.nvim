@@ -10,35 +10,33 @@ function M.setup_keymaps(buf, key_grp)
 				{
 					key = "B",
 					cb = function()
-						s_util.run_n_refresh("Git bisect start")
+						s_util.run_n_refresh("Git! bisect start")
 					end,
 					desc = "Start",
 				},
 				{
 					key = "g",
 					cb = function()
-						s_util.run_n_refresh("Git bisect good")
+						s_util.run_n_refresh("Git! bisect good")
 					end,
 					desc = "Good",
 				},
 				{
 					key = "b",
 					cb = function()
-						s_util.run_n_refresh("Git bisect bad")
+						s_util.run_n_refresh("Git! bisect bad")
 					end,
 					desc = "Bad",
 				},
-				{
-					key = "r",
-					cb = function()
-						s_util.run_n_refresh("Git bisect reset")
-					end,
-					desc = "Reset",
-				},
+			},
+		},
+		{
+			title = "Actions",
+			items = {
                 {
 					key = "q",
 					cb = function()
-						s_util.run_n_refresh("Git bisect reset")
+						s_util.run_n_refresh("Git! bisect reset")
 					end,
 					desc = "Quit (Reset)",
 				},
@@ -46,7 +44,7 @@ function M.setup_keymaps(buf, key_grp)
 					key = " ",
 					cb = function(f)
 						local flags = f and table.concat(f, " ") or ""
-						util.set_cmdline("Git bisect " .. flags .. " ")
+						util.set_cmdline("Git! bisect " .. flags .. " ")
 					end,
 					desc = "Bisect (edit cmd)",
 				},

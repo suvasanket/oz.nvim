@@ -10,8 +10,7 @@ suggestions, and deep integration with Neovim's quickfix list.
 ==============================================================================
 COMMANDS                                                    *oz-term-commands*
 
-:Term [args]                                                *:Term*
-:Term! [args]                                               *:Term!*
+:Term[!] [args]                                                *:Term*
     Executes [args] in a new oz-term buffer.
     - If no [args] are provided, it opens a command wizard for selection.
     - Using `!` runs the command in the background (hidden).

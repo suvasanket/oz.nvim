@@ -137,7 +137,7 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 		{
-			title = "Native Diff",
+			title = "Diff",
 			items = {
 				{ key = "h", cb = M.file_history, desc = "File History / Stash Show" },
 				{ key = "d", cb = M.file_changes, desc = "File Changes (vs HEAD)" },
@@ -145,6 +145,11 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "r", cb = M.diff_range, desc = "Diff Range" },
 				{ key = "u", cb = M.diff_unstaged, desc = "Diff Unstaged" },
 				{ key = "s", cb = M.diff_staged, desc = "Diff Staged" },
+			},
+		},
+		{
+			title = "Actions",
+			items = {
 				{
 					key = " ",
 					cb = function(f)
@@ -158,36 +163,36 @@ function M.setup_keymaps(buf, key_grp)
 	}
 
 	if util.usercmd_exist("DiffviewOpen") or util.usercmd_exist("DiffviewFileHistory") then
-		table.insert(options, {
-			title = "Diffview",
-			items = {
-				{ key = "H", cb = M.dv_file_history, desc = "File History" },
-				{ key = "D", cb = M.dv_file_changes, desc = "File Changes" },
-				{ key = "J", cb = M.dv_diff, desc = "Diff LHS..RHS" },
-				{ key = "R", cb = M.dv_diff_range, desc = "Diff Range" },
-				{
-					key = "U",
-					cb = function()
-						vim.cmd("DiffviewOpen -uno")
-					end,
-					desc = "Diff Unstaged",
-				},
-				{
-					key = "S",
-					cb = function()
-						vim.cmd("DiffviewOpen --staged")
-					end,
-					desc = "Diff Staged",
-				},
-				{
-					key = " ",
-					cb = function()
-						util.set_cmdline("DiffviewOpen ")
-					end,
-					desc = "DiffviewOpen (cmdline)",
-				},
+		local dv_items = {
+			{ key = "H", cb = M.dv_file_history, desc = "File History" },
+			{ key = "D", cb = M.dv_file_changes, desc = "File Changes" },
+			{ key = "J", cb = M.dv_diff, desc = "Diff LHS..RHS" },
+			{ key = "R", cb = M.dv_diff_range, desc = "Diff Range" },
+			{
+				key = "U",
+				cb = function()
+					vim.cmd("DiffviewOpen -uno")
+				end,
+				desc = "Diff Unstaged",
 			},
-		})
+			{
+				key = "S",
+				cb = function()
+					vim.cmd("DiffviewOpen --staged")
+				end,
+				desc = "Diff Staged",
+			},
+			{
+				key = " ",
+				cb = function()
+					util.set_cmdline("DiffviewOpen ")
+				end,
+				desc = "DiffviewOpen (cmdline)",
+			},
+		}
+		for _, item in ipairs(dv_items) do
+			table.insert(options[2].items, item)
+		end
 	end
 
 	vim.keymap.set("n", "d", function()

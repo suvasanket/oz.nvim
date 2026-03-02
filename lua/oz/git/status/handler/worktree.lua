@@ -164,26 +164,21 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 		{
-			title = "Manage",
+			title = "Worktree",
 			items = {
 				{ key = "w", cb = M.add, desc = "Add new worktree" },
 				{ key = "d", cb = M.remove, desc = "Delete worktree" },
 				{ key = "m", cb = M.move, desc = "Move worktree" },
 				{ key = "g", cb = M.visit, desc = "Visit worktree" },
-			},
-		},
-		{
-			title = "Lock",
-			items = {
 				{ key = "l", cb = M.lock, desc = "Lock worktree" },
 				{ key = "u", cb = M.unlock, desc = "Unlock worktree" },
+				{ key = "p", cb = M.prune, desc = "Prune worktrees" },
+				{ key = "R", cb = M.repair, desc = "Repair worktrees" },
 			},
 		},
 		{
-			title = "Maintenance",
+			title = "Actions",
 			items = {
-				{ key = "p", cb = M.prune, desc = "Prune worktrees" },
-				{ key = "R", cb = M.repair, desc = "Repair worktrees" },
 				{
 					key = " ",
 					cb = function(f)

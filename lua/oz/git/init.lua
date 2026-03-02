@@ -4,16 +4,6 @@ local g_util = require("oz.git.util")
 local wizard = require("oz.git.wizard")
 local oz_git_win = require("oz.git.oz_git_win")
 
-local editor_req_cmds = {
-	"commit",
-	"commit --amend",
-	"tag -a",
-	"rebase -i",
-	"merge --no-commit",
-	"notes add",
-	"filter-branch",
-}
-
 M.user_config = nil
 M.running_git_jobs = {}
 M.state = {}
@@ -165,8 +155,9 @@ function M.cleanup_git_jobs(args)
 end
 
 --- Run Git cmd.
----@param args string
-function M.run_git_job(args)
+---@param args string arg string
+---@param stdout_buf boolean show stdout or not?
+function M.run_git_job(args, stdout_buf)
 	args = vim.fn.expandcmd(args)
 	local args_table = util.parse_args(args)
 
@@ -181,11 +172,9 @@ function M.run_git_job(args)
 	local current_job_env = job_env
 	local ipc_cleanup = nil
 
-	if util.str_in_tbl(args, editor_req_cmds) then
-		local env, cleanup = util.setup_ipc_env()
-		current_job_env = vim.tbl_extend("force", job_env, env)
-		ipc_cleanup = cleanup
-	end
+	local env, cleanup = util.setup_ipc_env()
+	current_job_env = vim.tbl_extend("force", job_env, env)
+	ipc_cleanup = cleanup
 
 	if vim.tbl_isempty(current_job_env) then
 		current_job_env = nil
@@ -196,6 +185,9 @@ function M.run_git_job(args)
 		stderr_buffered = true,
 		env = current_job_env,
 		on_stdout = function(_, data, _)
+			if not stdout_buf then
+				return
+			end
 			if data then
 				for _, line in ipairs(data) do
 					if line and line ~= "" then
@@ -221,7 +213,7 @@ function M.run_git_job(args)
 			end
 
 			M.running_git_jobs[args_table[1]] = nil
-			
+
 			-- refresh immediately
 			vim.schedule(function()
 				M.refresh_buf()

@@ -10,8 +10,8 @@ status window, commit logs, blame, browsing, and more.
 ==============================================================================
 COMMANDS                                                    *oz-git-commands*
 
-:Git [args]                                                 *:Git*
-:G [args]                                                   *:G*
+:Git[!] [args]                                                 *:Git*
+:G[!] [args]                                                   *:G*
     The primary Git command. When called without arguments, it opens the
     |oz-git-status| window.
     When called with arguments, it executes the corresponding git command
@@ -26,6 +26,7 @@ COMMANDS                                                    *oz-git-commands*
       commands like `push`, `pull`, `fetch`.
     - Integrated Editor: Commands that require an editor (like `commit` or
       `rebase -i`) will use the current Neovim instance.
+    - Bang support: Do not produces any stdout unless any error occured.
 
 :GitLog [args]                                              *:GitLog*
     Opens the |oz-git-log| window. Optional arguments are passed directly
@@ -70,6 +71,7 @@ Sections:
 Keymaps:
     <Enter>     Open file under cursor in a split.
     <Tab>       Show inline diffs or toggle section.
+    <Space>     In any menu: Populate command line with current flags and command.
     s           Stage file or visual selection.
     u           Unstage file or visual selection.
     X           Discard changes in file or selection.
@@ -82,14 +84,14 @@ Keymaps:
     p           Open Pull menu (from upstream, from remote, with rebase).
     f           Open Fetch menu (all, prune, tags).
     z           Open Stash menu (save, pop, apply, drop, snapshot).
-    r           Open Rebase menu (interactive, continue, skip, abort).
+    r           Open Rebase menu (unlocked during rebase).
     m           Open Merge menu (branch, squash, abort).
     t           Open Tag menu (create, delete).
     M           Open Remote menu (add, remove, rename, prune).
     U           Open Reset menu (soft, mixed, hard, keep, ORIG_HEAD).
     W           Open Worktree menu (add, remove, move, lock, visit).
     B           Open Bisect menu (start, good, bad, reset).
-    A           Open Cherry-pick menu (cherry-pick, continue, abort).
+    Y           Open Cherry-pick menu (unlocked during cherry-pick).
     C           Open Revert menu (revert, continue, abort).
     x           Open Conflict menu (resolve, list, diffview).
     I           Open reflog.
@@ -99,7 +101,7 @@ Keymaps:
     <C-P>       "Pick" an object (file, branch, hash) for later use.
     a, i        Edit picked objects in command line.
     <C-S-P>     Discard all picked objects.
-    gl          Open full commit log (|oz-git-log|).
+    gl          Open commit log for current branch.
     gL          Open log for object under cursor.
     gu          Jump to Unstaged section.
     gs          Jump to Staged section.
@@ -117,12 +119,13 @@ Opened via `:GitLog` or `gl` from the status buffer.
 Keymaps:
     <Enter>     Show commit details (`git show`).
     <C-CR>      Checkout the commit under cursor.
+    <Space>     In any menu: Populate command line with current flags and command.
     c           Open Commit Actions (squash, fixup, extend, amend).
     d           Open Diff Actions (vs commit, working, branch, stash).
     r           Open Rebase menu (interactive, continue, abort).
     R           Open Reset menu (soft, mixed, hard).
     b           Open Switch menu (checkout, new branch).
-    a           Open Cherry-pick menu (cherry-pick, continue, abort).
+    Y           Open Cherry-pick menu (cherry-pick, paste, clear, etc.).
     v           Open Revert menu (revert, continue, abort).
     I           Open reflog.
     -           Populate command line with `:Git `.
@@ -134,7 +137,7 @@ Keymaps:
     a, i        Edit picked hashes in command line.
     <C-S-P>     Discard all picked hashes.
     gs          Go to Git status window.
-    g:          Add custom arguments to the log command.
+    <C-g>       Pick log context (branch, tag, custom args).
     g?          Show all available keymaps.
 
 ==============================================================================

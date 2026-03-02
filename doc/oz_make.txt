@@ -10,8 +10,7 @@ per-project `makeprg` caching, and an automatic "AutoMake" feature.
 ==============================================================================
 COMMANDS                                                    *oz-make-commands*
 
-:Make [args]                                                *:Make*
-:Make! [args]                                               *:Make!*
+:Make[!] [args]                                                *:Make*
     Asynchronously executes the `makeprg`.
     - By default, runs from the project root.
     - Using `!` runs from the current working directory.

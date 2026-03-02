@@ -10,8 +10,7 @@ falling back to `grep`.
 ==============================================================================
 COMMANDS                                                    *oz-grep-commands*
 
-:Grep [args]                                                *:Grep*
-:Grep! [args]                                               *:Grep!*
+:Grep[!] [args]                                                *:Grep*
     Asynchronously searches for a pattern.
     - By default, searches from the project root.
     - Using `!` explicitly searches in the current working directory.

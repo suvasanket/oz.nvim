@@ -31,7 +31,7 @@ end
 
 function M.conflict_three_way()
 	-- Close status window first as we are opening a tab
-	vim.cmd("close")
+	util.win_close()
 	require("oz.git.diff").resolve_three_way()
 end
 
@@ -42,6 +42,19 @@ function M.setup_keymaps(buf)
 			items = {
 				{ key = "o", cb = M.conflict_three_way, desc = "Start 3-way merge resolution" },
 				{ key = "l", cb = M.list_conflicts, desc = "List conflicted files" },
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git merge " .. flags .. " ")
+					end,
+					desc = "Merge (edit cmd)",
+				},
 			},
 		},
 	}

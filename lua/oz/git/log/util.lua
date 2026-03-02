@@ -3,7 +3,7 @@ local util = require("oz.util")
 local git = require("oz.git")
 
 local op_to_marker = {
-	bisect = "B",
+	bisect = ">",
 	["cherry-pick"] = "C",
 	merge = "M",
 	rebase = "R",
@@ -39,6 +39,7 @@ function M.clear_all_picked()
 	end
 
 	vim.api.nvim_echo({ { "" } }, false, {})
+	log.refresh_buf(true)
 end
 
 -- Execute callback with current commit hash
@@ -88,7 +89,9 @@ function M.apply_log_highlights(buf_id, raw_lines, git_state, log_win)
 	vim.api.nvim_set_hl(0, "OzGitLogRef", { fg = sl_bg, bg = sl_bg })
 
 	local marker = git_state and op_to_marker[git_state.operation] or nil
-	local marker_width = marker and 2 or 0
+	local grab_hashs = require("oz.git.log").grab_hashs
+	local is_bisecting = git_state and git_state.operation == "bisect"
+	local marker_width = (marker or is_bisecting or #grab_hashs > 0) and 2 or 0
 
 	-- Set Winbar if operation is active
 	if marker and log_win and vim.api.nvim_win_is_valid(log_win) then
@@ -124,12 +127,41 @@ function M.apply_log_highlights(buf_id, raw_lines, git_state, log_win)
 			local graph = prefix:gsub("[+=<>%-]", "")
 
 			local final_marker = " "
-			if git_state and git_state.operation == "bisect" and decor:find("bisect/") then
-				final_marker = "B"
-			elseif git_state and git_state.hash and sha:find("^" .. git_state.hash) then
-				final_marker = marker or " "
-			elseif marker_char == "=" then
-				final_marker = "C"
+			local marker_hl = "OzActive"
+
+			if git_state and git_state.operation == "bisect" then
+				local b_marker = git_state.bisect_map and git_state.bisect_map[sha:sub(1, 7)]
+				if b_marker == "B" then
+					final_marker = "B"
+					marker_hl = "DiagnosticError"
+				elseif b_marker == "G" then
+					final_marker = "G"
+					marker_hl = "DiagnosticOk"
+				elseif b_marker == "S" then
+					final_marker = "S"
+                    marker_hl = "DiagnosticInfo"
+				elseif git_state.hash and sha:find("^" .. git_state.hash) then
+					final_marker = ">"
+					marker_hl = "OzActive"
+				end
+			end
+
+			if final_marker == " " then
+				if git_state and git_state.hash and sha:find("^" .. git_state.hash) then
+					final_marker = marker or ">"
+					marker_hl = "OzActive"
+				elseif marker_char == "=" then
+					final_marker = "C"
+					marker_hl = "OzActive"
+				end
+			end
+
+			for _, h in ipairs(grab_hashs) do
+				if h:find("^" .. sha) or sha:find("^" .. h) then
+					final_marker = "C"
+					marker_hl = "OzActive"
+					break
+				end
 			end
 
 			local padded_sha = sha .. string.rep(" ", math.max(0, sha_width - #sha))
@@ -167,7 +199,7 @@ function M.apply_log_highlights(buf_id, raw_lines, git_state, log_win)
 			end
 			table.insert(final_highlights, { line_idx, marker_width, marker_width + #sha, "OzEchoDef", 120 })
 			if marker_width > 0 and final_marker ~= " " then
-				table.insert(final_highlights, { line_idx, 0, 1, "OzActive", 160 })
+				table.insert(final_highlights, { line_idx, 0, 1, marker_hl, 160 })
 			end
 			if b_s then table.insert(final_highlights, { line_idx, b_s, b_e, "OzGitLogRef", 140 }) end
 		else

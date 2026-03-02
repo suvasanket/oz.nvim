@@ -33,12 +33,25 @@ end
 function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
-			title = "Reset Actions",
+			title = "Reset",
 			items = {
 				{ key = "U", cb = M.handle_reset, desc = "Reset commit" },
 				{ key = "s", cb = M.soft, desc = "Reset commit(--soft)" },
 				{ key = "m", cb = M.mixed, desc = "Reset commit(--mixed)" },
 				{ key = "h", cb = M.hard, desc = "Reset commit(--hard)" },
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git reset " .. flags .. " ")
+					end,
+					desc = "Reset (edit cmd)",
+				},
 			},
 		},
 	}

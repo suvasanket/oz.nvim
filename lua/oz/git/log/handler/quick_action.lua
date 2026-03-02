@@ -15,19 +15,17 @@ local buf_id = nil
 
 function M.quit()
 	vim.api.nvim_echo({ { "" } }, false, {})
-	if not pcall(vim.cmd.close) then
-		vim.cmd.blast()
-	end
+    util.win_close()
 end
 
 function M.increase_log()
-	vim.cmd("close")
+	util.win_close()
 	log.log_level = (log.log_level % 3) + 1
 	commit_log({ level = log.log_level, from = log.comming_from })
 end
 
 function M.decrease_log()
-	vim.cmd("close")
+	util.win_close()
 	local log_levels = { [1] = 3, [2] = 1, [3] = 2 }
 	log.log_level = log_levels[log.log_level]
 	commit_log({ level = log.log_level, from = log.comming_from })
@@ -35,7 +33,7 @@ end
 
 function M.go_back()
 	if log.comming_from then
-		vim.cmd("close")
+		util.win_close()
 		vim.cmd(log.comming_from)
 	end
 end
@@ -120,13 +118,43 @@ end
 function M.add_args()
 	local input = util.UserInput("args:")
 	if input then
-		vim.cmd("close")
+		util.win_close()
 		commit_log({ level = 1 }, { input })
 	end
 end
 
+function M.log_context_picker()
+	local g_util = require("oz.util.git")
+	local branches = g_util.get_branch()
+	local tags = util.shellout_tbl("git tag")
+
+	local all_options = { "--all", "HEAD" }
+	for _, b in ipairs(branches) do
+		table.insert(all_options, b)
+	end
+	for _, t in ipairs(tags) do
+		table.insert(all_options, t)
+	end
+	table.insert(all_options, "Custom...")
+
+	util.pick(all_options, {
+		title = "Log Context",
+		on_select = function(choice)
+			if not choice then
+				return
+			end
+			if choice == "Custom..." then
+				M.add_args()
+			else
+				util.win_close()
+				commit_log({ level = log.log_level, from = log.comming_from }, { choice })
+			end
+		end,
+	})
+end
+
 function M.go_status()
-	vim.cmd("close")
+    util.win_close()
 	vim.cmd("Git")
 end
 
@@ -145,18 +173,19 @@ function M.setup_keymaps(buf, key_grp)
 	vim.keymap.set("n", "I", M.reflog, { buffer = buf, desc = "Open reflog", silent = true })
 	-- refresh
 	vim.keymap.set("n", "<C-r>", M.refresh, { buffer = buf, desc = "Refresh commit log buffer.", silent = true })
+	-- log context picker
+	vim.keymap.set("n", "<C-g>", M.log_context_picker, { buffer = buf, desc = "Pick log context.", silent = true })
 	-- show current hash
-	vim.keymap.set({ "n", "x" }, "<cr>", M.show_hash, { buffer = buf, desc = "Show current commit under cursor. <*>", silent = true })
+	vim.keymap.set({ "n", "x" }, "<cr>", M.show_hash, { buffer = buf, desc = "Show commit", silent = true })
 	-- check out to a commit
-	vim.keymap.set("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout to the commit under cursor. <*>", silent = true })
-	key_grp["quick actions"] = { "[", "]", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "q" }
+	vim.keymap.set("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout commit", silent = true })
+	key_grp["quick actions"] = { "[", "]", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "<C-G>", "q" }
 
 	-- goto mappings
 	local g_options = {
 		{
 			title = "Goto",
 			items = {
-				{ key = ":", cb = M.add_args, desc = "Add args to log command" },
 				{ key = "s", cb = M.go_status, desc = "Go to git status buffer" },
 				{
 					key = "g",
@@ -174,7 +203,7 @@ function M.setup_keymaps(buf, key_grp)
 							no_empty = true,
 						})
 					end,
-					desc = "Show all available keymaps",
+					desc = "Show all keymaps",
 				},
 			},
 		},
@@ -189,14 +218,14 @@ function M.setup_keymaps(buf, key_grp)
 		"n",
 		user_mappings.toggle_pick,
 		M.toggle_pick,
-		{ buffer = buf, desc = "Pick or unpick any hash under cursor. <*>", silent = true }
+		{ buffer = buf, desc = "Pick/unpick hash", silent = true }
 	)
 
 	-- edit picked
-	util.Map("n", { "a", "i" }, M.edit_picked, { buffer = buf, desc = "Enter cmdline to edit picked hashes." })
+	util.Map("n", { "a", "i" }, M.edit_picked, { buffer = buf, desc = "Edit picked" })
 
 	-- discard picked
-	vim.keymap.set("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard any picked hashes.", silent = true })
+	vim.keymap.set("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard picked", silent = true })
 	key_grp["pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
 end
 

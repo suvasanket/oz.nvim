@@ -3,14 +3,15 @@ local util = require("oz.util")
 local s_util = require("oz.git.status.util")
 
 function M.log()
-	-- vim.cmd("close") -- Close status window before opening log
-	require("oz.git.log").commit_log({ level = 1, from = "Git", win_type = "current" })
+	-- util.win_close() -- Close status window before opening log
+	local current_branch = require("oz.git.status").state.current_branch
+	require("oz.git.log").commit_log({ level = 1, from = "Git", win_type = "current" }, { current_branch })
 end
 
 function M.log_context()
 	local branch = s_util.get_branch_under_cursor()
 	local file = s_util.get_file_under_cursor(true)
-	vim.cmd("close")
+	util.win_close()
 	if branch then
 		require("oz.git.log").commit_log({ level = 1, from = "Git" }, { branch })
 	elseif #file > 0 then

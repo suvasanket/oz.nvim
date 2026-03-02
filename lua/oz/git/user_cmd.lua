@@ -17,14 +17,18 @@ end
 local function handle_g(opts)
 	if g_util.if_in_git() then
 		if opts.args and #opts.args > 0 then
-			main.run_git_job(opts.args)
+			if opts.bang then
+				main.run_git_job(opts.args, false)
+			else
+				main.run_git_job(opts.args, true)
+			end
 		else
 			require("oz.git.status").GitStatus()
 			util.setup_hls({ "OzEchoDef" })
 			vim.api.nvim_echo({ { "press g? to see all available keymaps.", "OzEchoDef" } }, false, {})
 		end
 	elseif opts.args and (opts.args:find("init") or opts.args:find("clone")) then
-		main.run_git_job(opts.args)
+		main.run_git_job(opts.args, true)
 	else
 		util.Notify("You are not in a git repo. Try :Git init", "warn", "oz_git")
 	end
@@ -145,6 +149,7 @@ function M.init()
 	end, {
 		nargs = "*",
 		desc = "oz_git",
+		bang = true,
 		complete = function(arglead, cmdline, cursorpos)
 			return require("oz.git.complete").complete(arglead, cmdline, cursorpos)
 		end,

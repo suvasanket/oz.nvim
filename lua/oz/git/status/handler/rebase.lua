@@ -31,6 +31,26 @@ function M.rebase_interactive(flags)
 	})
 end
 
+function M.rebase_cursor(flags)
+	local branch = s_util.get_branch_under_cursor()
+	if not branch then
+		util.Notify("Cursor not on a branch.", "warn", "oz_git")
+		return
+	end
+	local flag_str = (flags and #flags > 0) and (" " .. table.concat(flags, " ")) or ""
+	s_util.run_n_refresh(string.format("Git rebase%s %s", flag_str, branch))
+end
+
+function M.rebase_interactive_cursor(flags)
+	local branch = s_util.get_branch_under_cursor()
+	if not branch then
+		util.Notify("Cursor not on a branch.", "warn", "oz_git")
+		return
+	end
+	local flag_str = (flags and #flags > 0) and (" " .. table.concat(flags, " ")) or ""
+	s_util.run_n_refresh(string.format("Git rebase -i%s %s", flag_str, branch))
+end
+
 function M.setup_keymaps(buf, key_grp)
 	local r_opts = {
 		{
@@ -38,24 +58,19 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "-k", name = "--keep-base", type = "switch", desc = "Keep base" },
 				{ key = "-a", name = "--autosquash", type = "switch", desc = "Autosquash" },
-				{ key = "-S", name = "--autostash", type = "switch", desc = "Autostash" },
+				{ key = "-S", name = "--autostash", type = "switch", desc = "Autostash", default = true },
 				{ key = "-i", name = "--interactive", type = "switch", desc = "Interactive" },
-				{ key = "-p", name = "--preserve-merges", type = "switch", desc = "Preserve merges" }, -- Deprecated in newer git but still useful
+				{ key = "-o", name = "--onto", type = "switch", desc = "Onto" },
+				{ key = "-n", name = "--no-verify", type = "switch", desc = "No verify" },
 			},
 		},
 		{
 			title = "Rebase",
 			items = {
 				{ key = "r", cb = M.rebase_branch, desc = "Rebase on..." },
-				{ key = "i", cb = M.rebase_interactive, desc = "Interactive" },
-				{
-					key = " ",
-					cb = function(f)
-						local flags = f and table.concat(f, " ") or ""
-						util.set_cmdline("Git rebase " .. flags .. " ")
-					end,
-					desc = "Rebase (edit cmd)",
-				},
+				{ key = "i", cb = M.rebase_interactive, desc = "Interactive on..." },
+				{ key = "R", cb = M.rebase_cursor, desc = "Rebase on Cursor <*>" },
+				{ key = "I", cb = M.rebase_interactive_cursor, desc = "Interactive on Cursor <*>" },
 			},
 		},
 		{
@@ -102,6 +117,14 @@ function M.setup_keymaps(buf, key_grp)
 						s_util.run_n_refresh("Git rebase --edit-todo")
 					end,
 					desc = "Edit todo",
+				},
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git rebase " .. flags .. " ")
+					end,
+					desc = "Rebase (edit cmd)",
 				},
 			},
 		},

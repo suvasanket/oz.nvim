@@ -31,21 +31,13 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "-n", name = "--no-commit", type = "switch", desc = "No commit" },
 				{ key = "-s", name = "--signoff", type = "switch", desc = "Signoff" },
+				{ key = "-e", name = "--edit", type = "switch", desc = "Edit" },
 			},
 		},
 		{
 			title = "Revert",
 			items = {
-				{ key = "v", cb = M.revert, desc = "Revert" },
-				{ key = "V", cb = M.revert, desc = "Revert" },
-				{
-					key = " ",
-					cb = function(f)
-						local flags = f and table.concat(f, " ") or ""
-						util.set_cmdline("Git revert " .. flags .. " ")
-					end,
-					desc = "Revert (edit cmd)",
-				},
+				{ key = "C", cb = M.revert, desc = "Revert" },
 			},
 		},
 		{
@@ -79,17 +71,24 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Abort",
 				},
-                {
+				{
 					key = "Q",
 					cb = function()
 						s_util.run_n_refresh("Git revert --quit")
 					end,
 					desc = "Quit",
 				},
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git revert " .. flags .. " ")
+					end,
+					desc = "Revert (edit cmd)",
+				},
 			},
 		},
 	}
-
 	vim.keymap.set("n", "C", function()
 		util.show_menu("Revert Actions", options)
 	end, { buffer = buf, desc = "Revert Actions", nowait = true, silent = true })

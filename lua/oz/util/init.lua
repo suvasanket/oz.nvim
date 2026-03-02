@@ -39,6 +39,7 @@ local lazy = {
     generate_unique_id = "oz.util.misc",
     Map = "oz.util.misc",
     exit_visual = "oz.util.misc",
+    win_close = "oz.util.misc",
 
     -- oz.util.editor
     setup_ipc_env = "oz.util.editor",

@@ -97,4 +97,11 @@ function M.exit_visual()
     end
 end
 
+-- safe win close
+function M.win_close()
+    if not pcall(vim.cmd.close) then
+        vim.cmd.bd()
+    end
+end
+
 return M

@@ -1,11 +1,16 @@
 local M = {}
 local util = require("oz.util")
-local s_util = require("oz.git.status.util")
+local log_util = require("oz.git.log.util")
 
 function M.create()
+	local hash = log_util.get_selected_hash()
 	local tag_name = util.UserInput("Tag Name:")
 	if tag_name and tag_name ~= "" then
-		s_util.run_n_refresh("Git tag " .. tag_name)
+		local cmd = "Git tag " .. tag_name
+		if #hash > 0 then
+			cmd = cmd .. " " .. hash[1]
+		end
+		log_util.run_n_refresh(cmd)
 	end
 end
 
@@ -15,7 +20,7 @@ function M.delete()
 		title = "Delete tag",
 		on_select = function(choice)
 			if choice then
-				s_util.run_n_refresh("Git tag -d " .. choice)
+				log_util.run_n_refresh("Git tag -d " .. choice)
 			end
 		end,
 	})
@@ -45,7 +50,12 @@ function M.setup_keymaps(buf, key_grp)
 					key = " ",
 					cb = function(f)
 						local flags = f and table.concat(f, " ") or ""
-						util.set_cmdline("Git tag " .. flags .. " ")
+						local hash = log_util.get_selected_hash()
+						local cmd = "Git tag " .. flags .. " "
+						if #hash > 0 then
+							cmd = cmd .. " " .. hash[1]
+						end
+						util.set_cmdline(cmd)
 					end,
 					desc = "Tag (edit cmd)",
 				},

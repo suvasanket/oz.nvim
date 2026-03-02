@@ -55,13 +55,26 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 		{
-			title = "Commit Actions",
+			title = "Commit",
 			items = {
 				{ key = "s", cb = M.squash, desc = "Create commit with commit under cursor(--squash)" },
 				{ key = "f", cb = M.fixup, desc = "Create commit with commit under cursor(--fixup)" },
 				{ key = "c", cb = M.commit, desc = "Populate cmdline with Git commit followed by current hash" },
 				{ key = "e", cb = M.extend, desc = "Create commit & reuse message from commit under cursor" },
 				{ key = "a", cb = M.amend, desc = "Create commit & edit message from commit under cursor" },
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git commit " .. flags .. " ")
+					end,
+					desc = "Commit (edit cmd)",
+				},
 			},
 		},
 	}

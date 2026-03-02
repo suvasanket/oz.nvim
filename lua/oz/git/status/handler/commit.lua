@@ -71,6 +71,11 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Commit",
 			items = {
 				{ key = "c", cb = M.create, desc = "Create a commit" },
+			},
+		},
+		{
+			title = "Actions",
+			items = {
 				{
 					key = " ",
 					cb = function(f)

@@ -13,21 +13,28 @@ function M.keymaps_init(buf)
 	handle.commit.setup_keymaps(buf, key_grp)
 	handle.diff.setup_keymaps(buf, key_grp)
 	handle.merge.setup_keymaps(buf, key_grp)
-	handle.rebase.setup_keymaps(buf, key_grp)
 	handle.revert.setup_keymaps(buf, key_grp)
-	handle.cherry_pick.setup_keymaps(buf, key_grp)
 	handle.bisect.setup_keymaps(buf, key_grp)
 	handle.tag.setup_keymaps(buf, key_grp)
 	handle.pick.setup_keymaps(buf, key_grp)
 	handle.remote.setup_keymaps(buf, key_grp)
 	handle.push.setup_keymaps(buf, key_grp)
 	handle.pull.setup_keymaps(buf, key_grp)
-	handle.fetch.setup_keymaps(buf, key_grp)
 	handle.branch.setup_keymaps(buf, key_grp)
 	handle.worktree.setup_keymaps(buf, key_grp)
-	if require("oz.git.status").state.in_conflict then
+	handle.rebase.setup_keymaps(buf, key_grp)
+	handle.cherry_pick.setup_keymaps(buf, key_grp)
+
+	local state = require("oz.git.status").state
+	if state.in_rebase then
+		vim.notify_once("Rebase actions unlocked press 'r'")
+	end
+	if state.in_cherry_pick then
+		vim.notify_once("Cherry-pick actions unlocked press 'Y'")
+	end
+	if state.in_conflict then
 		handle.conflict.setup_keymaps(buf)
-        vim.notify_once("Conflict-Resolution mappings unlocked press 'x'")
+		vim.notify_once("Conflict-Resolution mappings unlocked press 'x'")
 	end
 end
 

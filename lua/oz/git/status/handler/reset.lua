@@ -68,11 +68,6 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Keep (safe)",
 				},
-			},
-		},
-		{
-			title = "Utilities",
-			items = {
 				{ key = "p", cb = M.undo_orig_head, desc = "Reset to ORIG_HEAD" },
 				{
 					key = "f",
@@ -81,6 +76,11 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Reset file/HEAD (Mixed)",
 				},
+			},
+		},
+		{
+			title = "Actions",
+			items = {
 				{
 					key = " ",
 					cb = function(f)

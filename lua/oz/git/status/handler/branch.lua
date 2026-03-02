@@ -10,7 +10,7 @@ function M.cc()
 		title = "Switch branch",
 		on_select = function(choice)
 			if choice then
-				s_util.run_n_refresh("Git switch " .. choice)
+				s_util.run_n_refresh("Git! switch " .. choice)
 			end
 		end,
 	})
@@ -22,7 +22,7 @@ function M.checkout_local()
 		title = "Checkout branch",
 		on_select = function(choice)
 			if choice then
-				s_util.run_n_refresh("Git switch " .. choice)
+				s_util.run_n_refresh("Git! switch " .. choice)
 			end
 		end,
 	})
@@ -213,7 +213,7 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 		{
-			title = "Custom",
+			title = "Actions",
 			items = {
 				{
 					key = " ",

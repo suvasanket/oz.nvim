@@ -1,6 +1,6 @@
 local M = {}
 local util = require("oz.util")
-local s_util = require("oz.git.status.util")
+local log_util = require("oz.git.log.util")
 
 -- Helper to construct args
 local function get_args(flags)
@@ -12,7 +12,7 @@ end
 
 function M.fetch_cmd(flags)
 	local args = get_args(flags)
-	s_util.run_n_refresh("Git fetch" .. args)
+	log_util.run_n_refresh("Git fetch" .. args)
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -34,7 +34,7 @@ function M.setup_keymaps(buf, key_grp)
 				{
 					key = "a",
 					cb = function(f)
-						s_util.run_n_refresh("Git fetch --all" .. get_args(f))
+						log_util.run_n_refresh("Git fetch --all" .. get_args(f))
 					end,
 					desc = "Fetch all",
 				},

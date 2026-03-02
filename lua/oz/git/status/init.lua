@@ -33,12 +33,17 @@ M.state = {
 	worktree_map = {},
 	info_lines = {},
 	in_conflict = false,
+	in_cherry_pick = false,
+	in_rebase = false,
 	line_map = {},
 }
 
 local function generate_status_info(current_branch, in_conflict)
 	local info = {}
 	local root_path = g_util.get_project_root()
+
+	M.state.in_cherry_pick = false
+	M.state.in_rebase = false
 
 	local ok, git_dir_res = util.run_command({ "git", "rev-parse", "--git-dir" }, root_path)
 	if ok and git_dir_res[1] then
@@ -54,6 +59,7 @@ local function generate_status_info(current_branch, in_conflict)
 
 		if vim.fn.filereadable(git_dir .. "/CHERRY_PICK_HEAD") == 1 then
 			table.insert(info, "[!] Cherry-picking")
+			M.state.in_cherry_pick = true
 		end
 
 		if vim.fn.filereadable(git_dir .. "/REVERT_HEAD") == 1 then
@@ -65,6 +71,7 @@ local function generate_status_info(current_branch, in_conflict)
 			or vim.fn.isdirectory(git_dir .. "/rebase-apply") == 1
 		then
 			table.insert(info, "[!] Rebasing")
+			M.state.in_rebase = true
 		end
 
 		if vim.fn.filereadable(git_dir .. "/BISECT_LOG") == 1 then

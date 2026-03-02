@@ -98,7 +98,7 @@ end
 function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
-			title = "Native Diff",
+			title = "Diff",
 			items = {
 				{ key = "d", cb = M.diff_commit, desc = "Diff Commit (Show)" },
 				{ key = "w", cb = M.diff_working, desc = "Diff Working Tree vs Commit" },
@@ -107,16 +107,29 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "p", cb = M.diff_range, desc = "Diff Range (Pick 2)" },
 			},
 		},
+		{
+			title = "Actions",
+			items = {
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git diff " .. flags .. " ")
+					end,
+					desc = "Diff (edit cmd)",
+				},
+			},
+		},
 	}
 
 	if util.usercmd_exist("DiffviewOpen") then
-		table.insert(options, {
-			title = "Diffview",
-			items = {
-				{ key = "D", cb = M.dv_open, desc = "Open Diffview (Working)" },
-				{ key = "C", cb = M.dv_commit, desc = "Open Diffview (Commit)" },
-			},
-		})
+		local dv_items = {
+			{ key = "D", cb = M.dv_open, desc = "Open Diffview (Working)" },
+			{ key = "C", cb = M.dv_commit, desc = "Open Diffview (Commit)" },
+		}
+		for _, item in ipairs(dv_items) do
+			table.insert(options[1].items, item)
+		end
 	end
 
 	vim.keymap.set("n", "d", function()

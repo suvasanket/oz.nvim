@@ -34,38 +34,31 @@ function M.handle_revert(flags)
 		end
 	end
 	if str then
-		util.set_cmdline("Git revert" .. args .. " " .. str)
+        run_n_refresh("Git! revert" .. args .. " " .. str)
 	end
 end
 
 function M.edit()
-    local hash = get_selected_hash()
-    if #hash == 1 then
-        run_n_refresh("Git revert --edit " .. hash[1])
-    end
-end
-
-function M.no_edit()
-    local hash = get_selected_hash()
-    if #hash == 1 then
-        run_n_refresh("Git revert --no-edit " .. hash[1])
-    end
+	local hash = get_selected_hash()
+	if #hash == 1 then
+		run_n_refresh("Git revert --edit " .. hash[1])
+	end
 end
 
 function M.continue()
-    run_n_refresh("Git revert --continue")
+	run_n_refresh("Git revert --continue")
 end
 
 function M.skip()
-    run_n_refresh("Git revert --skip")
+	run_n_refresh("Git revert --skip")
 end
 
 function M.quit()
-    run_n_refresh("Git revert --quit")
+	run_n_refresh("Git revert --quit")
 end
 
 function M.abort()
-    run_n_refresh("Git revert --abort")
+	run_n_refresh("Git revert --abort")
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -78,24 +71,34 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 		{
-			title = "Revert Actions",
+			title = "Revert",
 			items = {
-				{ key = "u", cb = M.handle_revert, desc = "Revert selection or current commit" },
-				{ key = "i", cb = M.edit, desc = "Revert commit with edit" },
-				{ key = "e", cb = M.no_edit, desc = "Revert commit with no-edit" },
+				{ key = "C", cb = M.handle_revert, desc = "Revert selection or current commit" },
+				{ key = "w", cb = M.edit, desc = "Revert commit with edit" },
+			},
+		},
+		{
+			title = "Actions",
+			items = {
 				{ key = "l", cb = M.continue, desc = "Revert continue" },
 				{ key = "k", cb = M.skip, desc = "Revert skip" },
 				{ key = "Q", cb = M.quit, desc = "Revert quit" },
 				{ key = "q", cb = M.abort, desc = "Revert abort" },
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git revert " .. flags .. " ")
+					end,
+					desc = "Revert (edit cmd)",
+				},
 			},
 		},
 	}
 
-	vim.keymap.set("n", "C", function()
+	vim.keymap.set({ "n", "x" }, "C", function()
 		util.show_menu("Revert Actions", options)
 	end, { buffer = buf, desc = "Revert Actions", nowait = true, silent = true })
-
-	vim.keymap.set("x", "C", M.handle_revert, { buffer = buf, desc = "Revert selection", silent = true })
 end
 
 return M

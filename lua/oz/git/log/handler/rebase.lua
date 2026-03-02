@@ -23,26 +23,26 @@ function M.interactive(flags)
 end
 
 function M.pick()
-    local current_hash = get_selected_hash()
-    if #current_hash == 1 then
-        util.set_cmdline("Git rebase| " .. current_hash[1])
-    end
+	local current_hash = get_selected_hash()
+	if #current_hash == 1 then
+		util.set_cmdline("Git rebase| " .. current_hash[1])
+	end
 end
 
 function M.continue()
-    run_n_refresh("Git rebase --continue")
+	run_n_refresh("Git rebase --continue")
 end
 
 function M.abort()
-    run_n_refresh("Git rebase --abort")
+	run_n_refresh("Git rebase --abort")
 end
 
 function M.quit()
-    run_n_refresh("Git rebase --quit")
+	run_n_refresh("Git rebase --quit")
 end
 
 function M.skip()
-    run_n_refresh("Git rebase --skip")
+	run_n_refresh("Git rebase --skip")
 end
 
 function M.autosquash(flags)
@@ -54,7 +54,7 @@ function M.autosquash(flags)
 end
 
 function M.edit_todo()
-    run_n_refresh("Git rebase --edit-todo")
+	run_n_refresh("Git rebase --edit-todo")
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -68,16 +68,33 @@ function M.setup_keymaps(buf, key_grp)
 			},
 		},
 		{
-			title = "Rebase Actions",
+			title = "Rebase",
 			items = {
 				{ key = "i", cb = M.interactive, desc = "Start interactive rebase including commit under cursor" },
 				{ key = "r", cb = M.pick, desc = "Rebase with commit under cursor" },
-				{ key = "l", cb = M.continue, desc = "Rebase continue" },
+				{
+					key = "o",
+					cb = M.autosquash,
+					desc = "Start interactive rebase with commit under cursor(--autosquash)",
+				},
+			},
+		},
+		{
+			title = "Actions",
+			items = {
+                { key = "l", cb = M.continue, desc = "Rebase continue" },
 				{ key = "q", cb = M.abort, desc = "Rebase abort" },
 				{ key = "Q", cb = M.quit, desc = "Rebase quit" },
 				{ key = "k", cb = M.skip, desc = "Rebase skip" },
-				{ key = "o", cb = M.autosquash, desc = "Start interactive rebase with commit under cursor(--autosquash)" },
-				{ key = "e", cb = M.edit_todo, desc = "Rebase edit todo" },
+                { key = "e", cb = M.edit_todo, desc = "Rebase edit todo" },
+				{
+					key = " ",
+					cb = function(f)
+						local flags = f and table.concat(f, " ") or ""
+						util.set_cmdline("Git rebase " .. flags .. " ")
+					end,
+					desc = "Rebase (edit cmd)",
+				},
 			},
 		},
 	}

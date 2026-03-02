@@ -100,6 +100,11 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Stash index",
 				}, -- Usually means stash but keep index?
+			},
+		},
+		{
+			title = "Actions",
+			items = {
 				{
 					key = " ",
 					cb = function(f)

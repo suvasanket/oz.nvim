@@ -1,9 +1,6 @@
 local M = {}
-local status = require("oz.git.status")
 local util = require("oz.util")
-local s_util = require("oz.git.status.util")
-
-local state = status.state
+local log_util = require("oz.git.log.util")
 
 -- Helper to construct args
 local function get_args(flags)
@@ -14,50 +11,54 @@ local function get_args(flags)
 end
 
 function M.push_cmd(flags)
-	local current_branch = s_util.get_branch_under_cursor() or state.current_branch
+	local current_branch = util.shellout_str("git branch --show-current")
 
-	if not current_branch then
+	if current_branch == "" then
 		util.Notify("could not determine current branch.", "error", "oz_git")
 		return
 	end
 
 	local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
 	local cur_remote_branch_ref = util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
-	local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch -- fallback?
 
 	local refined_args, branch
-	if cur_remote_branch == state.current_branch then
-		branch = cur_remote_branch
+	if cur_remote_branch_ref ~= "" then
+        local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch
+        if cur_remote_branch == current_branch then
+            branch = cur_remote_branch
+        else
+            branch = current_branch .. ":" .. cur_remote_branch
+        end
+		refined_args = string.format("%s %s", cur_remote, branch)
 	else
-		branch = current_branch .. ":" .. cur_remote_branch
-	end
-
-	if cur_remote_branch_ref == "" then
 		local remote = util.shellout_str("git remote")
 		if remote ~= "" then
-			refined_args = ("-u %s %s"):format(remote, current_branch)
+			refined_args = ("-u %s %s"):format(remote:match("%S+"), current_branch)
 		else
-			util.Notify("press 'ma' to add a remote first", "warn", "oz_git")
+			util.Notify("Add a remote first", "warn", "oz_git")
+            return
 		end
-	else
-		refined_args = string.format("%s %s", cur_remote, branch)
 	end
 
 	if refined_args then
 		local cmd = string.format("Git push %s%s", refined_args, get_args(flags))
-		s_util.run_n_refresh(cmd)
+		log_util.run_n_refresh(cmd)
 	end
 end
 
 function M.push_to(flags)
 	local args = get_args(flags)
-	local remotes = status.state.remotes or { "origin" } -- Simplified
+	local remotes = util.shellout_tbl("git remote")
+    if #remotes == 0 then
+        util.Notify("No remotes found", "warn", "oz_git")
+        return
+    end
 
 	util.pick(remotes, {
 		title = "Push to",
 		on_select = function(choice)
 			if choice then
-				s_util.run_n_refresh("Git push" .. args .. " " .. choice)
+				log_util.run_n_refresh("Git push" .. args .. " " .. choice)
 			end
 		end,
 	})
@@ -81,8 +82,8 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Push",
 			items = {
-				{ key = "P", cb = M.push_cmd, desc = "Push current to upstream" },
-				{ key = "u", cb = M.push_cmd, desc = "Push current to upstream" },
+				{ key = "P", cb = M.push_cmd, desc = "Push to upstream" },
+				{ key = "u", cb = M.push_cmd, desc = "Push to upstream" },
 				{ key = "e", cb = M.push_to, desc = "Push to..." },
 			},
 		},

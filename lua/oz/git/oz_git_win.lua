@@ -128,7 +128,7 @@ local function ft_mappings(buf)
 
 			if cfile:match("^[0-9a-f][0-9a-f]*$") and #cfile >= 7 and #cfile <= 40 then -- show hash
 				if vim.bo.buftype == "terminal" then
-					vim.cmd("close")
+					util.win_close()
 				end
 				vim.cmd("Git show " .. cfile)
 			else
@@ -157,11 +157,6 @@ local function ft_mappings(buf)
 			end
 		end
 	end, { buffer = buf, desc = "press enter on things then you'll know what it can do. <*>" })
-
-	-- refresh
-	vim.keymap.set("n", "<C-r>", function()
-		require("oz.git").run_git_job(git_cmd.cur_cmd)
-	end, { buffer = buf, desc = "refresh current cmd buffer(by rerunning prev cmd)." })
 
 	-- discard grab
 	vim.keymap.set("n", user_mappings.unpick_all, function()

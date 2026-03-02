@@ -36,11 +36,10 @@ end
 function M.refresh_buf(passive)
 	if not passive then
 		commit_log_lines = generate_content(M.log_level)
+	end
+
+	if M.log_buf and vim.api.nvim_buf_is_valid(M.log_buf) then
 		log_buf_hl(M.log_buf, commit_log_lines)
-	else
-		local pos = vim.api.nvim_win_get_cursor(0)
-		M.commit_log({ from = M.comming_from, level = M.log_level })
-		pcall(vim.api.nvim_win_set_cursor, 0, pos)
 	end
 end
 
