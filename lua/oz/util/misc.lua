@@ -79,29 +79,29 @@ function M.generate_unique_id()
 end
 
 function M.Map(mode, lhs, rhs, opts)
-    if type(lhs) ~= "table" then
-        return
-    end
+	if type(lhs) ~= "table" then
+		return
+	end
 
-    opts = vim.tbl_extend("force", { silent = true }, opts or {})
+	opts = vim.tbl_extend("force", { silent = true }, opts or {})
 
-    for _, k in ipairs(lhs) do
-        vim.keymap.set(mode, k, rhs, opts)
-    end
+	for _, k in ipairs(lhs) do
+		vim.keymap.set(mode, k, rhs, opts)
+	end
 end
 
 --- Exit visual mode.
 function M.exit_visual()
-    if vim.api.nvim_get_mode().mode:match("[vV]") then
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
-    end
+	if vim.api.nvim_get_mode().mode:match("[vV]") then
+		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+	end
 end
 
 -- safe win close
 function M.win_close()
-    if not pcall(vim.cmd.close) then
-        vim.cmd.bd()
-    end
+	if not pcall(vim.cmd.close) then
+		vim.cmd.bd()
+	end
 end
 
 return M

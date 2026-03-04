@@ -5,9 +5,7 @@ local util = require("oz.util")
 
 function M.quit()
 	vim.api.nvim_echo({ { "" } }, false, {})
-	if not pcall(vim.cmd.close) then
-		pcall(vim.cmd.blast)
-	end
+    util.win_close()
 end
 
 function M.enter_key()
