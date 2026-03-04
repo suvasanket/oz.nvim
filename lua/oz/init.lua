@@ -8,7 +8,7 @@ local defaults = {
 		win_type = "bot",
 		mappings = {
 			toggle_pick = "<C-P>",
-			unpick_all = "<C-S-P>",
+			unpick_all = "<C-x>",
 		},
 	},
 

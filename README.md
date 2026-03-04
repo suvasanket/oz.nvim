@@ -81,7 +81,7 @@ require("oz").setup({
         win_type = "bot",
         mappings = { -- oz_git universal mappings
             toggle_pick = "<C-P>",
-            unpick_all = "<C-S-P>",
+            unpick_all = "<C-x>",
         },
     },
 

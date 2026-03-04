@@ -100,7 +100,7 @@ Keymaps:
     q           Close status buffer.
     <C-P>       "Pick" an object (file, branch, hash) for later use.
     a, i        Edit picked objects in command line.
-    <C-S-P>     Discard all picked objects.
+    <C-x>     Discard all picked objects.
     gl          Open commit log for current branch.
     gL          Open log for object under cursor.
     gu          Jump to Unstaged section.
@@ -123,7 +123,7 @@ Keymaps:
     c           Open Commit Actions (squash, fixup, extend, amend).
     d           Open Diff Actions (vs commit, working, branch, stash).
     r           Open Rebase menu (interactive, continue, abort).
-    R           Open Reset menu (soft, mixed, hard).
+    U           Open Reset menu (soft, mixed, hard).
     b           Open Switch menu (checkout, new branch).
     Y           Open Cherry-pick menu (cherry-pick, paste, clear, etc.).
     v           Open Revert menu (revert, continue, abort).
@@ -135,7 +135,7 @@ Keymaps:
     q           Close log buffer.
     <C-P>       "Pick" a hash to use in a future command (Magit-style picking).
     a, i        Edit picked hashes in command line.
-    <C-S-P>     Discard all picked hashes.
+    <C-x>     Discard all picked hashes.
     gs          Go to Git status window.
     <C-g>       Pick log context (branch, tag, custom args).
     g?          Show all available keymaps.
@@ -185,7 +185,7 @@ The Git module can be configured via the `oz_git` table in `setup()`:
         win_type = "bot",
         mappings = {
             toggle_pick = "<C-P>", -- key to pick/unpick in status/log
-            unpick_all = "<C-S-P>",
+            unpick_all = "<C-x>",
         },
     }
 <

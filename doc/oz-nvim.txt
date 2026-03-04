@@ -57,7 +57,7 @@ Default configuration:
             win_type = "botright",
             mappings = {
                 toggle_pick = "<C-P>",
-                unpick_all = "<C-S-P>",
+                unpick_all = "<C-x>",
             },
         },
 
