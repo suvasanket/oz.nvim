@@ -223,13 +223,13 @@ local function status_buf_hl()
 
 	-- Consolidate all patterns into buffer-local syntax matches.
 	-- We use a list of pairs to allow multiple patterns for the same highlight group.
-	vim.fn.matchadd("healthError", "^deleted:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("healthWarning", "^both modified:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("@field", "^modified:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("healthSuccess", "^new file:\\s\\+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("@diff.plus", "^+.*$", 0, -1, { extend = true })
-	vim.fn.matchadd("@diff.minus", "^-.*$", 0, -1, { extend = true })
 	vim.cmd([[
+		syntax match healthError "^deleted:\s\+.*$"
+		syntax match healthWarning "^both modified:\s\+.*$"
+		syntax match @field "^modified:\s\+.*$"
+		syntax match healthSuccess "^new file:\s\+.*$"
+		syntax match @diff.plus "^+.*$"
+		syntax match @diff.minus "^-.*$"
         syntax match OzActive "\S\+" contained
         syntax match OzActive /\*\s\S\+/
         syntax match OzCmdPrompt /stash@{[0-9]}/

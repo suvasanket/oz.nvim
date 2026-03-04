@@ -14,18 +14,12 @@ local function highlight(buf)
             syntax match Comment /^\(Exit code:\|Time:\|Cwd:\).*/
             syntax match DiagnosticError /^Exit code: [^0]\d*/
         ]])
+		vim.cmd("syntax match OzUrl #" .. term_util.URL_PATTERN .. "#")
 	end)
 
 	vim.schedule(function()
 		if not vim.api.nvim_buf_is_valid(buf) then
 			return
-		end
-		local win = vim.fn.bufwinid(buf)
-		if win ~= -1 then
-			vim.api.nvim_win_call(win, function()
-				-- Highlight URLs
-				vim.fn.matchadd("OzUrl", term_util.URL_PATTERN)
-			end)
 		end
 
 		-- Performance guards

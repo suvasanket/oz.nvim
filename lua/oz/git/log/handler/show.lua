@@ -151,7 +151,7 @@ function M.show(hash)
 					-- End of stats if we see something else
                     -- But usually it just transitions to diff or end
 				end
-                
+
                 if not fold_levels[i] then
                     fold_levels[i] = "1"
                 end
