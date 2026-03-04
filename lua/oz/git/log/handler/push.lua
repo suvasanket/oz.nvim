@@ -10,36 +10,49 @@ local function get_args(flags)
 	return ""
 end
 
-function M.push_cmd(flags)
+local function get_push_args(source_ref)
 	local current_branch = util.shellout_str("git branch --show-current")
 
 	if current_branch == "" then
 		util.Notify("could not determine current branch.", "error", "oz_git")
-		return
+		return nil
 	end
 
 	local cur_remote = util.shellout_str(string.format("git config --get branch.%s.remote", current_branch))
 	local cur_remote_branch_ref = util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", current_branch))
 
-	local refined_args, branch
+	local refined_args
 	if cur_remote_branch_ref ~= "" then
-        local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch
-        if cur_remote_branch == current_branch then
-            branch = cur_remote_branch
-        else
-            branch = current_branch .. ":" .. cur_remote_branch
-        end
-		refined_args = string.format("%s %s", cur_remote, branch)
+		local cur_remote_branch = cur_remote_branch_ref:match("[^/]+$") or current_branch
+		local branch_spec
+		if source_ref then
+			branch_spec = source_ref .. ":" .. cur_remote_branch
+		elseif cur_remote_branch == current_branch then
+			branch_spec = cur_remote_branch
+		else
+			branch_spec = current_branch .. ":" .. cur_remote_branch
+		end
+		refined_args = string.format("%s %s", cur_remote, branch_spec)
 	else
 		local remote = util.shellout_str("git remote")
 		if remote ~= "" then
-			refined_args = ("-u %s %s"):format(remote:match("%S+"), current_branch)
+			local r = remote:match("%S+")
+			if source_ref then
+				refined_args = string.format("%s %s:%s", r, source_ref, current_branch)
+			else
+				refined_args = ("-u %s %s"):format(r, current_branch)
+			end
 		else
 			util.Notify("Add a remote first", "warn", "oz_git")
-            return
+			return nil
 		end
 	end
 
+	return refined_args
+end
+
+function M.push_cmd(flags)
+	local refined_args = get_push_args()
 	if refined_args then
 		local cmd = string.format("Git push %s%s", refined_args, get_args(flags))
 		log_util.run_n_refresh(cmd)
@@ -64,6 +77,21 @@ function M.push_to(flags)
 	})
 end
 
+function M.push_sha(flags)
+	local hashes = log_util.get_selected_hash()
+	if not hashes or #hashes == 0 then
+		util.Notify("No SHA found under cursor", "warn", "oz_git")
+		return
+	end
+	local sha = hashes[1]
+
+	local refined_args = get_push_args(sha)
+	if refined_args then
+		local cmd = string.format("Git push %s%s", refined_args, get_args(flags))
+		log_util.run_n_refresh(cmd)
+	end
+end
+
 function M.setup_keymaps(buf, key_grp)
 	-- Push Menu (P)
 	local push_opts = {
@@ -82,13 +110,14 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Push",
 			items = {
-				{ key = "P", cb = M.push_cmd, desc = "Push to upstream" },
-				{ key = "u", cb = M.push_cmd, desc = "Push to upstream" },
+                { key = "P", cb = M.push_sha, desc = "Push commit under cursor" },
+				{ key = "h", cb = M.push_cmd, desc = "Push HEAD to upstream" },
 				{ key = "e", cb = M.push_to, desc = "Push to..." },
 			},
 		},
 		{
 			title = "Actions",
+
 			items = {
 				{
 					key = " ",
