@@ -39,6 +39,52 @@ function M.get_branch(arg)
 	return util.shellout_tbl(string.format("git for-each-ref --format=%%(refname:short) %s", ref))
 end
 
+--- Open a file at a specific revision in a new buffer.
+--- @param commit_hash string The commit hash.
+--- @param file_path string The file path.
+function M.open_file_at_revision(commit_hash, file_path)
+	local root = M.get_project_root()
+	local ok, content = util.run_command({ "git", "show", commit_hash .. ":" .. file_path }, root)
+	if ok then
+		util.create_win("oz_git_log_file", {
+			content = content,
+			win_type = "tab",
+			buf_name = string.format("%s @ %s", file_path, commit_hash:sub(1, 7)),
+			callback = function(buf_id, win_id)
+				local ft = vim.filetype.match({ filename = file_path })
+				if ft then
+					vim.api.nvim_set_option_value("filetype", ft, { buf = buf_id })
+				end
+				vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf_id })
+				vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf_id })
+				vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
+				vim.api.nvim_set_option_value("number", true, { win = win_id })
+				vim.api.nvim_set_option_value("relativenumber", false, { win = win_id })
+				vim.api.nvim_set_option_value("signcolumn", "no", { win = win_id })
+				vim.api.nvim_set_option_value("foldcolumn", "0", { win = win_id })
+
+				vim.keymap.set(
+					"n",
+					"q",
+					"<cmd>close<cr>",
+					{ buffer = buf_id, desc = "Close buffer", silent = true }
+				)
+			end,
+		})
+	else
+		util.Notify(
+			"Could not show file "
+				.. file_path
+				.. "\nRoot: "
+				.. (root or "N/A")
+				.. "\nError: "
+				.. table.concat(content or {}, "\n"),
+			"error",
+			"oz_git"
+		)
+	end
+end
+
 --- Check if a string contains something that looks like a Git hash.
 --- @param text string The string to check.
 --- @return boolean True if it contains a hash.

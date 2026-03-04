@@ -15,7 +15,7 @@ local buf_id = nil
 
 function M.quit()
 	vim.api.nvim_echo({ { "" } }, false, {})
-    util.win_close()
+	util.win_close()
 end
 
 function M.increase_log()
@@ -50,10 +50,12 @@ function M.refresh()
 	refresh()
 end
 
+local commit_show = require("oz.git.log.handler.show")
+
 function M.show_hash()
 	local hash = get_selected_hash()
 	if #hash > 0 then
-        run_n_refresh("Git show " .. table.concat(hash, " "))
+		commit_show.show(hash[1])
 	end
 end
 
@@ -74,7 +76,7 @@ function M.toggle_pick()
 	-- unpick
 	if vim.tbl_contains(grab_hashs, entry) then
 		if #grab_hashs > 1 then
-            util.setup_hls({ "OzActive" })
+			util.setup_hls({ "OzActive" })
 			util.remove_from_tbl(grab_hashs, entry)
 			vim.api.nvim_echo({ { ":Git | " }, { table.concat(grab_hashs, " "), "OzActive" } }, false, {})
 		elseif grab_hashs[1] == entry then
@@ -95,7 +97,7 @@ function M.toggle_pick()
 			interval = 2000,
 			buf = buf_id,
 			on_active = function(t)
-                util.setup_hls({ "OzActive" })
+				util.setup_hls({ "OzActive" })
 				vim.api.nvim_echo({ { ":Git | " }, { table.concat(t, " "), "OzActive" } }, false, {})
 			end,
 		})
@@ -154,8 +156,41 @@ function M.log_context_picker()
 end
 
 function M.go_status()
-    util.win_close()
+	util.win_close()
 	vim.cmd("Git")
+end
+
+function M.show_file_in_commit()
+	local hash = get_selected_hash()
+	if #hash == 0 then
+		return
+	end
+	local commit_hash = hash[1]
+	local root = require("oz.util.git").get_project_root()
+
+	local ok, files = util.run_command({ "git", "ls-tree", "-r", "--name-only", "--full-name", commit_hash }, root)
+	if not ok or #files == 0 then
+		util.Notify(
+			"Could not list files for commit "
+				.. commit_hash
+				.. "\nRoot: "
+				.. root
+				.. "\nError: "
+				.. table.concat(files or {}, "\n"),
+			"error",
+			"oz_git"
+		)
+		return
+	end
+
+	util.pick(files, {
+		title = "Select file to view from " .. commit_hash,
+		on_select = function(choice)
+			if choice then
+				require("oz.util.git").open_file_at_revision(commit_hash, choice)
+			end
+		end,
+	})
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -163,9 +198,19 @@ function M.setup_keymaps(buf, key_grp)
 	-- quick actions
 	vim.keymap.set("n", "q", M.quit, { buffer = buf, desc = "Close git log buffer.", silent = true })
 	-- increase
-	vim.keymap.set("n", "]", M.increase_log, { buffer = buf, desc = "Increase log level.", silent = true, nowait = true })
+	vim.keymap.set(
+		"n",
+		"]",
+		M.increase_log,
+		{ buffer = buf, desc = "Increase log level.", silent = true, nowait = true }
+	)
 	-- decrease
-	vim.keymap.set("n", "[", M.decrease_log, { buffer = buf, desc = "Decrease log level.", silent = true, nowait = true })
+	vim.keymap.set(
+		"n",
+		"[",
+		M.decrease_log,
+		{ buffer = buf, desc = "Decrease log level.", silent = true, nowait = true }
+	)
 	-- back
 	vim.keymap.set("n", "<C-o>", M.go_back, { buffer = buf, desc = "Go back.", silent = true })
 	-- :G
@@ -174,19 +219,22 @@ function M.setup_keymaps(buf, key_grp)
 	-- refresh
 	vim.keymap.set("n", "<C-r>", M.refresh, { buffer = buf, desc = "Refresh commit log buffer.", silent = true })
 	-- log context picker
-	vim.keymap.set("n", "<C-g>", M.log_context_picker, { buffer = buf, desc = "Pick log context.", silent = true })
+	vim.keymap.set("n", "<C-g>", M.log_context_picker, { buffer = buf, desc = "Pick log context", silent = true })
 	-- show current hash
 	vim.keymap.set({ "n", "x" }, "<cr>", M.show_hash, { buffer = buf, desc = "Show commit", silent = true })
 	-- check out to a commit
 	vim.keymap.set("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout commit", silent = true })
-	key_grp["quick actions"] = { "[", "]", "-", "<CR>", "<C-O>", "<C-CR>", "I", "<C-R>", "<C-G>", "q" }
+	-- show file in commit
+	vim.keymap.set("n", "<S-CR>", M.show_file_in_commit, { buffer = buf, desc = "Show file in commit", silent = true })
+	key_grp["Good Stuff"] = { "<CR>", "<S-CR>", "<C-CR>", "<C-G>" }
+	key_grp["Misc"] = { "[", "]", "-", "<C-O>", "I", "<C-R>", "q" }
 
 	-- goto mappings
 	local g_options = {
 		{
 			title = "Goto",
 			items = {
-				{ key = "s", cb = M.go_status, desc = "Go to git status buffer" },
+                { key = "s", cb = M.go_status, desc = "Go to git status buffer" },
 				{
 					key = "g",
 					cb = function()
@@ -225,8 +273,13 @@ function M.setup_keymaps(buf, key_grp)
 	util.Map("n", { "a", "i" }, M.edit_picked, { buffer = buf, desc = "Edit picked" })
 
 	-- discard picked
-	vim.keymap.set("n", user_mappings.unpick_all, clear_all_picked, { buffer = buf, desc = "Discard picked", silent = true })
-	key_grp["pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
+	vim.keymap.set(
+		"n",
+		user_mappings.unpick_all,
+		clear_all_picked,
+		{ buffer = buf, desc = "Discard picked", silent = true }
+	)
+	key_grp["Pick"] = { user_mappings.toggle_pick, user_mappings.unpick_all, "a", "i" }
 end
 
 return M

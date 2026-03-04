@@ -8,7 +8,7 @@ local defaults = {
 		win_type = "bot",
 		mappings = {
 			toggle_pick = "<C-P>",
-			unpick_all = "<C-x>",
+			unpick_all = "<C-X>",
 		},
 	},
 
@@ -23,8 +23,8 @@ local defaults = {
 		override_make = false, -- override the default :make
 		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
 		transient_mappings = {
-			kill_job = "<C-x>",
-			toggle_output = "<C-d>",
+			kill_job = "<C-X>",
+			toggle_output = "<C-D>",
 		},
 	},
 

@@ -18,7 +18,6 @@ function M.keymaps_init(buf)
 	handle.reset.setup_keymaps(buf, key_grp)
 	handle.revert.setup_keymaps(buf, key_grp)
 	handle.quick_action.setup_keymaps(buf, key_grp)
-	handle.switch.setup_keymaps(buf, key_grp)
 	handle.tag.setup_keymaps(buf, key_grp)
 end
 
