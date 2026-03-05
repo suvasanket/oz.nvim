@@ -11,8 +11,9 @@ local nvim_win_is_valid = api.nvim_win_is_valid
 local nvim_set_option_value = api.nvim_set_option_value
 
 local state = {
-	ns = api.nvim_create_namespace("ivy_picker"),
-	prompt_ns = api.nvim_create_namespace("ivy_picker_prompt"),
+	ns = api.nvim_create_namespace("picker"),
+	prompt_ns = api.nvim_create_namespace("picker_prompt"),
+	title_ns = api.nvim_create_namespace("picker_title"),
 	items = {},
 	filtered = {},
 	keys = {},
@@ -85,10 +86,11 @@ local function close_picker()
 	end
 
 	-- Reset state but keep namespaces
-	local ns, pns = state.ns, state.prompt_ns
+	local ns, pns, tns = state.ns, state.prompt_ns, state.title_ns
 	state = {
 		ns = ns,
 		prompt_ns = pns,
+		title_ns = tns,
 		items = {},
 		filtered = {},
 		keys = {},
@@ -152,17 +154,7 @@ local function on_type()
 	if state.closing or not state.prompt_buf then
 		return
 	end
-	local line = api.nvim_buf_get_lines(state.prompt_buf, 0, 1, false)[1] or ""
-	local t = state.title_opts
-	local prefix = (t.title or "") .. (t.separator or " > ")
-
-	if not vim.startswith(line, prefix) then
-		nvim_buf_set_lines(state.prompt_buf, 0, 1, false, { prefix .. state.query })
-		api.nvim_win_set_cursor(state.prompt_win, { 1, #prefix + #state.query })
-		return
-	end
-
-	local query = line:sub(#prefix + 1)
+	local query = api.nvim_buf_get_lines(state.prompt_buf, 0, 1, false)[1] or ""
 	if query ~= state.query then
 		state.query = query
 		state.selected = 0
@@ -189,22 +181,9 @@ local function on_type()
 		end
 		render_results()
 
-		-- Inline render decorations for speed
+		-- Update count label
 		local pbuf, pns = state.prompt_buf, state.prompt_ns
 		nvim_buf_clear_namespace(pbuf, pns, 0, -1)
-		if #t.title > 0 then
-			nvim_buf_add_highlight(pbuf, pns, t.highlight or "OzActive", 0, 0, #t.title)
-		end
-		if #t.separator > 0 then
-			nvim_buf_add_highlight(
-				pbuf,
-				pns,
-				t.separator_highlight or "OzEchoDef",
-				0,
-				#t.title,
-				#t.title + #t.separator
-			)
-		end
 		api.nvim_buf_set_extmark(pbuf, pns, 0, 0, {
 			id = 1,
 			virt_text = { { string.format("[%d/%d]", #state.filtered, #state.items), "Comment" } },
@@ -281,9 +260,17 @@ function M.pick(items, opts)
 
 	state.original_win = fn.win_getid(fn.winnr("#"))
 	api.nvim_set_current_win(state.prompt_win)
-	local pref = (state.title_opts.title or "") .. state.title_opts.separator
-	nvim_buf_set_lines(state.prompt_buf, 0, -1, false, { pref })
-	api.nvim_win_set_cursor(state.prompt_win, { 1, #pref })
+
+	nvim_buf_set_lines(state.prompt_buf, 0, -1, false, { "" })
+	api.nvim_buf_set_extmark(state.prompt_buf, state.title_ns, 0, 0, {
+		virt_text = {
+			{ state.title_opts.title or "", state.title_opts.highlight or "Normal" },
+			{ state.title_opts.separator or " > ", state.title_opts.separator_highlight or "OzEchoDef" },
+		},
+		virt_text_pos = "inline",
+		right_gravity = false,
+	})
+	api.nvim_win_set_cursor(state.prompt_win, { 1, 0 })
 
 	render_results()
 	local map_opts = { buffer = state.prompt_buf, nowait = true, silent = true }
@@ -322,7 +309,7 @@ function M.pick(items, opts)
 	map_nav("<C-n>", 1)
 	map_nav("<C-p>", -1)
 
-	state.aug = api.nvim_create_augroup("IvyPicker", { clear = true })
+	state.aug = api.nvim_create_augroup("OzPicker", { clear = true })
 	api.nvim_create_autocmd("TextChangedI", { group = state.aug, buffer = state.prompt_buf, callback = on_type })
 	api.nvim_create_autocmd("BufWipeout", {
 		group = state.aug,

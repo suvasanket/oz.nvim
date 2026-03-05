@@ -62,19 +62,67 @@ end
 function M.push_to(flags)
 	local args = get_args(flags)
 	local remotes = util.shellout_tbl("git remote")
-    if #remotes == 0 then
-        util.Notify("No remotes found", "warn", "oz_git")
-        return
-    end
+	if #remotes == 0 then
+		util.Notify("No remotes found", "warn", "oz_git")
+		return
+	end
 
-	util.pick(remotes, {
-		title = "Push to",
-		on_select = function(choice)
-			if choice then
-				log_util.run_n_refresh("Git push" .. args .. " " .. choice)
+	local function pick_branch(remote)
+		if not remote then
+			return
+		end
+
+		local branches = util.shellout_tbl({
+			"git",
+			"for-each-ref",
+			"--format=%(refname:short)",
+			"refs/remotes/" .. remote,
+		})
+		for i, branch in ipairs(branches) do
+			-- Remove any literal quotes and the remote prefix
+			branches[i] = branch:gsub("^" .. remote .. "/", ""):gsub("['\"]", "")
+		end
+		branches = vim.tbl_filter(function(b)
+			return b ~= "HEAD" and b ~= ""
+		end, branches)
+
+		-- Also add local branches that might want to be pushed
+		local local_branches = util.shellout_tbl({
+			"git",
+			"for-each-ref",
+			"--format=%(refname:short)",
+			"refs/heads",
+		})
+		for _, b in ipairs(local_branches) do
+			local clean_b = b:gsub("['\"]", "")
+			if clean_b ~= "" and not vim.tbl_contains(branches, clean_b) then
+				table.insert(branches, clean_b)
 			end
-		end,
-	})
+		end
+
+		if #branches == 0 then
+			log_util.run_n_refresh("Git push" .. args .. " " .. remote)
+			return
+		end
+
+		util.pick(branches, {
+			title = "Push branch to " .. remote,
+			on_select = function(branch)
+				if branch then
+					log_util.run_n_refresh(string.format("Git push%s %s %s", args, remote, branch))
+				end
+			end,
+		})
+	end
+
+	if #remotes == 1 then
+		pick_branch(remotes[1])
+	else
+		util.pick(remotes, {
+			title = "Push to remote",
+			on_select = pick_branch,
+		})
+	end
 end
 
 function M.push_sha(flags)
