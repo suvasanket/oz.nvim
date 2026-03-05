@@ -21,36 +21,38 @@ local function open_entry(file, oz_cwd, lnum, col)
 	return true
 end
 
-local function try_jump_file(buf, line)
-	local oz_cwd = term_util.get_oz_cwd(buf)
-	local old_cwd = vim.fn.getcwd()
-
-	local changed = pcall(vim.api.nvim_set_current_dir, oz_cwd)
-	local qf = vim.fn.getqflist({ lines = { line }, efm = table.concat(term_util.EFM_PATTERNS, ",") })
-	if changed then
-		pcall(vim.api.nvim_set_current_dir, old_cwd)
-	end
-
-	local entry = qf.items and qf.items[1]
-	if not entry or entry.valid ~= 1 then
+local function try_jump_file(buf)
+	local entries = require("oz.term.executor").get_entries(buf)
+	if not entries then
 		return false
 	end
 
-	local filename = entry.filename
-	if (not filename or filename == "") and entry.bufnr > 0 then
-		filename = vim.api.nvim_buf_get_name(entry.bufnr)
-	end
+	local cursor = vim.api.nvim_win_get_cursor(0)
+	local lnum = cursor[1]
+	local col = cursor[2]
 
-	if not filename or filename == "" then
+	local line_entries = entries[lnum]
+	if not line_entries then
 		return false
 	end
 
-	local valid_path = term_util.find_valid_path(filename, oz_cwd)
-	if not valid_path then
-		return false
+	local best_entry = nil
+	for _, entry in ipairs(line_entries) do
+		if not best_entry then
+			best_entry = entry
+		end
+		if col >= entry.start and col < entry["end"] then
+			best_entry = entry
+			break
+		end
 	end
 
-	return open_entry(valid_path, oz_cwd, entry.lnum, entry.col)
+	if best_entry and best_entry.filename then
+		local oz_cwd = term_util.get_oz_cwd(buf)
+		return open_entry(best_entry.filename, oz_cwd, best_entry.lnum, best_entry.col)
+	end
+
+	return false
 end
 
 local function try_open_url(line)
@@ -82,30 +84,27 @@ local function try_cword(buf)
 end
 
 local function grab_to_qf(buf)
-	local oz_cwd = term_util.get_oz_cwd(buf)
-	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-
-	local old_cwd = vim.fn.getcwd()
-	local changed = pcall(vim.api.nvim_set_current_dir, oz_cwd)
-	local qf = vim.fn.getqflist({ lines = lines, efm = table.concat(term_util.EFM_PATTERNS, ",") })
-	if changed then
-		pcall(vim.api.nvim_set_current_dir, old_cwd)
+	local entries = require("oz.term.executor").get_entries(buf)
+	if not entries then
+		util.Notify("No parsed entries found.", "info", "oz_term")
+		return
 	end
 
 	local items = {}
-	for _, item in ipairs(qf.items or {}) do
-		if item.valid == 1 then
-			local filename = item.filename
-			if (not filename or filename == "") and item.bufnr > 0 then
-				filename = vim.api.nvim_buf_get_name(item.bufnr)
-			end
 
-			if filename and filename ~= "" then
-				local valid_path = term_util.find_valid_path(filename, oz_cwd)
-				if valid_path then
-					item.bufnr = vim.fn.bufnr(valid_path)
-					table.insert(items, item)
-				end
+	-- Sort line numbers to keep quickfix list in order
+	local lnums = {}
+	for k in pairs(entries) do
+		table.insert(lnums, k)
+	end
+	table.sort(lnums)
+
+	for _, lnum in ipairs(lnums) do
+		for _, entry in ipairs(entries[lnum]) do
+			if entry.entry and entry.entry.valid == 1 then
+				local item = vim.deepcopy(entry.entry)
+				item.bufnr = vim.fn.bufnr(entry.filename)
+				table.insert(items, item)
 			end
 		end
 	end
@@ -121,7 +120,7 @@ end
 function M.setup(buf)
 	vim.keymap.set("n", "<CR>", function()
 		local line = vim.api.nvim_get_current_line()
-		if try_jump_file(buf, line) or try_cword(buf) or try_open_url(line) then
+		if try_jump_file(buf) or try_cword(buf) or try_open_url(line) then
 			return
 		end
 		util.Notify("No entry found under cursor.", "info", "oz_term")

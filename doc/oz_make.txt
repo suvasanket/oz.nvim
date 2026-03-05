@@ -66,7 +66,7 @@ The Make module can be configured via the `oz_make` table in `setup()`:
     - transient_mappings: Temporary keymaps active only while a build job
       is running.
         - `kill_job`: Key to kill the running job (Default: `<C-x>`).
-        - `toggle_output`: Key to toggle the build output window (Default: `<C-d>`).
+        - `toggle_output`: Key to toggle the build output window (Default: `<C-t>`).
 
 Example configuration:
 >lua
@@ -75,7 +75,7 @@ Example configuration:
         autosave_makeprg = true,
         transient_mappings = {
             kill_job = "<C-x>",
-            toggle_output = "<C-d>",
+            toggle_output = "<C-t>",
         },
     }
 <

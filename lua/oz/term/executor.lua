@@ -1,6 +1,12 @@
 local M = {}
 local util = require("oz.util")
 
+local entries_cache = {}
+
+function M.get_entries(buf)
+	return entries_cache[buf]
+end
+
 local function highlight(buf)
 	local term_util = require("oz.term.util")
 
@@ -11,7 +17,7 @@ local function highlight(buf)
 		vim.cmd([[
             syntax clear
             syntax match Comment /^----------------------------------------$/
-            syntax match Comment /^\(Exit code:\|Time:\|Cwd:\).*/
+            syntax match Comment /^\(Exit code:\|Dir:\|Duration:\).*/
             syntax match DiagnosticError /^Exit code: [^0]\d*/
         ]])
 		vim.cmd("syntax match OzUrl #" .. term_util.URL_PATTERN .. "#")
@@ -46,8 +52,11 @@ local function highlight(buf)
 		local old_cwd = vim.fn.getcwd()
 		pcall(vim.api.nvim_set_current_dir, oz_cwd)
 
+		local all_entries = {}
+
 		for i, line in ipairs(lines) do
 			if line ~= "" and #line < 1000 then
+				local line_entries = {}
 				local start_idx = 0
 				while true do
 					local match = vim.fn.matchstrpos(line, term_util.PATH_PATTERN, start_idx)
@@ -62,12 +71,13 @@ local function highlight(buf)
 					local maybe_efm = text:find("[:(]") ~= nil
 					local hl_group = "OzUrl"
 					local filename = text
+					local sub_entry = nil
 
 					if maybe_efm then
 						-- Pass the rest of the line to catch diagnostic types
 						local line_rest = line:sub(start_pos + 1)
 						local sub_qf = vim.fn.getqflist({ lines = { line_rest }, efm = efm })
-						local sub_entry = sub_qf.items and sub_qf.items[1]
+						sub_entry = sub_qf.items and sub_qf.items[1]
 
 						-- Fallback to just text if line_rest didn't match
 						if not sub_entry or sub_entry.valid ~= 1 then
@@ -84,9 +94,9 @@ local function highlight(buf)
 							if sub_entry.type ~= "" then
 								local type = sub_entry.type:lower()
 								if type == "e" then
-                                    hl_group = "DiagnosticUnderlineError"
+									hl_group = "DiagnosticUnderlineError"
 								elseif type == "w" then
-                                    hl_group = "DiagnosticUnderlineWarn"
+									hl_group = "DiagnosticUnderlineWarn"
 								end
 							end
 						end
@@ -96,13 +106,26 @@ local function highlight(buf)
 						local valid_path = term_util.find_valid_path(filename, oz_cwd)
 						if valid_path then
 							vim.api.nvim_buf_add_highlight(buf, ns, hl_group, i - 1, start_pos, end_pos)
+							table.insert(line_entries, {
+								start = start_pos,
+								["end"] = end_pos,
+								hl_group = hl_group,
+								filename = valid_path,
+								lnum = sub_entry and sub_entry.lnum or 0,
+								col = sub_entry and sub_entry.col or 0,
+								entry = sub_entry,
+							})
 						end
 					end
 					start_idx = end_pos
 				end
+				if #line_entries > 0 then
+					all_entries[i] = line_entries
+				end
 			end
 		end
 
+		entries_cache[buf] = all_entries
 		pcall(vim.api.nvim_set_current_dir, old_cwd)
 	end)
 end
@@ -137,6 +160,14 @@ vim.api.nvim_create_autocmd("FileType", {
 				apply_win_styling(win, buf)
 			end
 		end)
+	end,
+})
+
+vim.api.nvim_create_autocmd("BufDelete", {
+	pattern = "*",
+	group = group,
+	callback = function(ev)
+		entries_cache[ev.buf] = nil
 	end,
 })
 
@@ -215,6 +246,14 @@ function M.run(cmd, opts)
 			vim.api.nvim_buf_set_name(buf, buf_name)
 			vim.b[buf].oz_cmd = cmd
 			vim.b[buf].oz_cwd = oz_cwd
+
+			manager.register_instance(id, {
+				buf = buf,
+				win = win_id,
+				job_id = job_id,
+				job_active = true,
+			})
+
 			vim.bo[buf].filetype = "oz_term"
 
 			-- Listen for OSC 7 directory changes
@@ -229,13 +268,6 @@ function M.run(cmd, opts)
 						end
 					end
 				end,
-			})
-
-			manager.register_instance(id, {
-				buf = buf,
-				win = win_id,
-				job_id = job_id,
-				job_active = true,
 			})
 		end)
 	end
@@ -303,8 +335,8 @@ function M.run(cmd, opts)
 			table.insert(lines, "")
 			table.insert(lines, "----------------------------------------")
 			table.insert(lines, string.format("Exit code: %d", status))
-			table.insert(lines, string.format("Cwd: %s", vim.fn.fnamemodify(oz_cwd, ":~:.")))
-			table.insert(lines, string.format("Time: ~%.3fs", duration))
+			table.insert(lines, string.format("Dir: %s", vim.fn.fnamemodify(oz_cwd, ":~:.")))
+			table.insert(lines, string.format("Duration: %.3fs", duration))
 
 			vim.schedule(function()
 				if not manager.instances[id] then
@@ -318,15 +350,16 @@ function M.run(cmd, opts)
 				vim.api.nvim_buf_set_name(new_buf, buf_name .. "_result")
 				vim.b[new_buf].oz_cmd = cmd
 				vim.b[new_buf].oz_cwd = final_oz_cwd
-				vim.bo[new_buf].filetype = "oz_term"
-				vim.bo[new_buf].buftype = "nofile"
-				vim.bo[new_buf].bufhidden = "hide"
-				vim.bo[new_buf].modifiable = false
 
 				-- Update manager with new buffer
 				manager.instances[id].buf = new_buf
 				vim.b[new_buf].oz_term_id = id
 				manager.setup_buf_cleanup(id, new_buf)
+
+				vim.bo[new_buf].filetype = "oz_term"
+				vim.bo[new_buf].buftype = "nofile"
+				vim.bo[new_buf].bufhidden = "hide"
+				vim.bo[new_buf].modifiable = false
 
 				-- If the window is still valid, switch to the new buffer
 				if old_win and vim.api.nvim_win_is_valid(old_win) then

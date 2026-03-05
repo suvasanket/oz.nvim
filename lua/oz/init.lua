@@ -24,7 +24,7 @@ local defaults = {
 		autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
 		transient_mappings = {
 			kill_job = "<C-X>",
-			toggle_output = "<C-D>",
+			toggle_output = "<C-T>",
 		},
 	},
 

@@ -97,7 +97,7 @@ require("oz").setup({
         autosave_makeprg = true, -- auto save all the project scoped makeprg(:set makeprg=<cmd>)
         transient_mappings = { -- only unlocks during the execution
             kill_job = "<C-x>",
-            toggle_output = "<C-d>",
+            toggle_output = "<C-t>",
         },
         -- vim.opt.makeprg can be used to set custom make program
     },
@@ -126,4 +126,4 @@ require("oz").setup({
 ```
 
 ## Contributing
-If you find a bug or have an idea for a feature that fits the "pragmatic intelligence" philosophy, feel free to open an issue or a pull request.
+If you find a bug or have an idea for a feature, feel free to open an issue or a pull request.
