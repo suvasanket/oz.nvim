@@ -251,7 +251,7 @@ function M.apply_log_highlights(buf_id, raw_lines, git_state, log_win)
 	vim.cmd("syntax clear")
 end
 
-function M.generate_content(level, cwd, user_set_args)
+function M.generate_content(level, cwd, user_set_args, original_cwd)
 	local fmt
 	if level == 2 then
 		fmt = "format:%C(auto)%m%h%d AUTHOR:%an DATE:%aD (%ar)%n%C(reset)%s"
@@ -261,10 +261,93 @@ function M.generate_content(level, cwd, user_set_args)
 		fmt = "format:%C(auto)%m%h%d %C(reset)%s AUTHOR:%an DATE:%ar"
 	end
 
-	local cmd = { "git", "log", "--graph", "--abbrev-commit", "--decorate", "--cherry-mark", "--color=always", "--format=" .. fmt }
-	util.join_tables(cmd, user_set_args or { "--all" })
+	local base_args = { "git", "log", "--graph", "--abbrev-commit", "--decorate", "--cherry-mark", "--color=always", "--format=" .. fmt }
+	local final_args = {}
+	for _, v in ipairs(base_args) do table.insert(final_args, v) end
 
-	local ok, content = util.run_command(cmd, cwd)
+	local input_args = user_set_args or { "--all" }
+	local has_all = false
+	local has_ref = false
+	local files = {}
+	local other_args = {}
+	local in_files = false
+
+	for _, arg in ipairs(input_args) do
+		if in_files then
+			table.insert(files, arg)
+		elseif arg == "--" then
+			in_files = true
+		elseif arg == "--all" then
+			has_all = true
+			table.insert(other_args, arg)
+		elseif arg:sub(1, 1) == "-" then
+			table.insert(other_args, arg)
+		else
+			-- Check if it's a ref or a file
+			-- If it contains / or . or exists on disk relative to original_cwd, it's likely a file
+			local full_path = original_cwd and (original_cwd .. "/" .. arg) or arg
+			if arg:find("/") or arg:find("%.", 1, true) or vim.fn.filereadable(full_path) == 1 or vim.fn.isdirectory(full_path) == 1 then
+				table.insert(files, arg)
+			else
+				local is_ref = vim.fn.system("git rev-parse --verify " .. vim.fn.shellescape(arg) .. " 2>/dev/null") ~= ""
+				if is_ref then
+					has_ref = true
+					table.insert(other_args, arg)
+				else
+					table.insert(files, arg)
+				end
+			end
+		end
+	end
+
+	-- Resolve file paths relative to git root (cwd)
+	if #files > 0 and original_cwd and original_cwd ~= cwd then
+		local resolved_files = {}
+		for _, f in ipairs(files) do
+			-- Join original_cwd with f to get absolute path
+			local abs = original_cwd .. "/" .. f
+			-- Normalize it
+			abs = vim.fn.fnamemodify(abs, ":p")
+			-- Now make it relative to the git root (cwd)
+			-- We need to temporarily set the CWD to the git root so fnamemodify(:.) works
+			local rel
+			local saved_cwd = vim.fn.getcwd()
+			vim.cmd("lcd " .. cwd)
+			rel = vim.fn.fnamemodify(abs, ":.")
+			vim.cmd("lcd " .. saved_cwd)
+			table.insert(resolved_files, rel)
+		end
+		files = resolved_files
+	end
+
+	-- If no explicit ref is provided, and we have files, default to --all to show history everywhere
+	if not has_ref and not has_all and #files > 0 then
+		table.insert(final_args, "--all")
+	elseif not has_ref and not has_all and #other_args == 0 then
+		table.insert(final_args, "--all")
+	end
+
+	-- Add other flags/refs
+	for _, arg in ipairs(other_args) do
+		if arg ~= "--all" or not vim.tbl_contains(final_args, "--all") then
+			table.insert(final_args, arg)
+		end
+	end
+
+	-- If exactly one file is provided, add --follow to see renames
+	if #files == 1 then
+		table.insert(final_args, "--follow")
+	end
+
+	-- Add files at the end with -- separator
+	if #files > 0 then
+		table.insert(final_args, "--")
+		for _, f in ipairs(files) do
+			table.insert(final_args, f)
+		end
+	end
+
+	local ok, content = util.run_command(final_args, cwd)
 	return ok and content or {}
 end
 

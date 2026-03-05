@@ -34,10 +34,10 @@ local function handle_g(opts)
 	end
 end
 
-local function handle_glog(opts)
+local function handle_glog(arg)
 	if g_util.if_in_git() then
-		if opts.args ~= "" then
-			local args_table = vim.split(opts.args, "%s+")
+		if arg.args ~= "" then
+			local args_table = util.parse_args(vim.fn.expandcmd(arg.args))
 			require("oz.git.log").commit_log({ level = 1 }, args_table)
 		else
 			require("oz.git.log").commit_log()
@@ -46,6 +46,7 @@ local function handle_glog(opts)
 		util.Notify("You are not in a git repo.", "warn", "oz_git")
 	end
 end
+
 
 local function handle_browse(opts)
 	local path = vim.trim(opts.args)
@@ -158,7 +159,13 @@ function M.init()
 	-- log
 	vim.api.nvim_create_user_command("GitLog", function(opts)
 		handle_glog(opts)
-	end, { nargs = "*", desc = "oz_git: log" })
+	end, {
+		nargs = "*",
+		desc = "oz_git: log",
+		complete = function(arglead, cmdline, cursorpos)
+			return require("oz.git.complete").log_complete(arglead, cmdline, cursorpos)
+		end,
+	})
 
 	-- Gr
 	g_util.User_cmd({ "Gr", "Gread" }, function(opts)

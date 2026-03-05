@@ -26,10 +26,23 @@ local function get_tbl(cur_arg, tbl)
 	if cur_arg == "" then
 		return tbl
 	end
+
 	local matches = {}
-	for _, val in ipairs(tbl) do
-		if val:find(cur_arg, 1, true) == 1 then
-			table.insert(matches, val)
+	local is_wildcard = cur_arg:find("[%*%?%[%]]")
+
+	if is_wildcard then
+		-- Convert glob to regex. vim.fn.glob2regpat is perfect for this.
+		local pattern = "^" .. vim.fn.glob2regpat(cur_arg) .. "$"
+		for _, val in ipairs(tbl) do
+			if vim.fn.match(val, pattern) ~= -1 then
+				table.insert(matches, val)
+			end
+		end
+	else
+		for _, val in ipairs(tbl) do
+			if val:find(cur_arg, 1, true) == 1 then
+				table.insert(matches, val)
+			end
 		end
 	end
 	return matches
@@ -95,12 +108,31 @@ local function get_git_files()
 	return files
 end
 
+local function get_log_candidates()
+	local candidates = {}
+	vim.list_extend(candidates, get_git_branches())
+	vim.list_extend(candidates, get_git_files())
+	local log_flags = {
+		"--all", "--graph", "--oneline", "--patch", "--stat", "--decorate",
+		"--abbrev-commit", "--relative-date", "--date=relative", "--date=local",
+		"--date=default", "--date=iso", "--date=rfc", "--date=short",
+		"--author=", "--committer=", "--grep=", "--since=", "--after=",
+		"--until=", "--before=", "--no-merges", "--merges", "--first-parent",
+		"--remotes", "--tags",
+	}
+	vim.list_extend(candidates, log_flags)
+	vim.list_extend(candidates, get_cmdflags("log"))
+	return candidates
+end
+
 -- Main logic: Aggregates candidates based on command context AND flags
 local function specific_compl(cmd, arg, full_args)
 	local candidates = {}
 
 	-- 1. Add context-specific candidates
-	if vim.tbl_contains({ "checkout", "switch", "branch", "merge", "rebase", "log", "reset" }, cmd) then
+	if cmd == "log" then
+		vim.list_extend(candidates, get_log_candidates())
+	elseif vim.tbl_contains({ "checkout", "switch", "branch", "merge", "rebase", "reset" }, cmd) then
 		vim.list_extend(candidates, get_git_branches())
 	elseif vim.tbl_contains({ "add", "rm", "mv", "restore" }, cmd) then
 		vim.list_extend(candidates, get_git_files())
@@ -127,6 +159,14 @@ local function specific_compl(cmd, arg, full_args)
 	-- 3. Filter already used args and match prefix
 	candidates = filter_suggestions(candidates, full_args, arg)
 	return get_tbl(arg, candidates)
+end
+
+function M.log_complete(arglead, cmdline, cursorpos)
+	local args = vim.split(cmdline, "%s+")
+	local candidates = get_log_candidates()
+
+	candidates = filter_suggestions(candidates, args, arglead)
+	return get_tbl(arglead, candidates)
 end
 
 function M.complete(arglead, cmdline, cursorpos)

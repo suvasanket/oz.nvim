@@ -24,18 +24,18 @@ local function log_buf_hl(buf_id, raw_lines)
 	log_util.apply_log_highlights(buf_id, raw_lines, git_state, M.log_win)
 end
 
-local function generate_content(level, args)
+local function generate_content(level, args, original_cwd)
 	if args and #args > 0 then
 		user_set_args = args
 	else
 		user_set_args = user_set_args or { "--all" }
 	end
-	return log_util.generate_content(level, M.state.cwd, user_set_args)
+	return log_util.generate_content(level, M.state.cwd, user_set_args, original_cwd)
 end
 
 function M.refresh_buf(passive)
 	if not passive then
-		commit_log_lines = generate_content(M.log_level)
+		commit_log_lines = generate_content(M.log_level, user_set_args, M.state.original_cwd)
 	end
 
 	if M.log_buf and vim.api.nvim_buf_is_valid(M.log_buf) then
@@ -52,10 +52,12 @@ function M.commit_log(opts, args)
 		M.log_level = opts.level or M.log_level
 	end
 	local win_type = (opts and opts.win_type) or require("oz.git").user_config.win_type or "tab"
-	M.state.cwd = vim.fn.getcwd():match("(.*)/%.git") or vim.fn.getcwd()
+	local original_cwd = vim.fn.getcwd()
+	M.state.original_cwd = original_cwd
+	M.state.cwd = require("oz.util.git").get_project_root() or original_cwd
 
 	vim.cmd("lcd " .. M.state.cwd)
-	commit_log_lines = generate_content(M.log_level, args)
+	commit_log_lines = generate_content(M.log_level, args, original_cwd)
 
 	util.create_win("log", {
 		content = {},
