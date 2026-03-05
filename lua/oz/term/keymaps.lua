@@ -130,6 +130,12 @@ function M.setup(buf)
 		grab_to_qf(buf)
 	end, { buffer = buf, silent = true, desc = "Grab all errors to quickfix" })
 
+	vim.keymap.set("n", "<C-c>", function()
+		local manager = require("oz.term.manager")
+		local id = vim.b[buf].oz_term_id
+		manager.kill(id)
+	end, { buffer = buf, silent = true, desc = "Kill job" })
+
 	vim.keymap.set("n", "q", function()
 		local manager = require("oz.term.manager")
 		local id = vim.b[buf].oz_term_id

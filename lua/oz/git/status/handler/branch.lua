@@ -16,18 +16,6 @@ function M.cc()
 	})
 end
 
-function M.checkout_local()
-	local branches = g_util.get_branch({ rem = false })
-	util.pick(branches, {
-		title = "Checkout branch",
-		on_select = function(choice)
-			if choice then
-				s_util.run_n_refresh("Git! switch " .. choice)
-			end
-		end,
-	})
-end
-
 function M.new()
 	local b_name = util.inactive_input(":Git branch ")
 	if b_name and vim.trim(b_name) ~= "" then
@@ -179,14 +167,8 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Checkout",
 			items = {
 				{ key = "b", cb = M.cc, desc = "Checkout/Switch branch" },
-				{ key = "l", cb = M.checkout_local, desc = "Checkout local branch" },
-			},
-		},
-		{
-			title = "Creation",
-			items = {
-				{ key = "c", cb = M.new_from, desc = "Checkout new branch" },
-				{ key = "n", cb = M.new, desc = "Create a new branch" },
+                { key = "c", cb = M.new_from, desc = "Checkout new branch" },
+                { key = "n", cb = M.new, desc = "Create a new branch" },
 			},
 		},
 		{

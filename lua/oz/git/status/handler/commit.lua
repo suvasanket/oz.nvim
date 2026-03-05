@@ -71,6 +71,17 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Commit",
 			items = {
 				{ key = "c", cb = M.create, desc = "Create a commit" },
+                { key = "f", cb = M.fixup, desc = "Fixup (HEAD)" },
+                { key = "s", cb = M.squash, desc = "Squash (HEAD)" },
+                -- { key = "A", cb = M.augment, desc = "Augment" },
+			},
+		},
+		{
+			title = "Edit",
+			items = {
+				{ key = "e", cb = M.amend_no_edit, desc = "Extend (Amend --no-edit)" },
+				{ key = "a", cb = M.amend, desc = "Amend" },
+				{ key = "w", cb = M.reword, desc = "Reword" },
 			},
 		},
 		{
@@ -84,27 +95,6 @@ function M.setup_keymaps(buf, key_grp)
 					end,
 					desc = "Commit (edit cmd)",
 				},
-			},
-		},
-		{
-			title = "Edit",
-			items = {
-				{ key = "e", cb = M.amend_no_edit, desc = "Extend (Amend --no-edit)" },
-				{ key = "a", cb = M.amend, desc = "Amend" },
-				{ key = "w", cb = M.reword, desc = "Reword" },
-			},
-		},
-		{
-			title = "Fixup",
-			items = {
-				{ key = "f", cb = M.fixup, desc = "Fixup (HEAD)" },
-				{ key = "s", cb = M.squash, desc = "Squash (HEAD)" },
-				-- { key = "A", cb = M.augment, desc = "Augment" },
-			},
-		},
-		{
-			title = "Undo",
-			items = {
 				{ key = "u", cb = M.undo, desc = "Undo last commit" },
 			},
 		},

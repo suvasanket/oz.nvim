@@ -118,6 +118,24 @@ function M.close(id)
 	M.instances[target_id] = nil
 end
 
+function M.kill(id)
+	local target_id = M.get_target_id(id)
+
+	if not target_id then
+		return
+	end
+
+	local inst = M.instances[target_id]
+
+	if not inst then
+		return
+	end
+
+	if inst.job_active and inst.job_id then
+		pcall(vim.fn.jobstop, inst.job_id)
+	end
+end
+
 function M.next_id()
 	local id = next_id
 	next_id = next_id + 1

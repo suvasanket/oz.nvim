@@ -24,14 +24,9 @@ function M.keymaps_init(buf)
 	handle.worktree.setup_keymaps(buf, key_grp)
 	handle.rebase.setup_keymaps(buf, key_grp)
 	handle.cherry_pick.setup_keymaps(buf, key_grp)
+	handle.fetch.setup_keymaps(buf, key_grp)
 
 	local state = require("oz.git.status").state
-	if state.in_rebase then
-		vim.notify_once("Rebase actions unlocked press 'r'")
-	end
-	if state.in_cherry_pick then
-		vim.notify_once("Cherry-pick actions unlocked press 'Y'")
-	end
 	if state.in_conflict then
 		handle.conflict.setup_keymaps(buf)
 		vim.notify_once("Conflict-Resolution mappings unlocked press 'x'")

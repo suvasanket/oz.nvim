@@ -147,14 +147,19 @@ function M.show(hash)
 				elseif section == "header" and line:match("^ [^ ]") and line:find("|") then
 					section = "stat"
 					fold_levels[i] = ">1"
-				elseif section == "stat" and (not line:match("^ [^ ]") or not line:find("|")) and line ~= "" and not line:find("changed") then
+				elseif
+					section == "stat"
+					and (not line:match("^ [^ ]") or not line:find("|"))
+					and line ~= ""
+					and not line:find("changed")
+				then
 					-- End of stats if we see something else
-                    -- But usually it just transitions to diff or end
+					-- But usually it just transitions to diff or end
 				end
 
-                if not fold_levels[i] then
-                    fold_levels[i] = "1"
-                end
+				if not fold_levels[i] then
+					fold_levels[i] = "1"
+				end
 
 				-- Highlights
 				if line:match("^commit ") then
@@ -213,7 +218,8 @@ function M.show(hash)
 			vim.api.nvim_buf_set_var(buf_id, "oz_fold_levels", fold_levels)
 			vim.wo[win_id].foldmethod = "expr"
 			vim.wo[win_id].foldexpr = "v:lua.require('oz.git.log.handler.show').foldexpr(v:lnum)"
-            vim.wo[win_id].foldlevel = 1
+			vim.wo[win_id].foldlevel = 1
+            vim.wo[win_id].relativenumber = false
 
 			-- Keymaps
 			local key_grp = {}
@@ -239,34 +245,12 @@ function M.show(hash)
 			key_grp["Navigation"] = { "<TAB>", "<S-TAB>", "q" }
 			key_grp["Actions"] = { "<CR>", "<leader>f" }
 
-			local options = {
-				{
-					title = "Goto",
-					items = {
-						{
-							key = "g",
-							cb = function()
-								vim.cmd("normal! gg")
-							end,
-							desc = "goto top of the buffer",
-						},
-						{
-							key = "?",
-							cb = function()
-								util.show_maps({
-									group = key_grp,
-									no_empty = true,
-								})
-							end,
-							desc = "Show all available keymaps",
-						},
-					},
-				},
-			}
-
-			vim.keymap.set("n", "g", function()
-				util.show_menu("Goto", options)
-			end, { buffer = buf_id, desc = "Goto Actions", nowait = true, silent = true })
+			vim.keymap.set("n", "g?", function()
+				util.show_maps({
+					group = key_grp,
+					no_empty = true,
+				})
+            end, { buffer = buf_id, desc = "Show all available keymaps", nowait = true, silent = true })
 
 			vim.api.nvim_buf_set_var(buf_id, "oz_commit_hash", hash)
 		end,

@@ -30,7 +30,6 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Fetch",
 			items = {
 				{ key = "f", cb = M.fetch_cmd, desc = "Fetch upstream" },
-				{ key = "u", cb = M.fetch_cmd, desc = "Fetch upstream" },
 				{
 					key = "a",
 					cb = function(f)
