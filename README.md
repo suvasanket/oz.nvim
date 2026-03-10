@@ -24,35 +24,35 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     opts = {},
 }
 ```
-Zero **third-party dependencies**.
+No **required dependencies.**
 
 ### Recommended Plugins (Completely optional)
 - [fidget.nvim](https://github.com/j-hui/fidget.nvim): For beautiful progress notifications during async tasks.
 - [nvim-notify](https://github.com/rcarriga/nvim-notify) (or similar): For enhanced system notifications.
 
 ## Feature Showcase
-### The Git Experience
+### Git
 The `:Git` (or `:G`) command is your entry point, designed to feel familiar yet more capable.
-- **Magit-like Interface**: Navigate your repository with a powerful status buffer featuring transient keybindings and intuitive section management.
+- **Magit-like Interface**: Navigate your repository with a powerful status buffer featuring transient keybindings and .
 - **Fugitive-like workflow**: `:Git` for any arbitrary git cmd execution and `:Gwrite`, `:Gread`, `:GBlame`, `:GBrowse`, `:GitLog` user-cmds are available just like in fugitive.
 - **Git Wizard**: If you type `:Git puhs` or try to push without an upstream, Oz won't just error out. It will suggest the corrected command in your command line.
-- **Async Execution**: Every git command runs in the background. You'll see progressive output for long-running tasks like `push` or `pull`.
+- **Pick Elements**: By pressing a key you can pick elements(SHA,branch,file,stash,flags etc.) in **any oz_git buffer** to quickly run any git command over it.
 
-### A Smart Terminal
+### Term
 Oz's terminal module is designed to reduce the friction of repetitive tasks.
 - **Arbitrary Execution**: Run any shell command with arguments directly via `:Term <cmd>`.
 - **Term Wizard**: If no arguments are provided, the Term Wizard suggests the most relevant command based on your learned patterns and project context.
 - **Jump & Grab**: Instantly jump to any errors/warnings in the output or use `<C-q>` to grab them all into the quickfix list.
 - **Root-Aware**: Use the `@` prefix (e.g., `:Term @make`) to run any command from the project root, regardless of where your current buffer is.
 
-### Project Building
+### Make
 The Make module is about staying in the flow.
 - **Project-Specific Caching**: Use `:set makeprg` to set your build command; Oz will automatically cache it (along with your `efm`) for that specific project, restoring it the next time you work there.
 - **Root by Default**: Running `:Make` executes from your project root. Use `:Make!` to explicitly run from your current working directory.
 - **Transient Keymaps**: While a build is running, temporary global keymaps (`<C-x>` to kill, `<C-d>` to view live execution) are active. They disappear as soon as the job is done.
 - **AutoMake**: Use `:AutoMake filetype` or `:AutoMake file` to have Oz automatically trigger a build whenever you save.
 
-### Seamless Search
+### Grep
 Grep module is designed to be simple yet effective.
 - **Range Support**: Select a block of text and run `:Grep` to search for it across your project. It automatically detects and escapes any wildcards to ensure precise results.
 - **Root by Default**: Every search starts from your project root by default. Use `:Grep!` to ground the search to your current working directory.
