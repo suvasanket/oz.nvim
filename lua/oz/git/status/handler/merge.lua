@@ -4,9 +4,14 @@ local s_util = require("oz.git.status.util")
 local g_util = require("oz.git.util")
 
 function M.merge_branch(flags)
-	local branches = g_util.get_branch()
+	local branch = s_util.get_branch_under_cursor()
 	local flag_str = (flags and #flags > 0) and (" " .. table.concat(flags, " ")) or ""
+	if branch then
+		s_util.run_n_refresh("Git merge" .. flag_str .. " " .. branch)
+        return
+	end
 
+	local branches = g_util.get_branch() -- if no branch so picker
 	util.pick(branches, {
 		title = "Merge branch",
 		on_select = function(choice)
