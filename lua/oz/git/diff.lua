@@ -3,13 +3,13 @@ local util = require("oz.util")
 local oz_git_win = require("oz.git.oz_git_win")
 local git_util = require("oz.git.util")
 
-local function get_content(target)
+local function get_content(target, root)
 	local state = require("oz.git").state
 	state.show_cache = state.show_cache or {}
 	if state.show_cache[target] then
 		return state.show_cache[target]
 	end
-	local ok, content = util.run_command({ "git", "show", target })
+	local ok, content = util.run_command({ "git", "show", target }, root)
 	if ok then
 		state.show_cache[target] = content
 		return content
@@ -90,22 +90,22 @@ function start_visual_diff(target_file, args, file_list, index)
 
 	if #revisions == 0 then
 		if is_cached then
-			lhs_name, lhs_content = "HEAD", get_content("HEAD:" .. rel_path)
-			rhs_name, rhs_content = "Index", get_content(":0:" .. rel_path)
+			lhs_name, lhs_content = "HEAD", get_content("HEAD:" .. rel_path, root)
+			rhs_name, rhs_content = "Index", get_content(":0:" .. rel_path, root)
 		else
-			lhs_name, lhs_content = "Index", get_content(":0:" .. rel_path)
+			lhs_name, lhs_content = "Index", get_content(":0:" .. rel_path, root)
 			rhs_name, rhs_is_working = "Working", true
 		end
 	elseif #revisions == 1 then
-		lhs_name, lhs_content = revisions[1], get_content(revisions[1] .. ":" .. rel_path)
+		lhs_name, lhs_content = revisions[1], get_content(revisions[1] .. ":" .. rel_path, root)
 		if is_cached then
-			rhs_name, rhs_content = "Index", get_content(":0:" .. rel_path)
+			rhs_name, rhs_content = "Index", get_content(":0:" .. rel_path, root)
 		else
 			rhs_name, rhs_is_working = "Working", true
 		end
 	elseif #revisions >= 2 then
-		lhs_name, lhs_content = revisions[1], get_content(revisions[1] .. ":" .. rel_path)
-		rhs_name, rhs_content = revisions[2], get_content(revisions[2] .. ":" .. rel_path)
+		lhs_name, lhs_content = revisions[1], get_content(revisions[1] .. ":" .. rel_path, root)
+		rhs_name, rhs_content = revisions[2], get_content(revisions[2] .. ":" .. rel_path, root)
 	end
 
 	-- Setup View
@@ -328,9 +328,9 @@ function M.resolve_three_way()
 
 	-- Fetch versions: :1 (Base), :2 (Ours/Local), :3 (Theirs/Remote)
 	local contents = {
-		base = get_content(":1:" .. rel_path),
-		ours = get_content(":2:" .. rel_path),
-		theirs = get_content(":3:" .. rel_path),
+		base = get_content(":1:" .. rel_path, root),
+		ours = get_content(":2:" .. rel_path, root),
+		theirs = get_content(":3:" .. rel_path, root),
 	}
 
 	local work_buf = vim.api.nvim_get_current_buf()
@@ -402,7 +402,7 @@ function M.resolve_three_way()
 		local cur_line = vim.fn.line(".")
 		local max_lines = vim.api.nvim_buf_line_count(0)
 
-		-- Find Start (<<<<<<<)
+		-- 1. Try to find the start of the current block (searching backward)
 		local start_line = nil
 		for i = cur_line, 1, -1 do
 			local line = vim.fn.getline(i)
@@ -414,28 +414,48 @@ function M.resolve_three_way()
 			end
 		end
 
+		-- 2. If not in a block, find the NEXT block (searching forward)
+		if not start_line then
+			for i = cur_line, max_lines do
+				if vim.fn.getline(i):match("^<<<<<<<") then
+					start_line = i
+					break
+				end
+			end
+		end
+
+		-- 3. If STILL not found, search from the beginning (wrap around)
+		if not start_line then
+			for i = 1, cur_line do
+				if vim.fn.getline(i):match("^<<<<<<<") then
+					start_line = i
+					break
+				end
+			end
+		end
+
 		-- Find End (>>>>>>>)
 		local end_line = nil
 		if start_line then
-			for i = cur_line, max_lines do
-				local line = vim.fn.getline(i)
-				if line:match("^>>>>>>>") then
+			for i = start_line, max_lines do
+				if vim.fn.getline(i):match("^>>>>>>>") then
 					end_line = i
-					break
-				elseif line:match("^<<<<<<<") and i ~= start_line then
 					break
 				end
 			end
 		end
 
 		if start_line and end_line then
+			-- Jump to the marker so user sees what's being resolved
+			vim.api.nvim_win_set_cursor(result_win, { start_line, 0 })
 			vim.cmd(start_line .. "," .. end_line .. "diffget " .. buf_from)
 			vim.cmd("diffupdate")
 		else
-			vim.cmd("diffget " .. buf_from)
+			util.Notify("No conflict marker found.", "warn", "oz_git")
 		end
 	end
 
+	-- Helper Keymaps
 	local map_opts = { buffer = work_buf, noremap = true, silent = true }
 	local lead = "<leader>"
 	vim.keymap.set("n", lead .. "1", function()
@@ -449,7 +469,7 @@ function M.resolve_three_way()
 	end, vim.tbl_extend("force", map_opts, { desc = "Get change from THEIRS" }))
 
 	-- Jumps
-	vim.keymap.set("n", lead .. "n", function()
+	vim.keymap.set("n", "]x", function()
 		for _, pattern in ipairs({ "^<<<<<<<", "^=====", "^>>>>>>" }) do
 			if vim.fn.search(pattern, "W") ~= 0 then
 				return
@@ -457,7 +477,7 @@ function M.resolve_three_way()
 		end
 	end, { buffer = work_buf, silent = true, desc = "Next conflict marker" })
 
-	vim.keymap.set("n", lead .. "p", function()
+	vim.keymap.set("n", "[x", function()
 		for _, pattern in ipairs({ "^>>>>>>", "^=====", "^<<<<<<<" }) do
 			if vim.fn.search(pattern, "Wb") ~= 0 then
 				return
@@ -471,6 +491,11 @@ function M.resolve_three_way()
 		local ok_j, out = util.run_command({ "git", "diff", "--name-only", "--diff-filter=U" }, r_root)
 		if not ok_j or #out == 0 then
 			util.Notify("No conflicted files found.", "warn", "oz_git")
+			return
+		end
+
+		if #out == 1 then
+			util.Notify("This is the only conflicted file.", "info", "oz_git")
 			return
 		end
 
@@ -526,15 +551,16 @@ function M.resolve_three_way()
 
 	-- Help
 	vim.keymap.set("n", "g?", function()
+		local actual_leader = vim.g.mapleader or "\\"
 		util.show_maps({
 			group = {
 				["Resolution Actions"] = {
-					lead .. "1",
-					lead .. "2",
-					lead .. "3",
-					lead .. "n",
-					lead .. "p",
-                    lead .. "e",
+					actual_leader .. "1",
+					actual_leader .. "2",
+					actual_leader .. "3",
+					"]x",
+					"[x",
+					actual_leader .. "e",
 					"]f",
 					"[f",
 					"gq",
