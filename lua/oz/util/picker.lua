@@ -278,19 +278,25 @@ function M.pick(items, opts)
 		local r = (state.filtered[state.selected + 1] or {}).value
 		close_picker()
 		if on_select then
-			on_select(r)
+			vim.schedule(function()
+				on_select(r)
+			end)
 		end
 	end, map_opts)
 	vim.keymap.set("i", "<Esc>", function()
 		close_picker()
 		if on_select then
-			on_select(nil)
+			vim.schedule(function()
+				on_select(nil)
+			end)
 		end
 	end, map_opts)
 	vim.keymap.set("i", "<C-c>", function()
 		close_picker()
 		if on_select then
-			on_select(nil)
+			vim.schedule(function()
+				on_select(nil)
+			end)
 		end
 	end, map_opts)
 
@@ -319,12 +325,19 @@ function M.pick(items, opts)
 			if not state.closing then
 				close_picker()
 				if on_select then
-					on_select(nil)
+					vim.schedule(function()
+						on_select(nil)
+					end)
 				end
 			end
 		end,
 	})
-	vim.cmd("startinsert!")
+	vim.schedule(function()
+		if not state.closing and state.prompt_win and nvim_win_is_valid(state.prompt_win) then
+			api.nvim_set_current_win(state.prompt_win)
+			vim.cmd("startinsert!")
+		end
+	end)
 end
 
 return M
