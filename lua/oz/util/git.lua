@@ -113,7 +113,7 @@ function M.get_git_state(cwd)
 		{ path = git_dir .. "/BISECT_LOG", op = "bisect", head = "HEAD" },
 		{ path = git_dir .. "/CHERRY_PICK_HEAD", op = "cherry-pick", head = "CHERRY_PICK_HEAD" },
 		{ path = git_dir .. "/MERGE_HEAD", op = "merge", head = "MERGE_HEAD" },
-		{ path = git_dir .. "/REBASE_HEAD", op = "rebase", head = "REBASE_HEAD" },
+        -- { path = git_dir .. "/REBASE_HEAD", op = "rebase", head = "REBASE_HEAD" },
 		{ path = git_dir .. "/rebase-merge", op = "rebase", head = "HEAD" },
 		{ path = git_dir .. "/rebase-apply", op = "rebase", head = "HEAD" },
 	}

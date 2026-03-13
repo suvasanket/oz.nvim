@@ -49,7 +49,7 @@ Oz's terminal module is designed to reduce the friction of repetitive tasks.
 The Make module is about staying in the flow.
 - **Project-Specific Caching**: Use `:set makeprg` to set your build command; Oz will automatically cache it (along with your `efm`) for that specific project, restoring it the next time you work there.
 - **Root by Default**: Running `:Make` executes from your project root. Use `:Make!` to explicitly run from your current working directory.
-- **Transient Keymaps**: While a build is running, temporary global keymaps (`<C-x>` to kill, `<C-d>` to view live execution) are active. They disappear as soon as the job is done.
+- **Transient Keymaps**: While a build is running, temporary global keymaps (`<C-x>` to kill, `<C-t>` to view live execution) are active. They disappear as soon as the job is done.
 - **AutoMake**: Use `:AutoMake filetype` or `:AutoMake file` to have Oz automatically trigger a build whenever you save.
 
 ### Grep
