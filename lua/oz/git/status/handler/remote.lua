@@ -127,6 +127,104 @@ function M.prune()
 	})
 end
 
+function M.set_url()
+	local options = get_remotes()
+	if #options == 0 then
+		util.Notify("No remotes configured.", "info", "oz_git")
+		return
+	end
+
+	util.pick(options, {
+		title = "Select remote to set URL",
+		on_select = function(choice)
+			if choice then
+				local current_url = util.shellout_str("git remote get-url " .. choice)
+				local new_url = util.UserInput("New URL for '" .. choice .. "':", current_url)
+				if new_url and new_url ~= current_url then
+					s_util.run_n_refresh(string.format("Git remote set-url %s %s", choice, new_url))
+				end
+			end
+		end,
+	})
+end
+
+function M.set_head()
+	local options = get_remotes()
+	if #options == 0 then
+		util.Notify("No remotes configured.", "info", "oz_git")
+		return
+	end
+
+	util.pick(options, {
+		title = "Select remote to set HEAD (default branch)",
+		on_select = function(choice)
+			if choice then
+				-- We can use 'git remote set-head <remote> -a' to auto-detect or let user pick
+				util.pick({"pick", "auto"}, {
+					title = "Set HEAD for '" .. choice .. "':",
+					on_select = function(ans)
+						if ans == "auto" then
+							s_util.run_n_refresh(string.format("Git remote set-head %s -a", choice))
+						elseif ans == "pick" then
+							local branches = util.get_branch({ rem = true })
+							local remote_prefix = choice .. "/"
+							local filtered = {}
+							for _, b in ipairs(branches) do
+								if b:find("^" .. remote_prefix) then
+									table.insert(filtered, b:sub(#remote_prefix + 1))
+								end
+							end
+							util.pick(filtered, {
+								title = "Select default branch for '" .. choice .. "'",
+								on_select = function(branch)
+									if branch then
+										s_util.run_n_refresh(string.format("Git remote set-head %s %s", choice, branch))
+									end
+								end,
+							})
+						end
+					end,
+				})
+			end
+		end,
+	})
+end
+
+function M.show()
+	local options = get_remotes()
+	if #options == 0 then
+		util.Notify("No remotes configured.", "info", "oz_git")
+		return
+	end
+
+	util.pick(options, {
+		title = "Select remote to show",
+		on_select = function(choice)
+			if choice then
+				vim.cmd("Git remote show " .. choice)
+			end
+		end,
+	})
+end
+
+function M.update()
+	local options = get_remotes()
+	table.insert(options, 1, "all")
+
+	util.pick(options, {
+		title = "Select remote to update",
+		on_select = function(choice)
+			if choice then
+				if choice == "all" then
+					s_util.run_n_refresh("Git remote update")
+				else
+					s_util.run_n_refresh("Git remote update " .. choice)
+				end
+			end
+		end,
+	})
+end
+
 function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
@@ -139,9 +237,13 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Remote",
 			items = {
 				{ key = "a", cb = M.add_update, desc = "Add or update remotes" },
+				{ key = "u", cb = M.set_url, desc = "Set remote URL" },
 				{ key = "d", cb = M.remove, desc = "Remove remote" },
 				{ key = "r", cb = M.rename, desc = "Rename remote" },
 				{ key = "p", cb = M.prune, desc = "Prune remote" },
+				{ key = "h", cb = M.set_head, desc = "Set remote HEAD" },
+				{ key = "s", cb = M.show, desc = "Show remote" },
+				{ key = "f", cb = M.update, desc = "Fetch/Update remote" },
 			},
 		},
 		{
