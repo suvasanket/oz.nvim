@@ -152,7 +152,33 @@ function M.visit()
 		vim.cmd("tabnew")
 		vim.cmd("lcd " .. vim.fn.fnameescape(path))
 		vim.cmd("e .") -- open dir
+		return
 	end
+
+	local worktrees = {}
+	for name, p in pairs(status.state.worktree_map or {}) do
+		table.insert(worktrees, { key = name, value = p })
+	end
+
+	if #worktrees == 0 then
+		util.Notify("No worktrees found.", "warn", "oz_git")
+		return
+	end
+
+	table.sort(worktrees, function(a, b)
+		return a.key < b.key
+	end)
+
+	util.pick(worktrees, {
+		title = "Visit Worktree",
+		on_select = function(p)
+			if p then
+				vim.cmd("tabnew")
+				vim.cmd("lcd " .. vim.fn.fnameescape(p))
+				vim.cmd("e .")
+			end
+		end,
+	})
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -166,10 +192,10 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Worktree",
 			items = {
-				{ key = "w", cb = M.add, desc = "Add new worktree" },
+                { key = "W", cb = M.visit, desc = "Visit worktree" },
+				{ key = "a", cb = M.add, desc = "Add new worktree" },
 				{ key = "d", cb = M.remove, desc = "Delete worktree" },
 				{ key = "m", cb = M.move, desc = "Move worktree" },
-				{ key = "g", cb = M.visit, desc = "Visit worktree" },
 				{ key = "l", cb = M.lock, desc = "Lock worktree" },
 				{ key = "u", cb = M.unlock, desc = "Unlock worktree" },
 				{ key = "p", cb = M.prune, desc = "Prune worktrees" },

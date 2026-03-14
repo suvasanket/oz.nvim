@@ -4,16 +4,28 @@ local s_util = require("oz.git.status.util")
 local g_util = require("oz.git.util")
 local status = require("oz.git.status")
 
-function M.cc()
-	local branches = g_util.get_branch()
+local function get_branch(callback, opts)
+	opts = opts or {}
+	local branch = s_util.get_branch_under_cursor()
+	if branch then
+		callback(branch)
+		return
+	end
+	local branches = g_util.get_branch(opts)
 	util.pick(branches, {
-		title = "Switch branch",
+		title = opts.title or "Select branch",
 		on_select = function(choice)
 			if choice then
-				s_util.run_n_refresh("Git! switch " .. choice)
+				callback(choice)
 			end
 		end,
 	})
+end
+
+function M.cc()
+	get_branch(function(choice)
+		s_util.run_n_refresh("Git! switch " .. choice)
+	end, { title = "Switch branch" })
 end
 
 function M.new()
@@ -29,20 +41,16 @@ function M.new_from()
 	local branches = util.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
 	local new_branch = util.UserInput("New Branch Name:")
 	if new_branch then
-		util.pick(branches, {
-			title = "From branch",
-			on_select = function(choice)
-				if choice then
-					s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
-				end
-			end,
-		})
+		get_branch(function(choice)
+			if choice then
+				s_util.run_n_refresh(string.format("Git switch -c %s %s", new_branch, choice))
+			end
+		end, { title = "From branch" })
 	end
 end
 
 function M.delete()
-	local branch = s_util.get_branch_under_cursor()
-	if branch then
+	get_branch(function(branch)
 		if branch == status.state.current_branch then
 			util.Notify("Cannot delete the current branch.", "error", "oz_git")
 			return
@@ -75,37 +83,30 @@ function M.delete()
 				end
 			end,
 		})
-	else
-		util.Notify("Cursor not on a deletable branch.", "warn", "oz_git")
-	end
+	end, { title = "Delete branch" })
 end
 
 function M.set_upstream()
-	local branch = s_util.get_branch_under_cursor()
-	if not branch then
-		util.Notify("Cursor not on a local branch.", "warn", "oz_git")
-		return
-	end
+	get_branch(function(branch)
+		local remote_branches = g_util.get_branch({ rem = true })
+		if #remote_branches == 0 then
+			util.Notify("No remote branches found.", "info", "oz_git")
+			return
+		end
 
-	local remote_branches = g_util.get_branch({ rem = true })
-	if #remote_branches == 0 then
-		util.Notify("No remote branches found.", "info", "oz_git")
-		return
-	end
-
-	util.pick(remote_branches, {
-		title = "Select upstream branch for '" .. branch .. "'",
-		on_select = function(choice)
-			if choice then
-				s_util.run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
-			end
-		end,
-	})
+		util.pick(remote_branches, {
+			title = "Select upstream branch for '" .. branch .. "'",
+			on_select = function(choice)
+				if choice then
+					s_util.run_n_refresh("Git branch --set-upstream-to=" .. choice .. " " .. branch)
+				end
+			end,
+		})
+	end, { title = "Set upstream" })
 end
 
 function M.unset_upstream()
-	local branch = s_util.get_branch_under_cursor()
-	if branch then
+	get_branch(function(branch)
 		local upstream = util.shellout_str(string.format("git rev-parse --abbrev-ref %s@{u}", branch))
 		if upstream == "" then
 			util.Notify("Branch '" .. branch .. "' has no upstream configured.", "info", "oz_git")
@@ -115,42 +116,39 @@ function M.unset_upstream()
 		if ans == 1 then
 			s_util.run_n_refresh("Git branch --unset-upstream " .. branch)
 		end
-	else
-		util.Notify("Cursor not on a local branch.", "warn", "oz_git")
-	end
+	end, { title = "Unset upstream" })
 end
 
 function M.rename()
-	local branch = s_util.get_branch_under_cursor()
-	local new_name = util.UserInput("New name: ", branch)
-	if new_name then
-		s_util.run_n_refresh(string.format("Git branch -m %s %s", branch, new_name))
-	end
+	get_branch(function(branch)
+		local new_name = util.UserInput("New name: ", branch)
+		if new_name then
+			s_util.run_n_refresh(string.format("Git branch -m %s %s", branch, new_name))
+		end
+	end, { title = "Rename branch" })
 end
 
 function M.copy()
-	local branch = s_util.get_branch_under_cursor()
-	local new_name = util.UserInput("Copy branch '" .. (branch or "") .. "' to: ")
-	if new_name and new_name ~= "" then
-		s_util.run_n_refresh(string.format("Git branch %s %s", new_name, branch or ""))
-	end
+	get_branch(function(branch)
+		local new_name = util.UserInput("Copy branch '" .. (branch or "") .. "' to: ")
+		if new_name and new_name ~= "" then
+			s_util.run_n_refresh(string.format("Git branch %s %s", new_name, branch or ""))
+		end
+	end, { title = "Copy branch" })
 end
 
 function M.reset()
-	local branch = s_util.get_branch_under_cursor()
-	if not branch then
-		util.Notify("Cursor not on a branch.", "warn", "oz_git")
-		return
-	end
-	local targets = g_util.get_branch()
-	util.pick(targets, {
-		title = "Reset branch '" .. branch .. "' to",
-		on_select = function(choice)
-			if choice then
-				s_util.run_n_refresh(string.format("Git branch -f %s %s", branch, choice))
-			end
-		end,
-	})
+	get_branch(function(branch)
+		local targets = g_util.get_branch()
+		util.pick(targets, {
+			title = "Reset branch '" .. branch .. "' to",
+			on_select = function(choice)
+				if choice then
+					s_util.run_n_refresh(string.format("Git branch -f %s %s", branch, choice))
+				end
+			end,
+		})
+	end, { title = "Reset branch" })
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -167,8 +165,8 @@ function M.setup_keymaps(buf, key_grp)
 			title = "Checkout",
 			items = {
 				{ key = "b", cb = M.cc, desc = "Checkout/Switch branch" },
-                { key = "c", cb = M.new_from, desc = "Checkout new branch" },
-                { key = "n", cb = M.new, desc = "Create a new branch" },
+				{ key = "c", cb = M.new_from, desc = "Checkout new branch" },
+				{ key = "n", cb = M.new, desc = "Create a new branch" },
 			},
 		},
 		{

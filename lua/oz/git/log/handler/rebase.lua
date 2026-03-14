@@ -18,7 +18,9 @@ function M.interactive(flags)
 	local args = get_args(flags)
 	local current_hash = get_selected_hash()
 	if #current_hash > 0 then
-		run_n_refresh("Git rebase" .. args .. " -i " .. current_hash[1] .. "^")
+		local ok = util.run_command({ "git", "rev-parse", "--verify", current_hash[1] .. "^" })
+		local base = ok and current_hash[1] .. "^" or "--root"
+		run_n_refresh("Git rebase" .. args .. " -i " .. base)
 	end
 end
 
@@ -49,7 +51,9 @@ function M.autosquash(flags)
 	local args = get_args(flags)
 	local hash = get_selected_hash()
 	if #hash > 0 then
-		run_n_refresh("Git rebase" .. args .. " -i --autosquash " .. hash[1] .. "^")
+		local ok = util.run_command({ "git", "rev-parse", "--verify", hash[1] .. "^" })
+		local base = ok and hash[1] .. "^" or "--root"
+		run_n_refresh("Git rebase" .. args .. " -i --autosquash " .. base)
 	end
 end
 
