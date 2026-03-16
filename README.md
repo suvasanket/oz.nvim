@@ -33,7 +33,7 @@ No **required dependencies.**
 ## Feature Showcase
 ### Git
 The `:Git` (or `:G`) command is your entry point, designed to feel familiar yet more capable.
-- **Magit-like Interface**: Navigate your repository with a powerful status buffer featuring transient keybindings and .
+- **Magit-like Interface**: Navigate your repository with a powerful status buffer featuring transient keybindings with interactive flags selection.
 - **Fugitive-like workflow**: `:Git` for any arbitrary git cmd execution and `:Gwrite`, `:Gread`, `:GBlame`, `:GBrowse`, `:GitLog` user-cmds are available just like in fugitive.
 - **Git Wizard**: If you type `:Git puhs` or try to push without an upstream, Oz won't just error out. It will suggest the corrected command in your command line.
 - **Pick Elements**: By pressing a key you can pick elements(SHA,branch,file,stash,flags etc.) in **any oz_git buffer** to quickly run any git command over it.

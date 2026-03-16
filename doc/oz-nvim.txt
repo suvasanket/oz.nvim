@@ -36,7 +36,6 @@ Using |lazy.nvim|:
 >lua
     {
         'suvasanketrout/oz-nvim',
-        dependencies = { 'stevearc/oil.nvim' }, -- optional for oil integration
         config = function()
             require('oz').setup({
                 -- configuration goes here

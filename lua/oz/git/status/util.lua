@@ -226,14 +226,8 @@ function M.get_branch_under_cursor()
 	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
 	local item = map[cursor_line]
 
-	if item then
-		if item.type == "header" and item.section_id == "branch" then
-			return status.state.current_branch
-		elseif item.type == "branch_item" then
-			-- Parse branch from text: "  * master  sha msg"
-			-- or "    master  sha msg"
-			return item.text:match("^%s*[*+]?%s+(%S+)")
-		end
+	if item and item.type == "branch_item" then
+		return item.text:match("^%s*[*+]?%s+(%S+)")
 	end
 	return nil
 end
