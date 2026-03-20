@@ -49,23 +49,6 @@ local defaults = {
 	},
 }
 
---- vim start with cmd
----@param cmds table
----@return boolean
-local function start_with_cmd(cmds)
-	for i, arg in ipairs(vim.v.argv) do
-		if arg == "-c" and vim.v.argv[i + 1] then
-			for _, cmd in ipairs(cmds) do
-				-- if vim.v.argv[i + 1] == cmd then
-				if vim.startswith(vim.v.argv[i + 1], cmd) then
-					return true
-				end
-			end
-		end
-	end
-	return false
-end
-
 -- Setup function
 function M.setup(opts)
 	-- Merge user-provided options with defaults
@@ -74,46 +57,22 @@ function M.setup(opts)
 
 	-- Initialize oz git
 	if M.config.oz_git then
-		if start_with_cmd({ "G", "Git" }) then
-			require("oz.git").oz_git_usercmd_init(M.config.oz_git)
-		else -- lazy
-			vim.fn.timer_start(10, function()
-				require("oz.git").oz_git_usercmd_init(M.config.oz_git)
-			end)
-		end
+		require("oz.git").oz_git_usercmd_init(M.config.oz_git)
 	end
 
 	-- Initialize :Term
 	if M.config.oz_term then
-		if start_with_cmd({ "Term", "Term!" }) then
-			require("oz.term").Term_init(M.config.oz_term)
-		else -- lazy
-			vim.fn.timer_start(20, function()
-				require("oz.term").Term_init(M.config.oz_term)
-			end)
-		end
+		require("oz.term").Term_init(M.config.oz_term)
 	end
 
 	-- Initialize :Make
 	if M.config.oz_make then
-		if start_with_cmd({ "Make", "Make!" }) then
-			require("oz.make").oz_make_init(M.config.oz_make)
-		else -- lazy
-			vim.fn.timer_start(100, function()
-				require("oz.make").oz_make_init(M.config.oz_make)
-			end)
-		end
+		require("oz.make").oz_make_init(M.config.oz_make)
 	end
 
 	-- Initialize :Grep
 	if M.config.oz_grep then
-		if start_with_cmd({ "Grep", "Grep!" }) then
-			require("oz.grep").oz_grep_init(M.config.oz_grep)
-		else -- lazy
-			vim.fn.timer_start(50, function()
-				require("oz.grep").oz_grep_init(M.config.oz_grep)
-			end)
-		end
+		require("oz.grep").oz_grep_init(M.config.oz_grep)
 	end
 
 	-- Initialize oil integration
