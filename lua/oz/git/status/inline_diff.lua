@@ -194,6 +194,40 @@ end
 -- CORE: Optimized Expansion
 -- ============================================================
 
+local function build_display_lines(parsed)
+	local display = {
+		{
+			text = "──────────────────────────────────────────",
+			hl = "OzGitDiffSep",
+			type = "sep",
+		},
+	}
+	for hi, hunk in ipairs(parsed.hunks) do
+		table.insert(display, { text = hunk.header, hl = "OzGitDiffHunkHeader", type = "hunk_header", hunk_index = hi })
+		for li, entry in ipairs(hunk.lines) do
+			local hl = entry.type == "add" and "OzGitDiffAdd"
+				or (
+					entry.type == "del" and "OzGitDiffDel"
+					or (entry.type == "info" and "OzGitDiffSep" or "OzGitDiffContext")
+				)
+			table.insert(display, { text = entry.text, hl = hl, type = entry.type, hunk_index = hi, line_in_hunk = li })
+		end
+		if hi < #parsed.hunks then
+			table.insert(display, {
+				text = "=====================================================================",
+				hl = "OzGitDiffSep",
+				type = "sep",
+			})
+		end
+	end
+	table.insert(display, {
+		text = "──────────────────────────────────────────",
+		hl = "OzGitDiffSep",
+		type = "sep",
+	})
+	return display
+end
+
 function M.toggle_inline_diff(bufnr, file_line, file_path, section, root, rel_path)
 	setup_highlights()
 	bufnr = bufnr or vim.api.nvim_get_current_buf()
@@ -289,46 +323,6 @@ function M.toggle_inline_diff(bufnr, file_line, file_path, section, root, rel_pa
 	}
 
 	M._adjust_lines_after_insert(bufnr, file_line, #display)
-end
-
-function build_display_lines(parsed)
-	local display = {
-		{
-			text = "──────────────────────────────────────────",
-			hl = "OzGitDiffSep",
-			type = "sep",
-		},
-	}
-	for hi, hunk in ipairs(parsed.hunks) do
-		table.insert(display, { text = hunk.header, hl = "OzGitDiffHunkHeader", type = "hunk_header", hunk_index = hi })
-		for li, entry in ipairs(hunk.lines) do
-			local hl = entry.type == "add" and "OzGitDiffAdd"
-				or (
-					entry.type == "del" and "OzGitDiffDel"
-					or (entry.type == "info" and "OzGitDiffSep" or "OzGitDiffContext")
-				)
-			table.insert(display, { text = entry.text, hl = hl, type = entry.type, hunk_index = hi, line_in_hunk = li })
-		end
-		if hi < #parsed.hunks then
-			table.insert(
-				display,
-				{
-					text = "=====================================================================",
-					hl = "OzGitDiffSep",
-					type = "sep",
-				}
-			)
-		end
-	end
-	table.insert(
-		display,
-		{
-			text = "──────────────────────────────────────────",
-			hl = "OzGitDiffSep",
-			type = "sep",
-		}
-	)
-	return display
 end
 
 function M.collapse_inline_diff(bufnr, file_line)
@@ -534,7 +528,7 @@ function M.stage_selection(bufnr)
 
 	for fl, info in pairs(buf_diffs) do
 		if s >= info.diff_start_line and e <= info.diff_end_line then
-			for hi, hr in pairs(info.hunk_ranges) do
+			for _, hr in pairs(info.hunk_ranges) do
 				if not (e < hr.start_line or s > hr.end_line) then
 					local sel = {}
 					for lnum = math.max(s, hr.start_line), math.min(e, hr.end_line) do
