@@ -1,7 +1,6 @@
 --- @class oz.util.progress
 local M = {}
-local has_fidget = pcall(require, "fidget")
-local fidget = has_fidget and require("fidget.progress") or nil
+
 M.progress_tbl = {}
 
 local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
@@ -11,6 +10,11 @@ local spinner_active = false
 local progress_percentage = 0
 local progress_update_timer = nil
 local progress_increment_value = 5
+
+local function get_fidget()
+	local has_fidget = pcall(require, "fidget")
+	return has_fidget and require("fidget.progress") or nil
+end
 
 --- Update spinner animation.
 --- @return string|nil The next frame of the spinner.
@@ -28,6 +32,8 @@ local function start_spinner_updates(unique_id)
 	if progress_update_timer then
 		return
 	end
+
+	local fidget = get_fidget()
 
 	-- WTF: for some shit reason i can't access M.progress_tbl items by passing index
 	local fidget_handle
@@ -75,6 +81,7 @@ end
 --- @param unique_id string
 ---@param opts {title: string, fidget_lsp?: string, message?: string, manual?: boolean}
 function M.start_progress(unique_id, opts)
+	local fidget = get_fidget()
 	local msg = opts.message or "in progress..."
 	spinner_active = true
 	if fidget then
@@ -118,6 +125,7 @@ end
 --- @param percentage number
 --- @param message string
 function M.update_progress(unique_id, percentage, message)
+	local fidget = get_fidget()
 	progress_percentage = percentage
 
 	local fidget_handle = M.progress_tbl[unique_id .. "_fidget_handle"]
@@ -133,8 +141,9 @@ end
 --- @param unique_id string
 ---@param opts {title: string, exit_code: integer, message?: string[]}
 function M.stop_progress(unique_id, opts)
+	local fidget = get_fidget()
 	local msg = opts.message and (opts.exit_code == 0 and opts.message[1] or opts.message[2])
-		or (opts.exit_code == 0 and "completed successfully" or "failed")
+	or (opts.exit_code == 0 and "completed successfully" or "failed")
 	spinner_active = false
 
 	local fidget_handle = M.progress_tbl[unique_id .. "_fidget_handle"]

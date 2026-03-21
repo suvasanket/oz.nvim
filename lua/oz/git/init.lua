@@ -1,8 +1,4 @@
 local M = {}
-local util = require("oz.util")
-local g_util = require("oz.git.util")
-local wizard = require("oz.git.wizard")
-local oz_git_win = require("oz.git.oz_git_win")
 
 M.user_config = nil
 M.running_git_jobs = {}
@@ -13,6 +9,8 @@ M.state = {}
 ---@param args string
 ---@param exit_code number
 local function notify_or_open(output, args, exit_code)
+	local util = require("oz.util")
+	local oz_git_win = require("oz.git.oz_git_win")
 	if #output == 0 then
 		return
 	end
@@ -29,6 +27,8 @@ end
 ---@param args_str string
 ---@return boolean
 local function subcmd_exec(args_tbl, args_str)
+	local util = require("oz.util")
+	local g_util = require("oz.git.util")
 	local cmd = args_tbl[1]
 	local remote_cmds = { "push", "pull", "fetch", "clone", "request-pull", "ls-remote", "submodule", "svn" }
 	local interactive_cmd = { "add -p", "add -i", "reset -p", "commit -p", "checkout -p" }
@@ -73,6 +73,8 @@ local function subcmd_exec(args_tbl, args_str)
 	-- Progress cmds
 	elseif vim.tbl_contains(remote_cmds, cmd) then
 		local command = table.remove(args_tbl, 1)
+		local oz_git_win = require("oz.git.oz_git_win")
+		local wizard = require("oz.git.wizard")
 
 		require("oz.git.remote_cmd").run_git_with_progress(command, args_tbl, function(lines)
 			oz_git_win.open_oz_git_win(lines, args_str)
@@ -125,6 +127,7 @@ end
 --- remove any running jobs.
 ---@param args table
 function M.cleanup_git_jobs(args)
+	local util = require("oz.util")
 	if args then
 		if args.job_id then
 			vim.fn.jobstop(args.job_id)
@@ -158,6 +161,8 @@ end
 ---@param args string arg string
 ---@param stdout_buf boolean show stdout or not?
 function M.run_git_job(args, stdout_buf)
+	local util = require("oz.util")
+	local wizard = require("oz.git.wizard")
 	args = vim.fn.expandcmd(args)
 	local args_table = util.parse_args(args)
 

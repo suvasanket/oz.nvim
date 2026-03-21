@@ -1,10 +1,10 @@
 local M = {}
-local util = require("oz.util")
 
 M.cached_cmd = nil
 M.term_cmd_ft = nil
 
 local function term_cmd_init(config)
+	local util = require("oz.util")
 	local function complete(arg_lead)
 		local manager = require("oz.term.manager")
 		local ids = {}

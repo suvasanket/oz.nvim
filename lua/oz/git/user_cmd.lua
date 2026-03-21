@@ -1,6 +1,4 @@
 local M = {}
-local util = require("oz.util")
-local g_util = require("oz.git.util")
 
 local main
 
@@ -15,6 +13,8 @@ end
 
 --- HANDLE ---
 local function handle_g(opts)
+	local util = require("oz.util")
+	local g_util = require("oz.git.util")
 	if g_util.if_in_git() then
 		if opts.args and #opts.args > 0 then
 			if opts.bang then
@@ -35,6 +35,8 @@ local function handle_g(opts)
 end
 
 local function handle_glog(arg)
+	local util = require("oz.util")
+	local g_util = require("oz.git.util")
 	if g_util.if_in_git() then
 		if arg.args ~= "" then
 			local args_table = util.parse_args(vim.fn.expandcmd(arg.args))
@@ -47,8 +49,8 @@ local function handle_glog(arg)
 	end
 end
 
-
 local function handle_browse(opts)
+	local g_util = require("oz.git.util")
 	local path = vim.trim(opts.args)
 	local oil_path = require("oil").get_current_dir()
 
@@ -62,11 +64,13 @@ local function handle_browse(opts)
 			require("oz.git.browse").browse(path)
 		end
 	else
-		util.Notify("You are not in a git repo.", "warn", "oz_git")
+		require("oz.util").Notify("You are not in a git repo.", "warn", "oz_git")
 	end
 end
 
 local function handle_gwrite(opts)
+	local util = require("oz.util")
+	local g_util = require("oz.git.util")
 	local file_name = vim.trim(opts.args)
 	if g_util.if_in_git() then
 		if opts.range and opts.range > 0 and file_name == "" then
@@ -100,6 +104,8 @@ local function handle_gwrite(opts)
 end
 
 local function handle_gread(opts)
+	local util = require("oz.util")
+	local g_util = require("oz.git.util")
 	if g_util.if_in_git() then
 		local file_name = vim.trim(opts.args)
 		if opts.range and opts.range > 0 and file_name == "" then
@@ -143,6 +149,7 @@ end
 --- user_cmd init
 function M.init()
 	main = require("oz.git")
+	local g_util = require("oz.git.util")
 
 	-- :Git
 	g_util.User_cmd({ "Git", "G" }, function(opts)

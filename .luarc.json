@@ -1,9 +1,10 @@
 {
-    "diagnostics.globals": [
-        "vim"
-    ],
-    "diagnostics.disable": [
-        "deprecated",
-        "undefined-field"
-    ]
+	"diagnostics.globals": [
+		"vim"
+	],
+	"diagnostics.disable": [
+		"deprecated",
+		"undefined-field",
+		"different-requires"
+	]
 }

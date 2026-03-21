@@ -1,5 +1,4 @@
 local M = {}
-local util = require("oz.util")
 
 local data_dir = vim.fn.stdpath("data")
 local uv = vim.loop
@@ -7,6 +6,7 @@ local uv = vim.loop
 --- Remove a JSON cache file.
 --- @param name string The name of the cache.
 function M.remove_oz_json(name)
+	local util = require("oz.util")
 	local path = data_dir .. "/oz/" .. name .. ".json"
 	if vim.fn.filereadable(path) == 1 then
 		os.remove(path)
@@ -26,6 +26,7 @@ end
 --- @param full_path string
 --- @param content string
 local function write_to_file(full_path, content)
+	local util = require("oz.util")
 	local dir_path = full_path:match("^(.*/)")
 
 	local function create_dir(path)

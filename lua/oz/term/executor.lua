@@ -1,17 +1,76 @@
 local M = {}
-local util = require("oz.util")
 
 local entries_cache = {}
+local augroup_created = false
+
+local function apply_win_styling(win, buf)
+	if not vim.api.nvim_win_is_valid(win) or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	local cmd = vim.b[buf].oz_cmd or ""
+	local wo = vim.wo[win]
+	wo.number = false
+	wo.relativenumber = false
+	wo.signcolumn = "no"
+	wo.wrap = false
+	wo.spell = false
+	wo.list = false
+	wo.winbar = string.format("$ %s", cmd)
+end
+
+local function ensure_augroup()
+	if augroup_created then
+		return
+	end
+	augroup_created = true
+	local group = vim.api.nvim_create_augroup("oz_term_setup", { clear = true })
+
+	vim.api.nvim_create_autocmd("FileType", {
+		pattern = "oz_term",
+		group = group,
+		callback = function(ev)
+			local buf = ev.buf
+			M.highlight(buf)
+			require("oz.term.keymaps").setup(buf)
+			vim.schedule(function()
+				local win = vim.fn.bufwinid(buf)
+				if win ~= -1 then
+					apply_win_styling(win, buf)
+				end
+			end)
+		end,
+	})
+
+	vim.api.nvim_create_autocmd("BufDelete", {
+		pattern = "*",
+		group = group,
+		callback = function(ev)
+			entries_cache[ev.buf] = nil
+		end,
+	})
+
+	vim.api.nvim_create_autocmd("BufWinEnter", {
+		pattern = "*",
+		group = group,
+		callback = function(ev)
+			if vim.bo[ev.buf].filetype == "oz_term" then
+				local win = vim.api.nvim_get_current_win()
+				apply_win_styling(win, ev.buf)
+			end
+		end,
+	})
+end
 
 function M.get_entries(buf)
 	return entries_cache[buf]
 end
 
-local function highlight(buf)
+function M.highlight(buf)
+	local util = require("oz.util")
 	local term_util = require("oz.term.util")
 
-    -- initialization of hls
-    util.setup_hls({ "OzUrl" })
+	-- initialization of hls
+	util.setup_hls({ "OzUrl" })
 
 	vim.api.nvim_buf_call(buf, function()
 		vim.cmd([[
@@ -130,67 +189,17 @@ local function highlight(buf)
 	end)
 end
 
-local function apply_win_styling(win, buf)
-	if not vim.api.nvim_win_is_valid(win) or not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-	local cmd = vim.b[buf].oz_cmd or ""
-	local wo = vim.wo[win]
-	wo.number = false
-	wo.relativenumber = false
-	wo.signcolumn = "no"
-	wo.wrap = false
-	wo.spell = false
-	wo.list = false
-	wo.winbar = string.format("$ %s", cmd)
-end
-
-local group = vim.api.nvim_create_augroup("oz_term_setup", { clear = true })
-
-vim.api.nvim_create_autocmd("FileType", {
-	pattern = "oz_term",
-	group = group,
-	callback = function(ev)
-		local buf = ev.buf
-		highlight(buf)
-		require("oz.term.keymaps").setup(buf)
-		vim.schedule(function()
-			local win = vim.fn.bufwinid(buf)
-			if win ~= -1 then
-				apply_win_styling(win, buf)
-			end
-		end)
-	end,
-})
-
-vim.api.nvim_create_autocmd("BufDelete", {
-	pattern = "*",
-	group = group,
-	callback = function(ev)
-		entries_cache[ev.buf] = nil
-	end,
-})
-
-vim.api.nvim_create_autocmd("BufWinEnter", {
-	pattern = "*",
-	group = group,
-	callback = function(ev)
-		if vim.bo[ev.buf].filetype == "oz_term" then
-			local win = vim.api.nvim_get_current_win()
-			apply_win_styling(win, ev.buf)
-		end
-	end,
-})
-
 --- run
 ---@param cmd string shell cmd
 ---@param opts {cwd: string, stdin: string, hidden: boolean}? runs the cmd then put the stdout into a buffer
 function M.run(cmd, opts)
+	ensure_augroup()
 	if not cmd or cmd == "" then
 		return
 	end
 	cmd = vim.fn.expandcmd(cmd)
 	opts = opts or {}
+	local util = require("oz.util")
 	local manager = require("oz.term.manager")
 	local target_id = manager.get_target_id()
 	local target_inst = target_id and manager.instances[target_id]

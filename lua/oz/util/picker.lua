@@ -10,18 +10,25 @@ local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
 local nvim_win_is_valid = api.nvim_win_is_valid
 local nvim_set_option_value = api.nvim_set_option_value
 
-local state = {
-	ns = api.nvim_create_namespace("picker"),
-	prompt_ns = api.nvim_create_namespace("picker_prompt"),
-	title_ns = api.nvim_create_namespace("picker_title"),
-	items = {},
-	filtered = {},
-	keys = {},
-	key_to_items = {},
-	selected = 0,
-	query = "",
-	closing = false,
-}
+local state = nil
+
+local function get_state()
+	if not state then
+		state = {
+			ns = api.nvim_create_namespace("picker"),
+			prompt_ns = api.nvim_create_namespace("picker_prompt"),
+			title_ns = api.nvim_create_namespace("picker_title"),
+			items = {},
+			filtered = {},
+			keys = {},
+			key_to_items = {},
+			selected = 0,
+			query = "",
+			closing = false,
+		}
+	end
+	return state
+end
 
 local function setup_highlights()
 	require("oz.util.hl").setup_hls({
@@ -49,6 +56,7 @@ local function normalize_items(items)
 end
 
 local function close_picker()
+	local state = get_state()
 	if state.closing then
 		return
 	end
@@ -102,6 +110,7 @@ local function close_picker()
 end
 
 local function render_results()
+	local state = get_state()
 	local buf = state.result_buf
 	if not buf or state.closing then
 		return
@@ -151,6 +160,7 @@ local function render_results()
 end
 
 local function on_type()
+	local state = get_state()
 	if state.closing or not state.prompt_buf then
 		return
 	end
@@ -209,6 +219,7 @@ end
 --- @param items oz.util.picker.item[] List of items to pick from.
 --- @param opts oz.util.picker.opts Configuration options.
 function M.pick(items, opts)
+	local state = get_state()
 	opts = opts or {}
 	local on_select = opts.on_select
 	assert(on_select, "on_select required")

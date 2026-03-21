@@ -1,6 +1,5 @@
 --- @class oz.term.util
 local M = {}
-local util = require("oz.util")
 
 M.EFM_PATTERNS = {
 	"%f:%l:%c: %m",
@@ -22,7 +21,7 @@ M.PATH_PATTERN = [[\v[a-zA-Z0-9./\_%@~-]{2,}%([:()]\d+)*]]
 --- @param cache table<string, boolean>
 --- @return boolean
 function M.is_readable(path, cache)
-	return util.is_readable(path, cache)
+	return require("oz.util").is_readable(path, cache)
 end
 
 --- Find a valid readable path from a string and CWD.
@@ -30,7 +29,7 @@ end
 --- @param cwd string
 --- @return string|nil
 function M.find_valid_path(path, cwd)
-	return util.find_valid_path(path, cwd)
+	return require("oz.util").find_valid_path(path, cwd)
 end
 
 --- Get the current working directory for a given buffer.

@@ -1,8 +1,5 @@
 local M = {}
-local term = require("oz.term")
-local util = require("oz.util")
-local p = require("oz.caching")
-local oil = require("oil")
+
 local json_name = "oilcmd"
 
 local function escape_spaces(s)
@@ -10,6 +7,7 @@ local function escape_spaces(s)
 end
 
 local function get_cur_entry(short)
+	local oil = require("oil")
 	local cursor = oil.get_cursor_entry()
 	local name = cursor.parsed_name or cursor.name
 
@@ -40,6 +38,10 @@ end
 
 -- all the oil specific mappings initialisation
 local function oil_buf_mappings(config, g_mappings)
+	local util = require("oz.util")
+	local term = require("oz.term")
+	local p = require("oz.caching")
+	local oil = require("oil")
 	local term_k = config.mappings.term == "<global>" and g_mappings.Term or config.mappings.term
 
 	if term_k then

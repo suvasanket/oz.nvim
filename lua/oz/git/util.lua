@@ -1,13 +1,12 @@
 --- @class oz.git.util
 local M = {}
 local original_mappings = {}
-local util = require("oz.util")
 
 --- Check if a path is inside a Git work tree.
 --- @param path? string
 --- @return boolean
 function M.if_in_git(path)
-	return util.if_in_git(path)
+	return require("oz.util").if_in_git(path)
 end
 
 --- Jump to a string in the current buffer.
@@ -81,7 +80,7 @@ end
 --- @param text string
 --- @return boolean
 function M.str_contains_hash(text)
-	return util.str_contains_hash(text)
+	return require("oz.util").str_contains_hash(text)
 end
 
 --- Apply terminal highlighting for diffs.
@@ -157,19 +156,13 @@ end
 --- Get the Git project root.
 --- @return string|nil
 function M.get_project_root()
+	local util = require("oz.util")
 	local root = util.get_git_root()
 	if root then
 		return root
 	else
 		return util.GetProjectRoot()
 	end
-end
-
---- Get a list of branches.
---- @param arg? {loc?: boolean, rem?: boolean}
---- @return string[]
-function M.get_branch(arg)
-	return util.get_branch(arg)
 end
 
 return M

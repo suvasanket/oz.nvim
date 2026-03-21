@@ -1,7 +1,7 @@
 local M = {}
-local util = require("oz.util")
 
 function M.oz_make_init(config)
+	local util = require("oz.util")
 	M.config = config
 
 	-- Make cmd

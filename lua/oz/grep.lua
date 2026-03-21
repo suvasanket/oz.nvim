@@ -1,7 +1,5 @@
 local M = {}
 
-local util = require("oz.util")
-
 --- cmd parser
 ---@param cmd string
 ---@return table
@@ -83,6 +81,7 @@ end
 --- show win
 ---@param lines string[]
 local function grep_win(lines)
+	local util = require("oz.util")
 	util.create_win("grep_err", {
 		content = lines,
 		win_type = "bot 7",
@@ -169,7 +168,7 @@ function M.oz_grep(cmd, pattern, dir, opts)
 				elseif #stderr_lines > 0 then
 					grep_win(stdout_lines)
 				else
-					util.Notify("No matches found", "warn", "oz_grep")
+					require("oz.util").Notify("No matches found", "warn", "oz_grep")
 				end
 			end
 		end,
@@ -266,6 +265,7 @@ end
 
 -- :Grep init
 function M.oz_grep_init(config)
+	local util = require("oz.util")
 	-- Grep usercmd
 	vim.api.nvim_create_user_command("Grep", function(opts)
 		local pattern, flags, target_dir
