@@ -135,7 +135,7 @@ Keymaps:
     q           Close log buffer.
     <C-P>       "Pick" a hash to use in a future command (Magit-style picking).
     a, i        Edit picked hashes in command line.
-    <C-x>     Discard all picked hashes.
+    <C-x>	Discard all picked hashes.
     gs          Go to Git status window.
     <C-g>       Pick log context (branch, tag, custom args).
     g?          Show all available keymaps.

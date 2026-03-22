@@ -225,7 +225,6 @@ function M.setup_keymaps(buf, key_grp)
 	-- check out to a commit
 	vim.keymap.set("n", "<C-CR>", M.checkout, { buffer = buf, desc = "Checkout commit", silent = true })
 	-- show file in commit
-	vim.keymap.set("n", "<S-CR>", M.show_file_in_commit, { buffer = buf, desc = "Show file in commit", silent = true })
 	key_grp["Good Stuff"] = { "<CR>", "<S-CR>", "<C-CR>", "<C-G>" }
 	key_grp["Misc"] = { "[", "]", "-", "<C-O>", "I", "<C-R>", "q" }
 
@@ -234,7 +233,8 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Goto",
 			items = {
-                { key = "s", cb = M.go_status, desc = "Go to git status buffer" },
+				{ key = "s", cb = M.go_status, desc = "Go to git status buffer" },
+				{ key = "f", cb = M.show_file_in_commit, desc = "Show file in commit" },
 				{
 					key = "g",
 					cb = function()

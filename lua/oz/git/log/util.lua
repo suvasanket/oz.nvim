@@ -122,7 +122,7 @@ function M.apply_log_highlights(buf_id, raw_lines, git_state, log_win)
 		if is_header then
 			local sha = line:sub(s, e)
 			local rest = line:sub(e + 1)
-			local decor = rest:match("^ %b()") or ""
+			-- local decor = rest:match("^ %b()") or ""
 			local marker_char = prefix:match("[+=<>%-]") or " "
 			local graph = prefix:gsub("[+=<>%-]", "")
 
@@ -284,15 +284,15 @@ function M.generate_content(level, cwd, user_set_args, original_cwd)
 			table.insert(other_args, arg)
 		else
 			-- Check if it's a ref or a file
-			-- If it contains / or . or exists on disk relative to original_cwd, it's likely a file
-			local full_path = original_cwd and (original_cwd .. "/" .. arg) or arg
-			if arg:find("/") or arg:find("%.", 1, true) or vim.fn.filereadable(full_path) == 1 or vim.fn.isdirectory(full_path) == 1 then
-				table.insert(files, arg)
+			local is_ref = util.shellout_str("git rev-parse --verify " .. vim.fn.shellescape(arg), cwd) ~= ""
+			if is_ref then
+				has_ref = true
+				table.insert(other_args, arg)
 			else
-				local is_ref = vim.fn.system("git rev-parse --verify " .. vim.fn.shellescape(arg) .. " 2>/dev/null") ~= ""
-				if is_ref then
-					has_ref = true
-					table.insert(other_args, arg)
+				-- If it contains / or . or exists on disk relative to original_cwd, it's likely a file
+				local full_path = original_cwd and (original_cwd .. "/" .. arg) or arg
+				if arg:find("/") or arg:find("%.", 1, true) or vim.fn.filereadable(full_path) == 1 or vim.fn.isdirectory(full_path) == 1 then
+					table.insert(files, arg)
 				else
 					table.insert(files, arg)
 				end
