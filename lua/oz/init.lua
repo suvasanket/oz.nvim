@@ -52,11 +52,16 @@ local defaults = {
 --- vim start with cmd
 ---@param cmds table
 ---@return boolean
-local function start_with_cmd(cmds)
+local function immediate_init(cmds)
+	-- If nvim has already finished starting up, initialize immediately
+	if vim.fn.has("vim_starting") == 0 then
+		return true
+	end
+
+	-- Check if we are starting with a specific command
 	for i, arg in ipairs(vim.v.argv) do
 		if arg == "-c" and vim.v.argv[i + 1] then
 			for _, cmd in ipairs(cmds) do
-				-- if vim.v.argv[i + 1] == cmd then
 				if vim.startswith(vim.v.argv[i + 1], cmd) then
 					return true
 				end
@@ -74,9 +79,10 @@ function M.setup(opts)
 
 	-- Initialize oz git
 	if M.config.oz_git then
-		if start_with_cmd({ "G", "Git" }) then
+		local git_cmds = { "G", "Git", "GitLog", "Gr", "Gread", "Gw", "Gwrite", "GBrowse", "GBlame" }
+		if immediate_init(git_cmds) then
 			require("oz.git").oz_git_usercmd_init(M.config.oz_git)
-		else -- lazy
+		else
 			vim.fn.timer_start(10, function()
 				require("oz.git").oz_git_usercmd_init(M.config.oz_git)
 			end)
@@ -85,9 +91,10 @@ function M.setup(opts)
 
 	-- Initialize :Term
 	if M.config.oz_term then
-		if start_with_cmd({ "Term", "Term!" }) then
+		local term_cmds = { "Term", "TermToggle", "TermClose" }
+		if immediate_init(term_cmds) then
 			require("oz.term").Term_init(M.config.oz_term)
-		else -- lazy
+		else
 			vim.fn.timer_start(20, function()
 				require("oz.term").Term_init(M.config.oz_term)
 			end)
@@ -96,10 +103,11 @@ function M.setup(opts)
 
 	-- Initialize :Make
 	if M.config.oz_make then
-		if start_with_cmd({ "Make", "Make!" }) then
+		local make_cmds = { "Make", "MakeKill", "AutoMake" }
+		if immediate_init(make_cmds) then
 			require("oz.make").oz_make_init(M.config.oz_make)
-		else -- lazy
-			vim.fn.timer_start(100, function()
+		else
+			vim.fn.timer_start(30, function()
 				require("oz.make").oz_make_init(M.config.oz_make)
 			end)
 		end
@@ -107,9 +115,9 @@ function M.setup(opts)
 
 	-- Initialize :Grep
 	if M.config.oz_grep then
-		if start_with_cmd({ "Grep", "Grep!" }) then
+		if immediate_init({ "Grep" }) then
 			require("oz.grep").oz_grep_init(M.config.oz_grep)
-		else -- lazy
+		else
 			vim.fn.timer_start(50, function()
 				require("oz.grep").oz_grep_init(M.config.oz_grep)
 			end)
