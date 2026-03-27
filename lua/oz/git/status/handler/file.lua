@@ -119,11 +119,11 @@ function M.rename()
 end
 
 function M.setup_keymaps(buf, key_grp)
-	vim.keymap.set({ "n", "x" }, "s", M.stage, { buffer = buf, desc = "Stage files", silent = true })
-	vim.keymap.set({ "n", "x" }, "u", M.unstage, { buffer = buf, desc = "Unstage files", silent = true })
-	vim.keymap.set({ "n", "x" }, "X", M.discard, { buffer = buf, desc = "Discard files", silent = true })
-	vim.keymap.set({ "n", "x" }, "D", M.untrack, { buffer = buf, desc = "Untrack files", silent = true })
-	vim.keymap.set("n", "R", M.rename, { buffer = buf, desc = "Rename file", silent = true })
+	vim.keymap.set({ "n", "x" }, "s", M.stage, { buffer = buf, desc = "Stage files", silent = true, nowait = true })
+	vim.keymap.set({ "n", "x" }, "u", M.unstage, { buffer = buf, desc = "Unstage files", silent = true, nowait = true })
+	vim.keymap.set({ "n", "x" }, "X", M.discard, { buffer = buf, desc = "Discard files", silent = true, nowait = true })
+	vim.keymap.set({ "n", "x" }, "D", M.untrack, { buffer = buf, desc = "Untrack files", silent = true, nowait = true })
+	vim.keymap.set("n", "R", M.rename, { buffer = buf, desc = "Rename file", silent = true, nowait = true })
 
 	key_grp["File actions"] = { "s", "u", "D", "X", "R" }
 end
