@@ -243,6 +243,7 @@ function M.run(cmd, opts)
 				job_id = vim.fn.termopen(cmd)
 			end
 
+            vim.cmd.startinsert()
 			vim.api.nvim_buf_set_name(buf, buf_name)
 			vim.b[buf].oz_cmd = cmd
 			vim.b[buf].oz_cwd = oz_cwd

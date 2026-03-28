@@ -7,14 +7,11 @@
 :Gr	oz_git.txt	/*:Gr*
 :Gread	oz_git.txt	/*:Gread*
 :Grep	oz_grep.txt	/*:Grep*
-:Grep!	oz_grep.txt	/*:Grep!*
 :Gw	oz_git.txt	/*:Gw*
 :Gwrite	oz_git.txt	/*:Gwrite*
 :Make	oz_make.txt	/*:Make*
-:Make!	oz_make.txt	/*:Make!*
 :MakeKill	oz_make.txt	/*:MakeKill*
 :Term	oz_term.txt	/*:Term*
-:Term!	oz_term.txt	/*:Term!*
 :TermClose	oz_term.txt	/*:TermClose*
 :TermToggle	oz_term.txt	/*:TermToggle*
 oz-git	oz-nvim.txt	/*oz-git*
