@@ -205,7 +205,7 @@ end
 --- @field height? number Height of the results window (default: 10).
 --- @field title? string|oz.util.picker.title_opts Title string or configuration table.
 
---- Open a fuzzy picker in "Ivy" style at the bottom of the editor.
+--- Open a fuzzy picker
 --- @param items oz.util.picker.item[] List of items to pick from.
 --- @param opts oz.util.picker.opts Configuration options.
 function M.pick(items, opts)
@@ -232,6 +232,8 @@ function M.pick(items, opts)
 		nvim_set_option_value("bufhidden", "wipe", { buf = b })
 		nvim_set_option_value("ft", "oz_prompt", { buf = state.result_buf })
 	end
+	vim.b[state.prompt_buf].minicompletion_disable = true
+	vim.b[state.prompt_buf].completion = false
 	nvim_set_option_value("modifiable", false, { buf = state.result_buf })
 
 	vim.o.laststatus, vim.o.cmdheight = 2, 0
