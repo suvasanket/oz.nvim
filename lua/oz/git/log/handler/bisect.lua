@@ -72,7 +72,7 @@ function M.setup_keymaps(buf, key_grp)
 					cb = function()
 						local script = util.UserInput("Run script:")
 						if script and script ~= "" then
-							log_util.run_n_refresh("Git! bisect run " .. script)
+							log_util.run_n_refresh("Git bisect run " .. script)
 						end
 					end,
 					desc = "Run",
@@ -80,21 +80,21 @@ function M.setup_keymaps(buf, key_grp)
 				{
 					key = "t",
 					cb = function()
-						log_util.run_n_refresh("Git! bisect terms")
+						log_util.run_n_refresh("Git bisect terms")
 					end,
 					desc = "Terms",
 				},
 				{
 					key = "v",
 					cb = function()
-						log_util.run_n_refresh("Git! bisect visualize")
+						log_util.run_n_refresh("Git bisect visualize")
 					end,
 					desc = "Visualize",
 				},
 				{
 					key = "l",
 					cb = function()
-						log_util.run_n_refresh("Git! bisect log")
+						log_util.run_n_refresh("Git bisect log")
 					end,
 					desc = "Log",
 				},
@@ -103,7 +103,7 @@ function M.setup_keymaps(buf, key_grp)
 					cb = function()
 						local logfile = util.inactive_input("Replay log: ", "", "file")
 						if logfile and logfile ~= "" then
-							log_util.run_n_refresh("Git! bisect replay " .. logfile)
+							log_util.run_n_refresh("Git bisect replay " .. logfile)
 						end
 					end,
 					desc = "Replay",

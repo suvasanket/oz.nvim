@@ -4,7 +4,7 @@ local s_util = require("oz.git.status.util")
 
 function M.log()
 	-- util.win_close() -- Close status window before opening log
-	require("oz.git.log").commit_log({ level = 1, from = "Git", win_type = "current" }, { "HEAD" })
+	require("oz.git.log").commit_log({ level = 1, from = "Git", win_type = "current" }, { "--all" })
 end
 
 function M.log_context()

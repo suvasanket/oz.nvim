@@ -10,14 +10,6 @@ function M.switch_branch()
 		title = "Switch branch",
 		on_select = function(choice)
 			if choice then
-				git.on_job_exit("log_switch_branch", {
-					once = true,
-					callback = function()
-						vim.schedule(function()
-							require("oz.git.log").commit_log({ level = 1 }, { choice })
-						end)
-					end,
-				})
 				util.setup_hls({ "OzCmdPrompt" })
 				vim.api.nvim_echo({ { ":Git! switch " .. choice, "OzCmdPrompt" } }, false, {})
 				vim.cmd("Git! switch " .. choice)
@@ -38,6 +30,14 @@ function M.new_branch()
 	end
 end
 
+function M.new_branch_local()
+	local b_name = util.UserInput("New Branch Name:")
+	if b_name and vim.trim(b_name) ~= "" then
+		local cmd = string.format("Git branch %s HEAD", b_name)
+		log_util.run_n_refresh(cmd)
+	end
+end
+
 function M.checkout_new_branch()
 	local hash = log_util.get_selected_hash()
 	local b_name = util.UserInput("New Branch Name:")
@@ -53,16 +53,17 @@ end
 function M.setup_keymaps(buf, key_grp)
 	local options = {
 		{
-			title = "Checkout",
+			title = "Switch",
 			items = {
 				{ key = "b", cb = M.switch_branch, desc = "Switch branch" },
-				{ key = "c", cb = M.checkout_new_branch, desc = "Checkout new branch" },
 			},
 		},
 		{
 			title = "Creation",
 			items = {
-				{ key = "n", cb = M.new_branch, desc = "Create new branch" },
+				{ key = "n", cb = M.new_branch, desc = "Create new branch from commit under cursor" },
+				{ key = "N", cb = M.new_branch_local, desc = "Create new branch from HEAD" },
+				{ key = "c", cb = M.checkout_new_branch, desc = "Checkout new branch" },
 			},
 		},
 		{
