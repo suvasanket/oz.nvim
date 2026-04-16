@@ -276,6 +276,7 @@ function M.run(cmd, opts)
 	if opts.hidden then
 		terminal_buf = vim.api.nvim_create_buf(false, true)
 		setup_terminal(terminal_buf, nil)
+		vim.cmd.stopinsert()
 	else
 		-- create a new window or reuse existing
 		util.create_win("oz_term", {
