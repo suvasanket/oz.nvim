@@ -22,7 +22,7 @@ function M.Make_func(arg_str, dir, config)
 	end
 
 	dir = dir or vim.fn.getcwd()
-	local cmd_tbl = util.parse_args(arg_str)
+	local cmd_tbl = util.parse_args(vim.fn.expandcmd(arg_str))
 	local make_cmd = require("oz.make.auto").get_makeprg(dir)
 
 	if vim.bo.makeprg == "" then
@@ -32,7 +32,7 @@ function M.Make_func(arg_str, dir, config)
 		end
 	end
 
-	local make_cmd_tbl = util.parse_args(make_cmd)
+	local make_cmd_tbl = util.parse_args(vim.fn.expandcmd(make_cmd))
 	for i = #make_cmd_tbl, 1, -1 do
 		table.insert(cmd_tbl, 1, make_cmd_tbl[i])
 	end
