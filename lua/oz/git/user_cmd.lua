@@ -37,7 +37,7 @@ end
 local function handle_glog(arg)
 	if g_util.if_in_git() then
 		if arg.args ~= "" then
-			local args_table = util.parse_args(vim.fn.expandcmd(arg.args))
+			local args_table = util.parse_args(arg.args)
 			require("oz.git.log").commit_log({ level = 1 }, args_table)
 		else
 			require("oz.git.log").commit_log()

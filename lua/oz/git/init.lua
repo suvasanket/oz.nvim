@@ -158,7 +158,6 @@ end
 ---@param args string arg string
 ---@param stdout_buf boolean show stdout or not?
 function M.run_git_job(args, stdout_buf)
-	args = vim.fn.expandcmd(args)
 	local args_table = util.parse_args(args)
 
 	local suggestion = nil

@@ -4,6 +4,9 @@ local M = {}
 --- @param argstring string The string to parse.
 --- @return string[] A table of parsed arguments.
 function M.parse_args(argstring)
+    -- Expand wildcards and special characters
+	argstring = vim.fn.expandcmd(argstring)
+
 	local args = {}
 	local i = 1
 	local len = #argstring
