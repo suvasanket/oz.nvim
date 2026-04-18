@@ -38,7 +38,6 @@ function M.new()
 end
 
 function M.new_from()
-	local branches = util.shellout_tbl("git for-each-ref --format=%(refname:short) refs/heads/ refs/remotes/")
 	local new_branch = util.UserInput("New Branch Name:")
 	if new_branch then
 		get_branch(function(choice)
