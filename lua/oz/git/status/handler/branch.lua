@@ -1,7 +1,6 @@
 local M = {}
 local util = require("oz.util")
 local s_util = require("oz.git.status.util")
-local g_util = require("oz.git.util")
 local status = require("oz.git.status")
 
 local function get_branch(callback, opts)
@@ -11,7 +10,7 @@ local function get_branch(callback, opts)
 		callback(branch)
 		return
 	end
-	local branches = g_util.get_branch(opts)
+	local branches = util.get_branch(opts)
 	util.pick(branches, {
 		title = opts.title or "Select branch",
 		on_select = function(choice)
@@ -87,7 +86,7 @@ end
 
 function M.set_upstream()
 	get_branch(function(branch)
-		local remote_branches = g_util.get_branch({ rem = true })
+		local remote_branches = util.get_branch({ rem = true })
 		if #remote_branches == 0 then
 			util.Notify("No remote branches found.", "info", "oz_git")
 			return
@@ -138,7 +137,7 @@ end
 
 function M.reset()
 	get_branch(function(branch)
-		local targets = g_util.get_branch()
+		local targets = util.get_branch()
 		util.pick(targets, {
 			title = "Reset branch '" .. branch .. "' to",
 			on_select = function(choice)

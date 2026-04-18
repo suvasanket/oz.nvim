@@ -16,18 +16,35 @@ function M.handle_reset(arg)
 end
 
 function M.soft()
-    M.handle_reset("--soft")
+	M.handle_reset("--soft")
 end
 
 function M.mixed()
-    M.handle_reset("--mixed")
+	M.handle_reset("--mixed")
 end
 
 function M.hard()
-    local confirm_ans = util.prompt("Do really really want to Git reset --hard ?", "&Yes\n&No", 2)
-    if confirm_ans == 1 then
-        M.handle_reset("--hard")
-    end
+	M.handle_reset("--hard")
+end
+
+function M.tag()
+	local ch = { "--hard", "--soft", "--mixed" }
+	util.pick(ch, {
+		title = "Pick reset mode",
+		on_select = function(choice)
+			if choice then
+				local tags = util.shellout_tbl("git tag")
+				util.pick(tags, {
+					title = "Pick tag",
+					on_select = function(tagc)
+						if tagc then
+							util.set_cmdline(("Git reset %s %s"):format(choice, tagc))
+						end
+					end,
+				})
+			end
+		end,
+	})
 end
 
 function M.setup_keymaps(buf, key_grp)
@@ -39,6 +56,7 @@ function M.setup_keymaps(buf, key_grp)
 				{ key = "s", cb = M.soft, desc = "Reset commit(--soft)" },
 				{ key = "m", cb = M.mixed, desc = "Reset commit(--mixed)" },
 				{ key = "h", cb = M.hard, desc = "Reset commit(--hard)" },
+				{ key = "t", cb = M.tag, desc = "Reset to tag" },
 			},
 		},
 		{
