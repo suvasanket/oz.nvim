@@ -1,6 +1,5 @@
 local M = {}
 local util = require("oz.util")
-local git = require("oz.git")
 local log_util = require("oz.git.log.util")
 local g_util = require("oz.util.git")
 

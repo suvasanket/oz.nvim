@@ -4,93 +4,77 @@ local M = {}
 --- @param argstring string The string to parse.
 --- @return string[] A table of parsed arguments.
 function M.parse_args(argstring)
-    -- Expand wildcards and special characters
-	argstring = vim.fn.expandcmd(argstring)
-
 	local args = {}
-	local i = 1
 	local len = #argstring
+	local i = 1
 
 	while i <= len do
-		-- Skip leading whitespace
-		while i <= len and argstring:sub(i, i):match("%s") do
+		local char = argstring:sub(i, i)
+
+		-- Skip whitespace
+		if char:match("%s") then
 			i = i + 1
-		end
-		if i > len then
-			break
-		end
+		else
+			local arg_start = i
+			local arg_end
 
-		local start_char = argstring:sub(i, i)
+			-- Quoted argument
+			if char == '"' or char == "'" then
+				local quote = char
+				i = i + 1
+				arg_start = i
 
-		if start_char == '"' or start_char == "'" then
-			-- Handle quoted arguments
-			local quote = start_char
-			local start = i + 1
-			i = i + 1 -- Move past opening quote
-			local found_quote = false
-			while i <= len do
-				if argstring:sub(i, i) == quote then
-					found_quote = true
+				-- Find closing quote
+				arg_end = argstring:find(quote, i, true)
+				if arg_end then
+					args[#args + 1] = argstring:sub(arg_start, arg_end - 1)
+					i = arg_end + 1
+				else
+					-- Unterminated quote
+					args[#args + 1] = argstring:sub(arg_start)
 					break
 				end
-				i = i + 1
-			end
-
-			if found_quote then
-				table.insert(args, argstring:sub(start, i - 1))
-				i = i + 1 -- Move past closing quote
 			else
-				table.insert(args, argstring:sub(start)) -- Unterminated
-			end
-		else
-			-- Handle non-quoted arguments (potentially with key='value')
-			local start = i
-			local end_pos = -1 -- Position *after* the argument ends
+				-- Non-quoted argument
+				local eq_pos = argstring:find("=", i, true)
 
-			local scan_pos = i
-			while scan_pos <= len do
-				local char = argstring:sub(scan_pos, scan_pos)
-
-				if char:match("%s") then
-					end_pos = scan_pos -- Argument ends before the space
-					break
-				elseif char == "=" then
-					if scan_pos + 1 <= len then
-						local next_char = argstring:sub(scan_pos + 1, scan_pos + 1)
-						if next_char == '"' or next_char == "'" then
-							-- Found key='value', find end of quoted value
-							local value_quote = next_char
-							local quote_end_scan = scan_pos + 2
-							while
-								quote_end_scan <= len
-								and argstring:sub(quote_end_scan, quote_end_scan) ~= value_quote
-							do
-								quote_end_scan = quote_end_scan + 1
-							end
-
-							if quote_end_scan <= len then
-								end_pos = quote_end_scan + 1 -- Argument ends *after* the closing quote
-							else
-								end_pos = len + 1 -- Unterminated value quote, arg ends at string end
-							end
-							break -- Definitively found end for this key='value' argument
+				-- Check for key='value' or key="value"
+				if eq_pos and eq_pos < len then
+					local next_char = argstring:sub(eq_pos + 1, eq_pos + 1)
+					if next_char == '"' or next_char == "'" then
+						-- Find end of quoted value
+						local close_quote = argstring:find(next_char, eq_pos + 2, true)
+						if close_quote then
+							args[#args + 1] = argstring:sub(arg_start, close_quote)
+							i = close_quote + 1
 						else
-							scan_pos = scan_pos + 1 -- '=' not followed by quote
+							-- Unterminated
+							args[#args + 1] = argstring:sub(arg_start)
+							break
 						end
 					else
-						scan_pos = scan_pos + 1 -- '=' is last char
+						-- key=unquoted or just regular text with =
+						arg_end = argstring:find("%s", i)
+						if arg_end then
+							args[#args + 1] = argstring:sub(arg_start, arg_end - 1)
+							i = arg_end + 1
+						else
+							args[#args + 1] = argstring:sub(arg_start)
+							break
+						end
 					end
 				else
-					scan_pos = scan_pos + 1 -- Normal character
+					-- Regular unquoted argument
+					arg_end = argstring:find("%s", i)
+					if arg_end then
+						args[#args + 1] = argstring:sub(arg_start, arg_end - 1)
+						i = arg_end + 1
+					else
+						args[#args + 1] = argstring:sub(arg_start)
+						break
+					end
 				end
 			end
-
-			if end_pos == -1 then -- Loop finished without break (reached end of string)
-				end_pos = len + 1
-			end
-
-			table.insert(args, argstring:sub(start, end_pos - 1))
-			i = end_pos -- Update main loop iterator for next argument
 		end
 	end
 
