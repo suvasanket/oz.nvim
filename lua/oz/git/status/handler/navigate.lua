@@ -112,7 +112,6 @@ function M.setup_keymaps(buf, key_grp)
 					cb = function()
 						util.show_maps({
 							group = key_grp,
-							subtext = { "[<*> represents the key is actionable for the entry under cursor.]" },
 							no_empty = true,
 						})
 					end,

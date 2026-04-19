@@ -69,20 +69,13 @@ function M.setup_keymaps(buf, key_grp)
 			items = {
 				{ key = "r", cb = M.rebase_branch, desc = "Rebase on..." },
 				{ key = "i", cb = M.rebase_interactive, desc = "Interactive on..." },
-				{ key = "R", cb = M.rebase_cursor, desc = "Rebase on Cursor <*>" },
-				{ key = "I", cb = M.rebase_interactive_cursor, desc = "Interactive on Cursor <*>" },
+				{ key = "R", cb = M.rebase_cursor, desc = "Rebase on Cursor" },
+				{ key = "I", cb = M.rebase_interactive_cursor, desc = "Interactive on Cursor" },
 			},
 		},
 		{
 			title = "Actions",
 			items = {
-				{
-					key = "c",
-					cb = function()
-						s_util.run_n_refresh("Git rebase --continue")
-					end,
-					desc = "Continue",
-				},
 				{
 					key = "l",
 					cb = function()
