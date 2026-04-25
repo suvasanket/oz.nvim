@@ -16,6 +16,7 @@ local defaults = {
 	oz_term = {
 		efm = { "%f:%l:%c: %trror: %m" },
 		root_prefix = "@",
+		ground_to_oil = true,
 	},
 
 	-- Make
@@ -31,6 +32,7 @@ local defaults = {
 	-- Grep
 	oz_grep = {
 		override_grep = true, -- override the default :grep
+		ground_to_oil = true,
 	},
 
 	integration = {
@@ -129,7 +131,7 @@ function M.setup(opts)
 		vim.api.nvim_create_autocmd("FileType", {
 			pattern = "oil",
 			callback = function()
-				require("oz.integration.oil").oil_init(M.config.integration.oil, M.config.mappings)
+				require("oz.integration.oil").oil_init(M.config.integration.oil)
 			end,
 		})
 	end

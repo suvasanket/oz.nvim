@@ -23,9 +23,12 @@ local function term_cmd_init(config)
 		-- args
 		if args.args and #args.args > 0 then
 			local cmd = args.args
-			if prefix and cmd:sub(1, #prefix) == prefix then
+			if prefix and cmd:sub(1, #prefix) == prefix then -- run in root with prefix
 				cmd = cmd:sub(#prefix + 1)
 				opts.cwd = util.GetProjectRoot()
+			end
+			if config.ground_to_oil and vim.bo.ft == "oil" then -- run in oil dir
+				opts.cwd = require("oil").get_current_dir()
 			end
 			M.cached_cmd = cmd
 			M.term_cmd_ft = vim.bo.ft
@@ -33,9 +36,12 @@ local function term_cmd_init(config)
 		else
 			local type = args.bang and "Term!" or "Term"
 			require("oz.term.cmd_wizard").cmd_func(type, function(cmd)
-				if prefix and cmd:sub(1, #prefix) == prefix then
+				if prefix and cmd:sub(1, #prefix) == prefix then -- run in root with prefix
 					cmd = cmd:sub(#prefix + 1)
 					opts.cwd = util.GetProjectRoot()
+				end
+				if config.ground_to_oil and vim.bo.ft == "oil" then -- run in oil dir
+					opts.cwd = require("oil").get_current_dir()
 				end
 				M.cached_cmd = cmd
 				M.term_cmd_ft = vim.bo.ft
