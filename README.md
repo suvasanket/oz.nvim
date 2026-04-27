@@ -89,6 +89,7 @@ require("oz").setup({
     oz_term = {
         efm = { "%f:%l:%c: %trror: %m" }, -- strings of errorformats
         root_prefix = "@", -- char to specify command to run in project root
+        ground_to_oil = true, -- ground the cwd to current oil buffer
     },
 
     -- Make
@@ -105,6 +106,7 @@ require("oz").setup({
     -- Grep
     oz_grep = {
         override_grep = true, -- override the default :grep
+        ground_to_oil = true, -- ground the scope to current oil buffer
         -- vim.opt.grepprg can be used to set custom grep program
     },
 
