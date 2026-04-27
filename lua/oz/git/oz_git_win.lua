@@ -119,7 +119,7 @@ local function ft_mappings(buf)
 				end
 			end
 		end
-	end, { buffer = buf, desc = "pick any valid entry under cursor. <*>" })
+	end, { buffer = buf, desc = "pick any valid entry under cursor." })
 
 	-- enter cmdline
 	util.Map("n", { "i", "a" }, function()
@@ -156,7 +156,7 @@ local function ft_mappings(buf)
 				vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
 			end
 		end
-	end, { buffer = buf, desc = "press enter on things then you'll know what it can do. <*>" })
+	end, { buffer = buf, desc = "press enter on things then you'll know what it can do." })
 
 	-- discard grab
 	vim.keymap.set("n", user_mappings.unpick_all, function()

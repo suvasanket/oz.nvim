@@ -82,7 +82,8 @@ local function handle_gwrite(opts)
 		if file_name == "" then
 			local ok = pcall(vim.cmd, "w")
 			if ok then
-				vim.cmd("Git add %")
+				local file = vim.fn.expand("%")
+				vim.cmd(string.format("Git add %s", file))
 			end
 		else
 			local old_name = vim.fn.expand("%")

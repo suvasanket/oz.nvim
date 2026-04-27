@@ -276,13 +276,14 @@ function M.oz_grep_init(config)
 			pattern, flags, target_dir = parse_args(opts.args) -- NOTE: opts.fargs won't work
 		end
 
-		-- parse the usercmd args.
-		local project_root = util.GetProjectRoot()
-
 		if opts.bang then
 			target_dir = vim.fn.getcwd()
 		elseif not target_dir then
-			target_dir = (vim.bo.ft == "oil" and require("oil").get_current_dir()) or (project_root or vim.fn.getcwd())
+			if config.ground_to_oil and vim.bo.ft == "oil" then
+				target_dir = require("oil").get_current_dir()
+			else
+				target_dir = util.GetProjectRoot() or vim.fn.getcwd()
+			end
 		end
 
 		local grep_opt = vim.o.grepprg

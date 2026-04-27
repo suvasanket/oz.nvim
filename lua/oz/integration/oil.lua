@@ -1,9 +1,7 @@
 local M = {}
 local term = require("oz.term")
 local util = require("oz.util")
-local p = require("oz.caching")
 local oil = require("oil")
-local json_name = "oilcmd"
 
 local function escape_spaces(s)
 	return (s:gsub(" ", "\\ "))
@@ -39,41 +37,7 @@ local function split_input(input, middle, splitter)
 end
 
 -- all the oil specific mappings initialisation
-local function oil_buf_mappings(config, g_mappings)
-	local term_k = config.mappings.term == "<global>" and g_mappings.Term or config.mappings.term
-
-	if term_k then
-		vim.keymap.set("n", term_k, function()
-			local oil_cwd = oil.get_current_dir()
-			local cmd = p.get_data(oil_cwd, json_name) or ""
-			local input = util.UserInput(":Term ", cmd)
-			if input then
-				if cmd ~= input then
-					p.set_data(oil_cwd, input, json_name)
-				end
-				term.run_in_term(input, oil_cwd)
-			end
-		end, { buffer = 0, silent = true, desc = "run cmd in this dir with oz_term" })
-	end
-
-	-- open compile_mode
-	local compile_k = config.mappings.compile == "<global>" and g_mappings.Compile or config.mappings.compile
-
-	if compile_k then
-		vim.keymap.set("n", compile_k, function()
-			local oil_cwd = oil.get_current_dir()
-			vim.g.compilation_directory = oil_cwd
-			local cmd = p.get_data(oil_cwd, json_name) or ""
-			local input = util.UserInput(":Compile ", cmd)
-			if input then
-				if cmd ~= input then
-					p.set_data(oil_cwd, input, json_name)
-				end
-				vim.cmd("Compile " .. input)
-			end
-		end, { buffer = 0, silent = true, desc = "run cmd in this dir with compile_mode" })
-	end
-
+local function oil_buf_mappings(config)
 	if config.mappings.entry_exec then
 		vim.keymap.set("n", config.mappings.entry_exec, function()
 			local oil_cwd = oil.get_current_dir()
@@ -111,9 +75,8 @@ local function oil_buf_mappings(config, g_mappings)
 end
 
 -- oil init
-function M.oil_init(config, g_mappings)
-	-- oil buffer specific mappings
-	oil_buf_mappings(config, g_mappings)
+function M.oil_init(config)
+	oil_buf_mappings(config)
 end
 
 return M
