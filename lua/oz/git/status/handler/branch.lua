@@ -22,6 +22,11 @@ local function get_branch(callback, opts)
 end
 
 function M.cc()
+	util.transient_cmd_complete()
+	util.set_cmdline("Git checkout -B ")
+end
+
+function M.switch()
 	get_branch(function(choice)
 		s_util.run_n_refresh("Git! switch " .. choice)
 	end, { title = "Switch branch" })
@@ -162,8 +167,9 @@ function M.setup_keymaps(buf, key_grp)
 		{
 			title = "Checkout",
 			items = {
-				{ key = "b", cb = M.cc, desc = "Checkout/Switch branch" },
-				{ key = "c", cb = M.new_from, desc = "Checkout new branch" },
+				{ key = "b", cb = M.cc, desc = "Switch or create branch" },
+				{ key = "s", cb = M.switch, desc = "Switch to branch" },
+				{ key = "c", cb = M.new_from, desc = "Create new branch from" },
 				{ key = "n", cb = M.new, desc = "Create a new branch" },
 			},
 		},
